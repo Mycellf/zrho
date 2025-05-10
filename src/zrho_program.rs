@@ -43,29 +43,29 @@ pub enum Instruction {
 
 impl Instruction {
     // This is awful. There must be a better way
-    pub fn new(name: &str, arguments: Vec<Argument>) -> Option<Self> {
+    pub fn new(name: &str, arguments: Vec<Argument>) -> Option<Instruction> {
         #[rustfmt::skip]
         let instruction = match name {
-            "SET" => Self::Set(arguments.get(0)?.as_register()?, arguments.get(1)?.as_value()?),
+            "SET" => Instruction::Set(arguments.get(0)?.as_register()?, arguments.get(1)?.as_value()?),
 
-            "ADD" => Self::Add(arguments.get(0)?.as_value()?, arguments.get(1)?.as_value()?, arguments.get(2)?.as_register()?),
-            "SUB" => Self::Sub(arguments.get(0)?.as_value()?, arguments.get(1)?.as_value()?, arguments.get(2)?.as_register()?),
-            "MUL" => Self::Mul(arguments.get(0)?.as_value()?, arguments.get(1)?.as_value()?, arguments.get(2)?.as_register()?),
-            "DIV" => Self::Div(arguments.get(0)?.as_value()?, arguments.get(1)?.as_value()?, arguments.get(2)?.as_register()?),
-            "MOD" => Self::Mod(arguments.get(0)?.as_value()?, arguments.get(1)?.as_value()?, arguments.get(2)?.as_register()?),
+            "ADD" => Instruction::Add(arguments.get(0)?.as_value()?, arguments.get(1)?.as_value()?, arguments.get(2)?.as_register()?),
+            "SUB" => Instruction::Sub(arguments.get(0)?.as_value()?, arguments.get(1)?.as_value()?, arguments.get(2)?.as_register()?),
+            "MUL" => Instruction::Mul(arguments.get(0)?.as_value()?, arguments.get(1)?.as_value()?, arguments.get(2)?.as_register()?),
+            "DIV" => Instruction::Div(arguments.get(0)?.as_value()?, arguments.get(1)?.as_value()?, arguments.get(2)?.as_register()?),
+            "MOD" => Instruction::Mod(arguments.get(0)?.as_value()?, arguments.get(1)?.as_value()?, arguments.get(2)?.as_register()?),
 
-            "CMP" => Self::Cmp(arguments.get(0)?.as_condition()?, arguments.get(1)?.as_register()?),
-            "TCP" => Self::Cmp(arguments.get(0)?.as_condition()?, arguments.get(1)?.as_register()?),
-            "FCP" => Self::Cmp(arguments.get(0)?.as_condition()?, arguments.get(1)?.as_register()?),
+            "CMP" => Instruction::Cmp(arguments.get(0)?.as_condition()?, arguments.get(1)?.as_register()?),
+            "TCP" => Instruction::Cmp(arguments.get(0)?.as_condition()?, arguments.get(1)?.as_register()?),
+            "FCP" => Instruction::Cmp(arguments.get(0)?.as_condition()?, arguments.get(1)?.as_register()?),
 
-            "LBL" => Self::Lbl(arguments.get(0)?.as_label()?),
+            "LBL" => Instruction::Lbl(arguments.get(0)?.as_label()?),
             "JMP" => match arguments.len() {
-                1 => Self::Jmp(arguments.get(0)?.as_label()?),
-                2.. => Self::JmpCond(arguments.get(0)?.as_condition()?, arguments.get(1)?.as_label()?),
+                1 => Instruction::Jmp(arguments.get(0)?.as_label()?),
+                2.. => Instruction::JmpCond(arguments.get(0)?.as_condition()?, arguments.get(1)?.as_label()?),
                 _ => return None,
             },
-            "LJP" => Self::Ljp(arguments.get(0)?.as_condition()?, arguments.get(1)?.as_label()?),
-            "UJP" => Self::Ujp(arguments.get(0)?.as_condition()?, arguments.get(1)?.as_label()?),
+            "LJP" => Instruction::Ljp(arguments.get(0)?.as_condition()?, arguments.get(1)?.as_label()?),
+            "UJP" => Instruction::Ujp(arguments.get(0)?.as_condition()?, arguments.get(1)?.as_label()?),
 
             _ => return None,
         };
