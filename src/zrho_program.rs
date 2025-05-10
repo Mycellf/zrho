@@ -61,7 +61,7 @@ impl Instruction {
             "LBL" => Self::Lbl(arguments.get(0)?.as_label()?),
             "JMP" => match arguments.len() {
                 1 => Self::Jmp(arguments.get(0)?.as_label()?),
-                2 => Self::JmpCond(arguments.get(0)?.as_condition()?, arguments.get(1)?.as_label()?),
+                2.. => Self::JmpCond(arguments.get(0)?.as_condition()?, arguments.get(1)?.as_label()?),
                 _ => return None,
             },
             "LJP" => Self::Ljp(arguments.get(0)?.as_condition()?, arguments.get(1)?.as_label()?),
