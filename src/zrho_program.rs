@@ -13,6 +13,7 @@ pub struct RegisterPrototype {
     pub read_delay: u8,
     pub write_delay: u8,
     pub linked_to: Option<usize>,
+    pub value: DigitInteger,
 }
 
 pub struct InstructionEntry {
