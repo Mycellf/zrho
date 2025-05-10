@@ -18,7 +18,7 @@ pub struct RegisterPrototype {
 
 pub struct InstructionEntry {
     pub source_line: usize,
-    pub kind: Instruction,
+    pub instruction: Instruction,
 }
 
 pub enum Instruction {
