@@ -69,7 +69,33 @@ impl Instruction {
             _ => return None,
         };
 
+        if arguments.len() != instruction.num_arguments() {
+            return None;
+        }
+
         Some(instruction)
+    }
+
+    pub fn num_arguments(&self) -> usize {
+        match self {
+            Instruction::Set(..) => 2,
+
+            Instruction::Add(..) => 3,
+            Instruction::Sub(..) => 3,
+            Instruction::Mul(..) => 3,
+            Instruction::Div(..) => 3,
+            Instruction::Mod(..) => 3,
+
+            Instruction::Cmp(..) => 2,
+            Instruction::Tcp(..) => 2,
+            Instruction::Fcp(..) => 2,
+
+            Instruction::Lbl(..) => 1,
+            Instruction::Jmp(..) => 1,
+            Instruction::JmpCond(..) => 2,
+            Instruction::Ljp(..) => 2,
+            Instruction::Ujp(..) => 2,
+        }
     }
 }
 
