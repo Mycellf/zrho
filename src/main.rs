@@ -96,7 +96,7 @@ fn main() {
             })
             .instruction(Instruction {
                 kind: InstructionKind::Modulus,
-                line: 6,
+                line: 7,
                 arguments: [
                     Argument::Number(NumberSource::Register(
                         computer::register_with_name('X').unwrap(),
@@ -104,6 +104,19 @@ fn main() {
                     Argument::Number(NumberSource::Constant(DigitInteger::new(2, 3).unwrap())),
                     Argument::Number(NumberSource::Register(
                         computer::register_with_name('I').unwrap(),
+                    )),
+                ],
+            })
+            .instruction(Instruction {
+                kind: InstructionKind::Divide,
+                line: 8,
+                arguments: [
+                    Argument::Number(NumberSource::Register(
+                        computer::register_with_name('X').unwrap(),
+                    )),
+                    Argument::Number(NumberSource::Constant(DigitInteger::new(2, 3).unwrap())),
+                    Argument::Number(NumberSource::Register(
+                        computer::register_with_name('Y').unwrap(),
                     )),
                 ],
             }),
