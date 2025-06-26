@@ -162,18 +162,24 @@ fn main() {
             ),
     );
 
+    println!("{:?}\n", computer.registers);
+
     loop {
+        computer.tick_partial();
+
+        if let Some(interrupt) = computer.interrupt {
+            println!("{:?}\n\n{:?}", interrupt, computer.registers);
+            break;
+        }
+
         if computer.block_time == 0 {
             println!("{:?}\n", computer.registers);
         } else {
             println!("waiting...");
         }
 
-        computer.tick();
-
-        if let Some(interrupt) = computer.interrupt {
-            println!("{:?}\n\n{:?}", interrupt, computer.registers);
-            break;
+        if computer.tick_complete {
+            println!("completed tick\n");
         }
     }
 }

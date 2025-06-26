@@ -16,6 +16,7 @@ pub struct Computer {
 
     pub instruction: u32,
     pub block_time: u32,
+    pub tick_complete: bool,
 
     pub previous_instruction: Option<(u32, ArgumentValues)>,
     pub interrupt: Option<InstructionEvaluationInterrupt>,
@@ -30,6 +31,7 @@ impl Computer {
 
             instruction: 0,
             block_time: 0,
+            tick_complete: true,
 
             previous_instruction: None,
             interrupt: None,
@@ -37,6 +39,18 @@ impl Computer {
     }
 
     pub fn tick(&mut self) {
+        loop {
+            self.tick_partial();
+
+            if self.tick_complete {
+                break;
+            }
+        }
+    }
+
+    pub fn tick_partial(&mut self) {
+        self.tick_complete = true;
+
         if self.interrupt.is_some() {
             return;
         }
@@ -44,50 +58,45 @@ impl Computer {
         if self.block_time > 0 {
             self.block_time -= 1;
         } else {
-            loop {
-                let previous_instruction = self.instruction;
+            let previous_instruction = self.instruction;
 
-                match self
-                    .loaded_program
-                    .instructions
-                    .get(self.instruction as usize)
-                    .map(|instruction| {
-                        instruction.evaluate(
-                            &mut self.registers,
-                            self.previous_instruction.as_ref().map(
-                                |&(instruction, ref argument_values)| {
-                                    (
-                                        &self.loaded_program.instructions[instruction as usize],
-                                        argument_values,
-                                    )
-                                },
-                            ),
-                            &mut self.instruction,
-                        )
-                    }) {
-                    Some(Ok((time, argument_values, update_previous_instruction))) => {
-                        self.previous_instruction = update_previous_instruction
-                            .then_some((previous_instruction, argument_values));
+            match self
+                .loaded_program
+                .instructions
+                .get(self.instruction as usize)
+                .map(|instruction| {
+                    instruction.evaluate(
+                        &mut self.registers,
+                        self.previous_instruction.as_ref().map(
+                            |&(instruction, ref argument_values)| {
+                                (
+                                    &self.loaded_program.instructions[instruction as usize],
+                                    argument_values,
+                                )
+                            },
+                        ),
+                        &mut self.instruction,
+                    )
+                }) {
+                Some(Ok((time, argument_values, update_previous_instruction))) => {
+                    self.previous_instruction = update_previous_instruction
+                        .then_some((previous_instruction, argument_values));
 
-                        if time == 0 {
-                            continue;
-                        } else if time > 0 {
-                            self.block_time = time - 1;
-                        }
-                    }
-                    Some(Err(interrupt)) => {
-                        self.interrupt = Some(interrupt);
-                        self.previous_instruction = None;
-                        return;
-                    }
-                    None => {
-                        self.interrupt = Some(InstructionEvaluationInterrupt::ProgramComplete);
-                        self.previous_instruction = None;
-                        return;
+                    if time == 0 {
+                        self.tick_complete = false;
+                        println!("incomplete");
+                    } else if time > 0 {
+                        self.block_time = time - 1;
                     }
                 }
-
-                break;
+                Some(Err(interrupt)) => {
+                    self.interrupt = Some(interrupt);
+                    self.previous_instruction = None;
+                }
+                None => {
+                    self.interrupt = Some(InstructionEvaluationInterrupt::ProgramComplete);
+                    self.previous_instruction = None;
+                }
             }
         }
     }
