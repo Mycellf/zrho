@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    instruction::{Instruction, InstructionEvaluationInterrupt},
+    instruction::{ArgumentValues, Instruction, InstructionEvaluationInterrupt},
     integer::{AssignIntegerError, DigitInteger, Integer},
 };
 
@@ -17,7 +17,7 @@ pub struct Computer {
     pub instruction: u32,
     pub block_time: u32,
 
-    pub previous_instruction: Option<u32>,
+    pub previous_instruction: Option<(u32, ArgumentValues)>,
     pub interrupt: Option<InstructionEvaluationInterrupt>,
 }
 
@@ -37,12 +37,57 @@ impl Computer {
     }
 
     pub fn tick(&mut self) {
+        if self.interrupt.is_some() {
+            return;
+        }
+
         if self.block_time > 0 {
             self.block_time -= 1;
         } else {
-            self.instruction += 1;
+            loop {
+                let previous_instruction = self.instruction;
 
-            todo!();
+                match self
+                    .loaded_program
+                    .instructions
+                    .get(self.instruction as usize)
+                    .map(|instruction| {
+                        instruction.evaluate(
+                            &mut self.registers,
+                            self.previous_instruction.as_ref().map(
+                                |&(instruction, ref argument_values)| {
+                                    (
+                                        &self.loaded_program.instructions[instruction as usize],
+                                        argument_values,
+                                    )
+                                },
+                            ),
+                            &mut self.instruction,
+                        )
+                    }) {
+                    Some(Ok((time, argument_values))) => {
+                        if time == 0 {
+                            continue;
+                        } else if time > 0 {
+                            self.previous_instruction =
+                                Some((previous_instruction, argument_values));
+                            self.block_time = time - 1;
+                        }
+                    }
+                    Some(Err(interrupt)) => {
+                        self.interrupt = Some(interrupt);
+                        self.previous_instruction = None;
+                        return;
+                    }
+                    None => {
+                        self.interrupt = Some(InstructionEvaluationInterrupt::ProgramComplete);
+                        self.previous_instruction = None;
+                        return;
+                    }
+                }
+
+                break;
+            }
         }
     }
 }
