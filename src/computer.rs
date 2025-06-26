@@ -1,5 +1,6 @@
 use std::{
     array,
+    fmt::Debug,
     ops::{Deref, DerefMut},
 };
 
@@ -149,7 +150,7 @@ impl Program {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct RegisterSet {
     pub registers: Box<[Option<Register>; NUM_REGISTERS]>,
 }
@@ -216,6 +217,22 @@ impl RegisterSet {
         }
 
         Ok(self.get(index).unwrap())
+    }
+}
+
+impl Debug for RegisterSet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (i, register) in self.registers.iter().enumerate() {
+            let Some(register) = register else {
+                continue;
+            };
+
+            let name = name_of_register(i as u32).unwrap();
+
+            writeln!(f, "{name}: {register:?}")?;
+        }
+
+        Ok(())
     }
 }
 

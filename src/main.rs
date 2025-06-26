@@ -226,21 +226,31 @@ fn main() {
             ),
     );
 
-    println!("{:?}\n", computer.registers);
+    println!("{:?}", computer.registers);
 
     loop {
-        println!("Instruction {:?}:", computer.instruction);
+        print!("Instruction {:?}", computer.instruction);
+
+        if let Some(instruction) = computer
+            .loaded_program
+            .instructions
+            .get(computer.instruction as usize)
+        {
+            print!(" ({:?})", instruction);
+        }
+
+        println!(":");
 
         let modified = computer.tick_partial();
 
         if let Some(interrupt) = computer.interrupt {
-            println!("{:?}\n\n{:?}", interrupt, computer.registers);
+            println!("{:?}\n{:?}", interrupt, computer.registers);
             break;
         }
 
         if modified {
             if computer.block_time == 0 {
-                println!("{:?}\n", computer.registers);
+                println!("{:?}", computer.registers);
             } else {
                 println!("waiting...");
             }
