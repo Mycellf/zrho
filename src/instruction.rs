@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::{
-    computer::{Register, RegisterAccessError, RegisterSet},
+    computer::{self, Register, RegisterAccessError, RegisterSet},
     integer::{AssignIntegerError, BiggerInteger, DigitInteger, Integer},
 };
 
@@ -420,10 +420,22 @@ impl Argument {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub enum NumberSource {
     Register(u32),
     Constant(DigitInteger),
+}
+
+impl std::fmt::Debug for NumberSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Register(arg0) => f
+                .debug_tuple("Register")
+                .field(&computer::name_of_register(*arg0).unwrap())
+                .finish(),
+            Self::Constant(arg0) => f.debug_tuple("Constant").field(arg0).finish(),
+        }
+    }
 }
 
 impl NumberSource {
