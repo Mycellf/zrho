@@ -1,4 +1,7 @@
-use std::cmp::Ordering;
+use std::{
+    cmp::Ordering,
+    ops::{Index, IndexMut},
+};
 
 use crate::{
     computer::{Register, RegisterAccessError, RegisterSet},
@@ -561,14 +564,41 @@ pub enum InstructionKind {
     End,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct InstructionKindSet<T>(pub [T; 16]);
+
+impl<T> InstructionKindSet<T> {
+    pub fn get(&self, kind: InstructionKind) -> &T {
+        &self.0[kind as usize]
+    }
+
+    pub fn get_mut(&mut self, kind: InstructionKind) -> &mut T {
+        &mut self.0[kind as usize]
+    }
+}
+
+impl<T> Index<InstructionKind> for InstructionKindSet<T> {
+    type Output = T;
+
+    fn index(&self, index: InstructionKind) -> &Self::Output {
+        self.get(index)
+    }
+}
+
+impl<T> IndexMut<InstructionKind> for InstructionKindSet<T> {
+    fn index_mut(&mut self, index: InstructionKind) -> &mut Self::Output {
+        self.get_mut(index)
+    }
+}
+
 impl InstructionKind {
     pub fn get_properties(self) -> &'static InstructionKindProperties {
-        &INSTRUCTION_KINDS[self as usize]
+        &INSTRUCTION_KINDS[self]
     }
 }
 
 #[allow(clippy::needless_update)]
-pub static INSTRUCTION_KINDS: [InstructionKindProperties; 16] = [
+pub static INSTRUCTION_KINDS: InstructionKindSet<InstructionKindProperties> = InstructionKindSet([
     InstructionKindProperties {
         kind: InstructionKind::Set,
         name: "SET",
@@ -776,4 +806,4 @@ pub static INSTRUCTION_KINDS: [InstructionKindProperties; 16] = [
         ],
         ..InstructionKindProperties::DEFAULT
     },
-];
+]);
