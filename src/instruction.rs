@@ -189,6 +189,11 @@ impl Instruction {
                         return time;
                     }
                 }
+                TimeCondition::ArgumentIsEmpty { argument } => {
+                    if self.arguments[*argument].is_empty() {
+                        return time;
+                    }
+                }
             }
         }
 
@@ -505,6 +510,7 @@ impl Default for InstructionKindProperties {
 pub enum TimeCondition {
     SameAsPrevious(InstructionKind),
     ArgumentMatches { argument: usize, value: Integer },
+    ArgumentIsEmpty { argument: usize },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -665,6 +671,7 @@ pub static INSTRUCTION_KINDS: [InstructionKindProperties; 16] = [
             ArgumentRequirement::Empty,
         ],
         base_time: 1,
+        conditional_time: Some((0, TimeCondition::ArgumentIsEmpty { argument: 0 })),
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
