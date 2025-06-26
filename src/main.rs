@@ -172,6 +172,17 @@ fn main() {
                     Argument::Instruction(10),
                     Argument::Empty,
                 ],
+            })
+            .instruction(Instruction {
+                kind: InstructionKind::Sleep,
+                line: 13,
+                arguments: [
+                    Argument::Number(NumberSource::Register(
+                        computer::register_with_name('X').unwrap(),
+                    )),
+                    Argument::Empty,
+                    Argument::Empty,
+                ],
             }),
         RegisterSet::new_empty()
             .with_register(
