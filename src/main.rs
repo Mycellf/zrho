@@ -1,6 +1,8 @@
+use std::cmp::Ordering;
+
 use crate::{
     computer::{Computer, Program, Register, RegisterSet, RegisterValues},
-    instruction::{Argument, Instruction, InstructionKind, NumberSource},
+    instruction::{Argument, Comparison, Instruction, InstructionKind, NumberSource},
     integer::DigitInteger,
 };
 
@@ -118,6 +120,35 @@ fn main() {
                     Argument::Number(NumberSource::Register(
                         computer::register_with_name('Y').unwrap(),
                     )),
+                ],
+            })
+            .instruction(Instruction {
+                kind: InstructionKind::Add,
+                line: 9,
+                arguments: [
+                    Argument::Number(NumberSource::Register(
+                        computer::register_with_name('X').unwrap(),
+                    )),
+                    Argument::Number(NumberSource::Constant(DigitInteger::new(1, 3).unwrap())),
+                    Argument::Number(NumberSource::Register(
+                        computer::register_with_name('X').unwrap(),
+                    )),
+                ],
+            })
+            .instruction(Instruction {
+                kind: InstructionKind::JumpCondLikely,
+                line: 10,
+                arguments: [
+                    Argument::Comparison(Comparison {
+                        ordering: Ordering::Less,
+                        invert: false,
+                        values: [
+                            NumberSource::Register(computer::register_with_name('X').unwrap()),
+                            NumberSource::Constant(DigitInteger::new(10, 3).unwrap()),
+                        ],
+                    }),
+                    Argument::Instruction(9),
+                    Argument::Empty,
                 ],
             }),
         RegisterSet::new()
