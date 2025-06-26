@@ -18,9 +18,7 @@ fn main() {
                     values: RegisterValues::Scalar(DigitInteger::zero(4)),
                     indexes_array: None,
                     read_time: 0,
-                    read_block: 0,
                     write_time: 0,
-                    write_block: 0,
                 },
             )
             .with_register(
@@ -29,9 +27,7 @@ fn main() {
                     values: RegisterValues::Scalar(DigitInteger::zero(4)),
                     indexes_array: None,
                     read_time: 0,
-                    read_block: 0,
                     write_time: 0,
-                    write_block: 0,
                 },
             )
             .with_register(
@@ -40,9 +36,7 @@ fn main() {
                     values: RegisterValues::Scalar(DigitInteger::zero(4)),
                     indexes_array: Some(computer::register_with_name('D').unwrap()),
                     read_time: 0,
-                    read_block: 0,
                     write_time: 0,
-                    write_block: 0,
                 },
             )
             .with_register(
@@ -54,9 +48,7 @@ fn main() {
                     },
                     indexes_array: None,
                     read_time: 0,
-                    read_block: 0,
                     write_time: 0,
-                    write_block: 0,
                 },
             ),
     );

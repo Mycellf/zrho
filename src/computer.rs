@@ -4,8 +4,8 @@ use std::{
 };
 
 use crate::{
-    instruction::Instruction,
-    integer::{DigitInteger, Integer},
+    instruction::{Instruction, InstructionEvaluationInterrupt},
+    integer::{AssignIntegerError, DigitInteger, Integer},
 };
 
 #[derive(Clone, Debug)]
@@ -16,6 +16,9 @@ pub struct Computer {
 
     pub instruction: u32,
     pub block_time: u32,
+
+    pub previous_instruction: Option<u32>,
+    pub interrupt: Option<InstructionEvaluationInterrupt>,
 }
 
 impl Computer {
@@ -27,6 +30,9 @@ impl Computer {
 
             instruction: 0,
             block_time: 0,
+
+            previous_instruction: None,
+            interrupt: None,
         }
     }
 
@@ -99,6 +105,22 @@ impl RegisterSet {
     pub fn get_mut(&mut self, index: u32) -> Option<&mut Register> {
         self.registers.get_mut(index as usize)?.as_mut()
     }
+
+    pub fn write(
+        &mut self,
+        index: u32,
+        value: Integer,
+    ) -> Result<&mut Register, RegisterAccessError> {
+        let register = self
+            .get_mut(index)
+            .ok_or(RegisterAccessError::NoSuchRegister { got: index })?;
+        register
+            .value_mut()?
+            .try_set(value)
+            .map_err(|error| RegisterAccessError::InvalidAssignment { error })?;
+
+        Ok(register)
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -111,9 +133,8 @@ pub struct Register {
     pub values: RegisterValues,
     pub indexes_array: Option<u32>,
     pub read_time: u32,
-    pub read_block: u32,
     pub write_time: u32,
-    pub write_block: u32,
+    // pub block_time: u32,
 }
 
 impl Deref for Register {
@@ -141,17 +162,17 @@ pub enum RegisterValues {
 
 impl RegisterValues {
     #[must_use]
-    pub fn value(&self) -> Result<&DigitInteger, RegisterReadError> {
+    pub fn value(&self) -> Result<&DigitInteger, RegisterAccessError> {
         match self {
             RegisterValues::Scalar(value) => Ok(value),
             RegisterValues::Vector { values, index } => values
                 .get(
-                    usize::try_from(*index).map_err(|_| RegisterReadError::IndexTooSmall {
+                    usize::try_from(*index).map_err(|_| RegisterAccessError::IndexTooSmall {
                         got: *index,
                         minimum: 0,
                     })?,
                 )
-                .ok_or_else(|| RegisterReadError::IndexTooBig {
+                .ok_or_else(|| RegisterAccessError::IndexTooBig {
                     got: *index,
                     maximum: values.len() as i32 - 1,
                 }),
@@ -159,7 +180,7 @@ impl RegisterValues {
     }
 
     #[must_use]
-    pub fn value_mut(&mut self) -> Result<&mut DigitInteger, RegisterReadError> {
+    pub fn value_mut(&mut self) -> Result<&mut DigitInteger, RegisterAccessError> {
         match self {
             RegisterValues::Scalar(value) => Ok(value),
             RegisterValues::Vector { values, index } => {
@@ -167,12 +188,12 @@ impl RegisterValues {
 
                 values
                     .get_mut(usize::try_from(*index).map_err(|_| {
-                        RegisterReadError::IndexTooSmall {
+                        RegisterAccessError::IndexTooSmall {
                             got: *index,
                             minimum: 0,
                         }
                     })?)
-                    .ok_or_else(|| RegisterReadError::IndexTooBig {
+                    .ok_or_else(|| RegisterAccessError::IndexTooBig {
                         got: *index,
                         maximum: length as i32 - 1,
                     })
@@ -182,9 +203,11 @@ impl RegisterValues {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum RegisterReadError {
+pub enum RegisterAccessError {
     IndexTooBig { got: Integer, maximum: Integer },
     IndexTooSmall { got: Integer, minimum: Integer },
+    NoSuchRegister { got: u32 },
+    InvalidAssignment { error: AssignIntegerError },
 }
 
 pub const NUM_REGISTERS: usize = 26;

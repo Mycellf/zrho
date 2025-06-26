@@ -1,6 +1,11 @@
 use std::cmp::Ordering;
 
-use crate::integer::{DigitInteger, Integer};
+use crate::{
+    computer::{Register, RegisterAccessError, RegisterSet},
+    integer::{DigitInteger, Integer},
+};
+
+pub type ArgumentValues = [Option<Integer>; Instruction::NUM_ARGUMENTS];
 
 #[derive(Clone, Copy, Debug)]
 pub struct Instruction {
@@ -20,6 +25,116 @@ impl Instruction {
             .rev()
             .find_map(|(i, argument)| argument.is_specified().then_some(i))
     }
+
+    /// Returns the total time taken by the instruction and the values of each input
+    pub fn evaluate(
+        &self,
+        registers: &mut RegisterSet,
+        previous_instruction: Option<(&Instruction, &ArgumentValues)>,
+    ) -> Result<(u32, ArgumentValues), InstructionEvaluationInterrupt> {
+        let properties = self.kind.get_properties();
+
+        let mut total_time = 0;
+
+        let mut argument_values = [None; 3];
+
+        for i in 0..argument_values.len() {
+            let requirement = properties.arguments[i];
+
+            assert!(self.arguments[i].matches_requirement(requirement));
+
+            if matches!(requirement, ArgumentRequirement::RegisterWrite) {
+                continue;
+            }
+
+            argument_values[i] = match self.arguments[i] {
+                Argument::Instruction(_) => None,
+                Argument::Number(source) => {
+                    let (value, register) = source.value(registers)?;
+
+                    total_time += register.map_or(0, |register| register.read_time);
+                    Some(value.get())
+                }
+                Argument::Comparison(comparison) => {
+                    let (value, registers) = comparison.evaluate(registers)?;
+
+                    for register in registers.into_iter().flatten() {
+                        total_time += register.read_time;
+                    }
+                    Some(value)
+                }
+                Argument::Empty => None,
+            };
+        }
+
+        total_time += self.execution_time(previous_instruction, &argument_values);
+
+        match self.kind {
+            InstructionKind::Set => todo!(),
+            InstructionKind::Try => (),
+            InstructionKind::Add => todo!(),
+            InstructionKind::Subtract => todo!(),
+            InstructionKind::Negate => todo!(),
+            InstructionKind::Multiply => todo!(),
+            InstructionKind::Divide => todo!(),
+            InstructionKind::Modulus => todo!(),
+            InstructionKind::Compare => todo!(),
+            InstructionKind::CompareSetIfTrue => todo!(),
+            InstructionKind::CompareSetIfFalse => todo!(),
+            InstructionKind::Jump => todo!(),
+            InstructionKind::JumpCondLikely => todo!(),
+            InstructionKind::JumpCondUnlikely => todo!(),
+            InstructionKind::Sleep => {
+                total_time += argument_values[0].unwrap().max(0) as u32;
+            }
+            InstructionKind::End => return Err(InstructionEvaluationInterrupt::ProgramComplete),
+        }
+
+        Ok((total_time, argument_values))
+    }
+
+    #[must_use]
+    pub fn execution_time(
+        &self,
+        previous_instruction: Option<(&Instruction, &ArgumentValues)>,
+        argument_values: &ArgumentValues,
+    ) -> u32 {
+        let properties = self.kind.get_properties();
+
+        if let &Some((time, ref condition)) = &properties.conditional_time {
+            match condition {
+                TimeCondition::SameAsPrevious(instruction_kind) => 'outer: {
+                    let Some((previous_instruction, previous_argument_values)) =
+                        previous_instruction
+                    else {
+                        break 'outer;
+                    };
+
+                    if previous_instruction.kind == *instruction_kind
+                        && previous_argument_values == argument_values
+                    {
+                        return time;
+                    }
+                }
+                TimeCondition::ArgumentMatches { argument, value } => {
+                    if argument_values[*argument] == Some(*value) {
+                        return time;
+                    }
+                }
+            }
+        }
+
+        properties.base_time
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum InstructionEvaluationInterrupt {
+    RegisterError {
+        register: u32,
+        error: RegisterAccessError,
+    },
+    ProgramComplete,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -80,7 +195,7 @@ impl Argument {
             ArgumentRequirement::Constant => {
                 matches!(self, Argument::Number(NumberSource::Constant(_)))
             }
-            ArgumentRequirement::Register => {
+            ArgumentRequirement::Register | ArgumentRequirement::RegisterWrite => {
                 matches!(self, Argument::Number(NumberSource::Register(_)))
             }
             ArgumentRequirement::ConstantOrRegister => matches!(self, Argument::Number(_)),
@@ -106,6 +221,53 @@ pub enum NumberSource {
     Constant(DigitInteger),
 }
 
+impl NumberSource {
+    #[must_use]
+    pub fn value<'a>(
+        &self,
+        registers: &'a RegisterSet,
+    ) -> Result<(DigitInteger, Option<&'a Register>), InstructionEvaluationInterrupt> {
+        match self {
+            NumberSource::Register(index) => {
+                let register =
+                    registers
+                        .get(*index)
+                        .ok_or(InstructionEvaluationInterrupt::RegisterError {
+                            register: *index,
+                            error: RegisterAccessError::NoSuchRegister { got: *index },
+                        })?;
+
+                register
+                    .value()
+                    .map_err(|error| InstructionEvaluationInterrupt::RegisterError {
+                        register: *index,
+                        error,
+                    })
+                    .map(|value| (*value, Some(register)))
+            }
+            NumberSource::Constant(value) => Ok((*value, None)),
+        }
+    }
+
+    #[must_use]
+    pub fn as_register(&self) -> Option<&u32> {
+        if let Self::Register(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    #[must_use]
+    pub fn as_constant(&self) -> Option<&DigitInteger> {
+        if let Self::Constant(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Comparison {
     pub ordering: Ordering,
@@ -113,9 +275,24 @@ pub struct Comparison {
     pub values: [NumberSource; 2],
 }
 
+impl Comparison {
+    pub fn evaluate<'a>(
+        &self,
+        registers: &'a RegisterSet,
+    ) -> Result<(Integer, [Option<&'a Register>; 2]), InstructionEvaluationInterrupt> {
+        let (lhs, lhs_register) = self.values[0].value(registers)?;
+        let (rhs, rhs_register) = self.values[1].value(registers)?;
+
+        let result = (lhs.cmp(&rhs) == self.ordering) ^ self.invert;
+
+        Ok((result as Integer, [lhs_register, rhs_register]))
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ArgumentRequirement {
     Constant,
+    RegisterWrite,
     Register,
     ConstantOrRegister,
     Comparison,
@@ -171,6 +348,7 @@ pub enum InstructionKind {
     JumpCondLikely,
     JumpCondUnlikely,
     Sleep,
+    End,
 }
 
 impl InstructionKind {
@@ -179,12 +357,12 @@ impl InstructionKind {
     }
 }
 
-pub static INSTRUCTION_KINDS: [InstructionKindProperties; 15] = [
+pub static INSTRUCTION_KINDS: [InstructionKindProperties; 16] = [
     InstructionKindProperties {
         kind: InstructionKind::Set,
         name: "SET",
         arguments: [
-            ArgumentRequirement::Register,
+            ArgumentRequirement::RegisterWrite,
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::Empty,
         ],
@@ -207,7 +385,7 @@ pub static INSTRUCTION_KINDS: [InstructionKindProperties; 15] = [
         arguments: [
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::ConstantOrRegister,
-            ArgumentRequirement::Register,
+            ArgumentRequirement::RegisterWrite,
         ],
         base_time: 1,
         ..InstructionKindProperties::DEFAULT
@@ -218,7 +396,7 @@ pub static INSTRUCTION_KINDS: [InstructionKindProperties; 15] = [
         arguments: [
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::ConstantOrRegister,
-            ArgumentRequirement::Register,
+            ArgumentRequirement::RegisterWrite,
         ],
         base_time: 1,
         ..InstructionKindProperties::DEFAULT
@@ -239,7 +417,7 @@ pub static INSTRUCTION_KINDS: [InstructionKindProperties; 15] = [
         arguments: [
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::ConstantOrRegister,
-            ArgumentRequirement::Register,
+            ArgumentRequirement::RegisterWrite,
         ],
         base_time: 4,
         ..InstructionKindProperties::DEFAULT
@@ -250,7 +428,7 @@ pub static INSTRUCTION_KINDS: [InstructionKindProperties; 15] = [
         arguments: [
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::ConstantOrRegister,
-            ArgumentRequirement::Register,
+            ArgumentRequirement::RegisterWrite,
         ],
         base_time: 8,
         conditional_time: Some((1, TimeCondition::SameAsPrevious(InstructionKind::Modulus))),
@@ -262,7 +440,7 @@ pub static INSTRUCTION_KINDS: [InstructionKindProperties; 15] = [
         arguments: [
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::ConstantOrRegister,
-            ArgumentRequirement::Register,
+            ArgumentRequirement::RegisterWrite,
         ],
         base_time: 8,
         conditional_time: Some((1, TimeCondition::SameAsPrevious(InstructionKind::Divide))),
@@ -273,7 +451,7 @@ pub static INSTRUCTION_KINDS: [InstructionKindProperties; 15] = [
         name: "CMP",
         arguments: [
             ArgumentRequirement::Comparison,
-            ArgumentRequirement::Register,
+            ArgumentRequirement::RegisterWrite,
             ArgumentRequirement::Empty,
         ],
         base_time: 1,
@@ -284,7 +462,7 @@ pub static INSTRUCTION_KINDS: [InstructionKindProperties; 15] = [
         name: "TCP",
         arguments: [
             ArgumentRequirement::Comparison,
-            ArgumentRequirement::Register,
+            ArgumentRequirement::RegisterWrite,
             ArgumentRequirement::Empty,
         ],
         base_time: 2,
@@ -295,7 +473,7 @@ pub static INSTRUCTION_KINDS: [InstructionKindProperties; 15] = [
         name: "FCP",
         arguments: [
             ArgumentRequirement::Comparison,
-            ArgumentRequirement::Register,
+            ArgumentRequirement::RegisterWrite,
             ArgumentRequirement::Empty,
         ],
         base_time: 2,
@@ -353,6 +531,16 @@ pub static INSTRUCTION_KINDS: [InstructionKindProperties; 15] = [
         name: "SLP",
         arguments: [
             ArgumentRequirement::ConstantOrRegister,
+            ArgumentRequirement::Empty,
+            ArgumentRequirement::Empty,
+        ],
+        ..InstructionKindProperties::DEFAULT
+    },
+    InstructionKindProperties {
+        kind: InstructionKind::End,
+        name: "END",
+        arguments: [
+            ArgumentRequirement::Empty,
             ArgumentRequirement::Empty,
             ArgumentRequirement::Empty,
         ],
