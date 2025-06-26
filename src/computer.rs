@@ -128,7 +128,7 @@ pub struct RegisterSet {
 
 impl RegisterSet {
     #[must_use]
-    pub fn new() -> Self {
+    pub fn new_empty() -> Self {
         Self {
             registers: array::from_fn(|_| None),
         }
@@ -193,7 +193,7 @@ impl RegisterSet {
 
 impl Default for RegisterSet {
     fn default() -> Self {
-        Self::new()
+        Self::new_empty()
     }
 }
 

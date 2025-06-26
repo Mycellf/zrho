@@ -151,7 +151,7 @@ fn main() {
                     Argument::Empty,
                 ],
             }),
-        RegisterSet::new()
+        RegisterSet::new_empty()
             .with_register(
                 computer::register_with_name('X').unwrap(),
                 Register {
