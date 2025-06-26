@@ -198,8 +198,11 @@ impl Instruction {
                         return (time, true);
                     }
                 }
-                TimeCondition::ArgumentIsEmpty { argument } => {
-                    if self.arguments[*argument].is_empty() {
+                TimeCondition::ArgumentTypeMatches {
+                    argument,
+                    requirement,
+                } => {
+                    if self.arguments[*argument].matches_requirement(*requirement) {
                         return (time, true);
                     }
                 }
@@ -401,6 +404,12 @@ impl Argument {
                 )
             }
             ArgumentRequirement::Instruction => matches!(self, Argument::Instruction(_)),
+            ArgumentRequirement::ConstantOrEmpty => {
+                matches!(
+                    self,
+                    Argument::Number(NumberSource::Constant(_)) | Argument::Empty
+                )
+            }
             ArgumentRequirement::Empty => matches!(self, Argument::Empty),
         }
     }
@@ -489,6 +498,7 @@ pub enum ArgumentRequirement {
     AnyValue,
     AnyValueOrEmpty,
     Instruction,
+    ConstantOrEmpty,
     Empty,
 }
 
@@ -525,8 +535,9 @@ pub enum TimeCondition {
         argument: usize,
         value: Integer,
     },
-    ArgumentIsEmpty {
+    ArgumentTypeMatches {
         argument: usize,
+        requirement: ArgumentRequirement,
     },
 }
 
@@ -700,7 +711,13 @@ pub static INSTRUCTION_KINDS: [InstructionKindProperties; 16] = [
             ArgumentRequirement::Empty,
         ],
         base_time: 1,
-        conditional_time: Some((0, TimeCondition::ArgumentIsEmpty { argument: 0 })),
+        conditional_time: Some((
+            0,
+            TimeCondition::ArgumentTypeMatches {
+                argument: 0,
+                requirement: ArgumentRequirement::ConstantOrEmpty,
+            },
+        )),
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
