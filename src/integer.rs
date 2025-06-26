@@ -48,7 +48,6 @@ impl DigitInteger {
         self.value as BiggerInteger
     }
 
-    #[must_use]
     fn check_value(value: Integer, digits: u8) -> Result<Integer, AssignIntegerError> {
         let digit_range = Self::range_of_digits(digits);
 

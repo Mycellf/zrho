@@ -38,7 +38,7 @@ impl Instruction {
 
         let mut argument_values = [None; 3];
 
-        for i in 0..argument_values.len() {
+        for (i, value) in argument_values.iter_mut().enumerate() {
             let requirement = properties.arguments[i];
 
             assert!(self.arguments[i].matches_requirement(requirement));
@@ -47,7 +47,7 @@ impl Instruction {
                 continue;
             }
 
-            argument_values[i] = match self.arguments[i] {
+            *value = match self.arguments[i] {
                 Argument::Instruction(_) => None,
                 Argument::Number(source) => {
                     let (value, register) = source.value(registers)?;
@@ -222,7 +222,6 @@ pub enum NumberSource {
 }
 
 impl NumberSource {
-    #[must_use]
     pub fn value<'a>(
         &self,
         registers: &'a RegisterSet,
@@ -357,6 +356,7 @@ impl InstructionKind {
     }
 }
 
+#[allow(clippy::needless_update)]
 pub static INSTRUCTION_KINDS: [InstructionKindProperties; 16] = [
     InstructionKindProperties {
         kind: InstructionKind::Set,

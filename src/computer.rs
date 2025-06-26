@@ -87,7 +87,7 @@ impl RegisterSet {
             },
         )?;
 
-        Ok(std::mem::replace(register_entry, Some(register)))
+        Ok(register_entry.replace(register))
     }
 
     #[must_use]
@@ -120,6 +120,12 @@ impl RegisterSet {
             .map_err(|error| RegisterAccessError::InvalidAssignment { error })?;
 
         Ok(register)
+    }
+}
+
+impl Default for RegisterSet {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -161,7 +167,6 @@ pub enum RegisterValues {
 }
 
 impl RegisterValues {
-    #[must_use]
     pub fn value(&self) -> Result<&DigitInteger, RegisterAccessError> {
         match self {
             RegisterValues::Scalar(value) => Ok(value),
@@ -179,7 +184,6 @@ impl RegisterValues {
         }
     }
 
-    #[must_use]
     pub fn value_mut(&mut self) -> Result<&mut DigitInteger, RegisterAccessError> {
         match self {
             RegisterValues::Scalar(value) => Ok(value),
