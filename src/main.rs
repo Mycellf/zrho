@@ -156,8 +156,8 @@ fn main() {
                         index: 0,
                     },
                     indexes_array: None,
-                    read_time: 0,
-                    write_time: 0,
+                    read_time: 1,
+                    write_time: 1,
                 },
             ),
     );
