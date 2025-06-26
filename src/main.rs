@@ -25,8 +25,19 @@ fn main() {
                 ],
             })
             .instruction(Instruction {
+                kind: InstructionKind::Set,
+                line: 0,
+                arguments: [
+                    Argument::Number(NumberSource::Register(
+                        computer::register_with_name('Y').unwrap(),
+                    )),
+                    Argument::Number(NumberSource::Constant(DigitInteger::new(10, 3).unwrap())),
+                    Argument::Empty,
+                ],
+            })
+            .instruction(Instruction {
                 kind: InstructionKind::Negate,
-                line: 1,
+                line: 2,
                 arguments: [
                     Argument::Number(NumberSource::Register(
                         computer::register_with_name('X').unwrap(),
@@ -37,7 +48,7 @@ fn main() {
             })
             .instruction(Instruction {
                 kind: InstructionKind::Negate,
-                line: 2,
+                line: 3,
                 arguments: [
                     Argument::Number(NumberSource::Register(
                         computer::register_with_name('Y').unwrap(),
@@ -48,7 +59,7 @@ fn main() {
             })
             .instruction(Instruction {
                 kind: InstructionKind::Add,
-                line: 3,
+                line: 4,
                 arguments: [
                     Argument::Number(NumberSource::Register(
                         computer::register_with_name('X').unwrap(),
@@ -61,7 +72,7 @@ fn main() {
             })
             .instruction(Instruction {
                 kind: InstructionKind::Set,
-                line: 4,
+                line: 5,
                 arguments: [
                     Argument::Number(NumberSource::Register(
                         computer::register_with_name('I').unwrap(),
@@ -72,7 +83,7 @@ fn main() {
             })
             .instruction(Instruction {
                 kind: InstructionKind::Set,
-                line: 5,
+                line: 6,
                 arguments: [
                     Argument::Number(NumberSource::Register(
                         computer::register_with_name('D').unwrap(),
@@ -83,7 +94,7 @@ fn main() {
             })
             .instruction(Instruction {
                 kind: InstructionKind::Multiply,
-                line: 6,
+                line: 7,
                 arguments: [
                     Argument::Number(NumberSource::Register(
                         computer::register_with_name('I').unwrap(),
@@ -96,7 +107,7 @@ fn main() {
             })
             .instruction(Instruction {
                 kind: InstructionKind::Divide,
-                line: 7,
+                line: 8,
                 arguments: [
                     Argument::Number(NumberSource::Register(
                         computer::register_with_name('X').unwrap(),
@@ -109,7 +120,7 @@ fn main() {
             })
             .instruction(Instruction {
                 kind: InstructionKind::Modulus,
-                line: 8,
+                line: 9,
                 arguments: [
                     Argument::Number(NumberSource::Register(
                         computer::register_with_name('X').unwrap(),
@@ -122,7 +133,7 @@ fn main() {
             })
             .instruction(Instruction {
                 kind: InstructionKind::Divide,
-                line: 9,
+                line: 10,
                 arguments: [
                     Argument::Number(NumberSource::Register(
                         computer::register_with_name('X').unwrap(),
@@ -135,7 +146,7 @@ fn main() {
             })
             .instruction(Instruction {
                 kind: InstructionKind::Add,
-                line: 10,
+                line: 11,
                 arguments: [
                     Argument::Number(NumberSource::Register(
                         computer::register_with_name('X').unwrap(),
@@ -148,14 +159,14 @@ fn main() {
             })
             .instruction(Instruction {
                 kind: InstructionKind::JumpCondLikely,
-                line: 11,
+                line: 12,
                 arguments: [
                     Argument::Comparison(Comparison {
                         ordering: Ordering::Less,
                         invert: false,
                         values: [
                             NumberSource::Register(computer::register_with_name('X').unwrap()),
-                            NumberSource::Constant(DigitInteger::new(10, 3).unwrap()),
+                            NumberSource::Constant(DigitInteger::new(11, 3).unwrap()),
                         ],
                     }),
                     Argument::Instruction(10),
