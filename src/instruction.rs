@@ -17,13 +17,14 @@ pub struct Instruction {
 impl Instruction {
     pub const NUM_ARGUMENTS: usize = 3;
 
-    /// Returns the total time taken by the instruction and the values of each input
+    /// Returns the total time taken by the instruction, the value of each input, and whether or
+    /// not to update `previous_instruction`.
     pub fn evaluate(
         &self,
         registers: &mut RegisterSet,
         previous_instruction: Option<(&Instruction, &ArgumentValues)>,
         instruction: &mut u32,
-    ) -> Result<(u32, ArgumentValues), InstructionEvaluationInterrupt> {
+    ) -> Result<(u32, ArgumentValues, bool), InstructionEvaluationInterrupt> {
         let properties = self.kind.get_properties();
 
         let mut total_time = 0;
@@ -59,7 +60,10 @@ impl Instruction {
             };
         }
 
-        total_time += self.execution_time(previous_instruction, &argument_values);
+        let (instruction_time, update_previous_instruction) =
+            self.execution_time(previous_instruction, &argument_values);
+
+        total_time += instruction_time;
 
         let mut jump = None;
 
@@ -158,46 +162,51 @@ impl Instruction {
             *instruction += 1;
         }
 
-        Ok((total_time, argument_values))
+        Ok((total_time, argument_values, update_previous_instruction))
     }
 
+    /// Returns the time to evaluate the instruction and whether or not to update the
+    /// `previous_instruction`.
     #[must_use]
     pub fn execution_time(
         &self,
         previous_instruction: Option<(&Instruction, &ArgumentValues)>,
         argument_values: &ArgumentValues,
-    ) -> u32 {
+    ) -> (u32, bool) {
         let properties = self.kind.get_properties();
 
         if let &Some((time, ref condition)) = &properties.conditional_time {
             match condition {
-                TimeCondition::SameAsPrevious(instruction_kind) => 'outer: {
+                TimeCondition::SameAsPrevious {
+                    kind,
+                    allow_cascade,
+                } => 'outer: {
                     let Some((previous_instruction, previous_argument_values)) =
                         previous_instruction
                     else {
                         break 'outer;
                     };
 
-                    if previous_instruction.kind == *instruction_kind
+                    if previous_instruction.kind == *kind
                         && previous_argument_values == argument_values
                     {
-                        return time;
+                        return (time, *allow_cascade);
                     }
                 }
                 TimeCondition::ArgumentMatches { argument, value } => {
                     if argument_values[*argument] == Some(*value) {
-                        return time;
+                        return (time, true);
                     }
                 }
                 TimeCondition::ArgumentIsEmpty { argument } => {
                     if self.arguments[*argument].is_empty() {
-                        return time;
+                        return (time, true);
                     }
                 }
             }
         }
 
-        properties.base_time
+        (properties.base_time, true)
     }
 
     /// Returns the amount of time taken by the instruction, or an interrupt.
@@ -508,9 +517,17 @@ impl Default for InstructionKindProperties {
 }
 
 pub enum TimeCondition {
-    SameAsPrevious(InstructionKind),
-    ArgumentMatches { argument: usize, value: Integer },
-    ArgumentIsEmpty { argument: usize },
+    SameAsPrevious {
+        kind: InstructionKind,
+        allow_cascade: bool,
+    },
+    ArgumentMatches {
+        argument: usize,
+        value: Integer,
+    },
+    ArgumentIsEmpty {
+        argument: usize,
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -614,7 +631,13 @@ pub static INSTRUCTION_KINDS: [InstructionKindProperties; 16] = [
             ArgumentRequirement::RegisterWriteOnly,
         ],
         base_time: 4,
-        conditional_time: Some((1, TimeCondition::SameAsPrevious(InstructionKind::Modulus))),
+        conditional_time: Some((
+            1,
+            TimeCondition::SameAsPrevious {
+                kind: InstructionKind::Modulus,
+                allow_cascade: false,
+            },
+        )),
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
@@ -626,7 +649,13 @@ pub static INSTRUCTION_KINDS: [InstructionKindProperties; 16] = [
             ArgumentRequirement::RegisterWriteOnly,
         ],
         base_time: 4,
-        conditional_time: Some((1, TimeCondition::SameAsPrevious(InstructionKind::Divide))),
+        conditional_time: Some((
+            1,
+            TimeCondition::SameAsPrevious {
+                kind: InstructionKind::Divide,
+                allow_cascade: false,
+            },
+        )),
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {

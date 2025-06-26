@@ -65,8 +65,9 @@ impl Computer {
                             &mut self.instruction,
                         )
                     }) {
-                    Some(Ok((time, argument_values))) => {
-                        self.previous_instruction = Some((previous_instruction, argument_values));
+                    Some(Ok((time, argument_values, update_previous_instruction))) => {
+                        self.previous_instruction = update_previous_instruction
+                            .then_some((previous_instruction, argument_values));
 
                         if time == 0 {
                             continue;
