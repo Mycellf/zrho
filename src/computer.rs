@@ -146,14 +146,14 @@ impl Program {
 
 #[derive(Clone, Debug)]
 pub struct RegisterSet {
-    pub registers: [Option<Register>; NUM_REGISTERS],
+    pub registers: Box<[Option<Register>; NUM_REGISTERS]>,
 }
 
 impl RegisterSet {
     #[must_use]
     pub fn new_empty() -> Self {
         Self {
-            registers: array::from_fn(|_| None),
+            registers: Box::new(array::from_fn(|_| None)),
         }
     }
 
