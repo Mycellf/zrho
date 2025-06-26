@@ -152,15 +152,11 @@ impl RegisterSet {
     }
 
     #[must_use]
-    pub fn get_mut(&mut self, index: u32) -> Option<&mut Register> {
+    fn get_mut(&mut self, index: u32) -> Option<&mut Register> {
         self.registers.get_mut(index as usize)?.as_mut()
     }
 
-    pub fn write(
-        &mut self,
-        index: u32,
-        value: Integer,
-    ) -> Result<&mut Register, RegisterAccessError> {
+    pub fn write(&mut self, index: u32, value: Integer) -> Result<&Register, RegisterAccessError> {
         let register = self
             .get_mut(index)
             .ok_or(RegisterAccessError::NoSuchRegister { got: index })?;
@@ -169,7 +165,20 @@ impl RegisterSet {
             .try_set(value)
             .map_err(|error| RegisterAccessError::InvalidAssignment { error })?;
 
-        Ok(register)
+        if let Some(array_index) = register.indexes_array {
+            match &mut self
+                .get_mut(array_index)
+                .ok_or(RegisterAccessError::NoSuchRegister { got: array_index })?
+                .values
+            {
+                RegisterValues::Vector { index, .. } => {
+                    *index = value;
+                }
+                _ => return Err(RegisterAccessError::NoSuchRegister { got: array_index }),
+            }
+        }
+
+        Ok(self.get(index).unwrap())
     }
 }
 
