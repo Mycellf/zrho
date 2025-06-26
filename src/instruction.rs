@@ -1,4 +1,5 @@
 use std::{
+    array,
     cmp::Ordering,
     ops::{Index, IndexMut},
 };
@@ -511,6 +512,7 @@ pub struct InstructionKindProperties {
     pub arguments: [ArgumentRequirement; Instruction::NUM_ARGUMENTS],
     pub base_time: u32,
     pub conditional_time: Option<(u32, TimeCondition)>,
+    pub maximum_calls_per_tick: u8,
 }
 
 impl InstructionKindProperties {
@@ -520,6 +522,7 @@ impl InstructionKindProperties {
         arguments: [ArgumentRequirement::Empty; Instruction::NUM_ARGUMENTS],
         base_time: 0,
         conditional_time: None,
+        maximum_calls_per_tick: 1,
     };
 }
 
@@ -565,9 +568,16 @@ pub enum InstructionKind {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct InstructionKindSet<T>(pub [T; 16]);
+pub struct InstructionKindMap<T>(pub [T; 16]);
 
-impl<T> InstructionKindSet<T> {
+impl<T> InstructionKindMap<T> {
+    pub fn from_element(element: T) -> Self
+    where
+        T: Clone,
+    {
+        Self(array::from_fn(|_| element.clone()))
+    }
+
     pub fn get(&self, kind: InstructionKind) -> &T {
         &self.0[kind as usize]
     }
@@ -577,7 +587,7 @@ impl<T> InstructionKindSet<T> {
     }
 }
 
-impl<T> Index<InstructionKind> for InstructionKindSet<T> {
+impl<T> Index<InstructionKind> for InstructionKindMap<T> {
     type Output = T;
 
     fn index(&self, index: InstructionKind) -> &Self::Output {
@@ -585,7 +595,7 @@ impl<T> Index<InstructionKind> for InstructionKindSet<T> {
     }
 }
 
-impl<T> IndexMut<InstructionKind> for InstructionKindSet<T> {
+impl<T> IndexMut<InstructionKind> for InstructionKindMap<T> {
     fn index_mut(&mut self, index: InstructionKind) -> &mut Self::Output {
         self.get_mut(index)
     }
@@ -598,7 +608,7 @@ impl InstructionKind {
 }
 
 #[allow(clippy::needless_update)]
-pub static INSTRUCTION_KINDS: InstructionKindSet<InstructionKindProperties> = InstructionKindSet([
+pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = InstructionKindMap([
     InstructionKindProperties {
         kind: InstructionKind::Set,
         name: "SET",

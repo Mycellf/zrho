@@ -4,7 +4,9 @@ use std::{
 };
 
 use crate::{
-    instruction::{ArgumentValues, Instruction, InstructionEvaluationInterrupt},
+    instruction::{
+        ArgumentValues, Instruction, InstructionEvaluationInterrupt, InstructionKindMap,
+    },
     integer::{AssignIntegerError, DigitInteger, Integer},
 };
 
@@ -17,6 +19,8 @@ pub struct Computer {
     pub instruction: u32,
     pub block_time: u32,
     pub tick_complete: bool,
+
+    executed_instructions: InstructionKindMap<u8>,
 
     pub previous_instruction: Option<(u32, ArgumentValues)>,
     pub interrupt: Option<InstructionEvaluationInterrupt>,
@@ -32,6 +36,8 @@ impl Computer {
             instruction: 0,
             block_time: 0,
             tick_complete: true,
+
+            executed_instructions: InstructionKindMap::from_element(0),
 
             previous_instruction: None,
             interrupt: None,
@@ -60,44 +66,61 @@ impl Computer {
         } else {
             let previous_instruction = self.instruction;
 
-            match self
+            let instruction = self
                 .loaded_program
                 .instructions
-                .get(self.instruction as usize)
-                .map(|instruction| {
-                    instruction.evaluate(
-                        &mut self.registers,
-                        self.previous_instruction.as_ref().map(
-                            |&(instruction, ref argument_values)| {
-                                (
-                                    &self.loaded_program.instructions[instruction as usize],
-                                    argument_values,
-                                )
-                            },
-                        ),
-                        &mut self.instruction,
-                    )
-                }) {
-                Some(Ok((time, argument_values, update_previous_instruction))) => {
-                    self.previous_instruction = update_previous_instruction
-                        .then_some((previous_instruction, argument_values));
+                .get(self.instruction as usize);
 
-                    if time == 0 {
-                        self.tick_complete = false;
-                    } else if time > 0 {
-                        self.block_time = time - 1;
+            if let Some(instruction) = instruction {
+                if self.executed_instructions[instruction.kind]
+                    >= instruction.kind.get_properties().maximum_calls_per_tick
+                {
+                    self.end_of_tick();
+                    return;
+                }
+
+                self.executed_instructions[instruction.kind] += 1;
+
+                match instruction.evaluate(
+                    &mut self.registers,
+                    self.previous_instruction.as_ref().map(
+                        |&(instruction, ref argument_values)| {
+                            (
+                                &self.loaded_program.instructions[instruction as usize],
+                                argument_values,
+                            )
+                        },
+                    ),
+                    &mut self.instruction,
+                ) {
+                    Ok((time, argument_values, update_previous_instruction)) => {
+                        self.previous_instruction = update_previous_instruction
+                            .then_some((previous_instruction, argument_values));
+
+                        if time == 0 {
+                            self.tick_complete = false;
+                        } else if time > 0 {
+                            self.block_time = time - 1;
+                        }
+                    }
+                    Err(interrupt) => {
+                        self.interrupt = Some(interrupt);
+                        self.previous_instruction = None;
                     }
                 }
-                Some(Err(interrupt)) => {
-                    self.interrupt = Some(interrupt);
-                    self.previous_instruction = None;
-                }
-                None => {
-                    self.interrupt = Some(InstructionEvaluationInterrupt::ProgramComplete);
-                    self.previous_instruction = None;
-                }
+            } else {
+                self.interrupt = Some(InstructionEvaluationInterrupt::ProgramComplete);
+                self.previous_instruction = None;
             }
         }
+
+        if self.tick_complete {
+            self.end_of_tick();
+        }
+    }
+
+    fn end_of_tick(&mut self) {
+        self.executed_instructions = InstructionKindMap::from_element(0);
     }
 }
 
