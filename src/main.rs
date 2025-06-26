@@ -228,13 +228,15 @@ fn main() {
 
     println!("{:?}", computer.registers);
 
+    let mut last_instruction = 0;
+
     loop {
-        print!("Instruction {:?}", computer.instruction);
+        print!("Instruction {:?}", last_instruction);
 
         if let Some(instruction) = computer
             .loaded_program
             .instructions
-            .get(computer.instruction as usize)
+            .get(last_instruction as usize)
         {
             print!(" ({:?})", instruction);
         }
@@ -251,6 +253,8 @@ fn main() {
         if modified {
             if computer.block_time == 0 {
                 println!("{:?}", computer.registers);
+
+                last_instruction = computer.instruction;
             } else {
                 println!("waiting...");
             }
