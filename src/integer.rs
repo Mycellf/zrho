@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 pub type Integer = i32;
 pub type BiggerInteger = i64;
 
@@ -9,7 +11,7 @@ const _: () = assert!(
 const _: () = assert!(Integer::MIN < 0, "Integer should be signed");
 const _: () = assert!(BiggerInteger::MIN < 0, "BiggerInteger should be signed");
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DigitInteger {
     value: Integer,
     digits: u8,
@@ -97,6 +99,22 @@ impl DigitInteger {
         };
 
         DIGIT_COMBINATIONS[digits as usize]
+    }
+}
+
+impl Debug for DigitInteger {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let digits = self.value.abs().to_string();
+
+        if self.value < 0 {
+            write!(f, "-")?;
+        }
+
+        for _ in digits.len()..self.digits as usize + 1 {
+            write!(f, "0")?;
+        }
+
+        write!(f, "{digits}")
     }
 }
 
