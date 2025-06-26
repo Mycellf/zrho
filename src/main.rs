@@ -35,7 +35,7 @@ fn main() {
             })
             .instruction(Instruction {
                 kind: InstructionKind::Add,
-                line: 1,
+                line: 2,
                 arguments: [
                     Argument::Number(NumberSource::Register(
                         computer::register_with_name('X').unwrap(),
@@ -43,6 +43,67 @@ fn main() {
                     Argument::Number(NumberSource::Constant(DigitInteger::new(1, 3).unwrap())),
                     Argument::Number(NumberSource::Register(
                         computer::register_with_name('D').unwrap(),
+                    )),
+                ],
+            })
+            .instruction(Instruction {
+                kind: InstructionKind::Set,
+                line: 3,
+                arguments: [
+                    Argument::Number(NumberSource::Register(
+                        computer::register_with_name('I').unwrap(),
+                    )),
+                    Argument::Number(NumberSource::Constant(DigitInteger::new(1, 3).unwrap())),
+                    Argument::Empty,
+                ],
+            })
+            .instruction(Instruction {
+                kind: InstructionKind::Set,
+                line: 4,
+                arguments: [
+                    Argument::Number(NumberSource::Register(
+                        computer::register_with_name('D').unwrap(),
+                    )),
+                    Argument::Number(NumberSource::Constant(DigitInteger::new(1, 3).unwrap())),
+                    Argument::Empty,
+                ],
+            })
+            .instruction(Instruction {
+                kind: InstructionKind::Multiply,
+                line: 5,
+                arguments: [
+                    Argument::Number(NumberSource::Register(
+                        computer::register_with_name('I').unwrap(),
+                    )),
+                    Argument::Number(NumberSource::Constant(DigitInteger::new(2, 3).unwrap())),
+                    Argument::Number(NumberSource::Register(
+                        computer::register_with_name('I').unwrap(),
+                    )),
+                ],
+            })
+            .instruction(Instruction {
+                kind: InstructionKind::Divide,
+                line: 6,
+                arguments: [
+                    Argument::Number(NumberSource::Register(
+                        computer::register_with_name('X').unwrap(),
+                    )),
+                    Argument::Number(NumberSource::Constant(DigitInteger::new(2, 3).unwrap())),
+                    Argument::Number(NumberSource::Register(
+                        computer::register_with_name('Y').unwrap(),
+                    )),
+                ],
+            })
+            .instruction(Instruction {
+                kind: InstructionKind::Modulus,
+                line: 6,
+                arguments: [
+                    Argument::Number(NumberSource::Register(
+                        computer::register_with_name('X').unwrap(),
+                    )),
+                    Argument::Number(NumberSource::Constant(DigitInteger::new(2, 3).unwrap())),
+                    Argument::Number(NumberSource::Register(
+                        computer::register_with_name('I').unwrap(),
                     )),
                 ],
             }),
@@ -88,31 +149,17 @@ fn main() {
             ),
     );
 
-    println!(
-        "{:?}\n{:?}\n",
-        computer
-            .registers
-            .get(computer::register_with_name('X').unwrap()),
-        computer
-            .registers
-            .get(computer::register_with_name('D').unwrap()),
-    );
-
     loop {
+        if computer.block_time == 0 {
+            println!("{:?}\n", computer.registers);
+        } else {
+            println!("waiting...");
+        }
+
         computer.tick();
 
-        println!(
-            "{:?}\n{:?}\n",
-            computer
-                .registers
-                .get(computer::register_with_name('X').unwrap()),
-            computer
-                .registers
-                .get(computer::register_with_name('D').unwrap()),
-        );
-
         if let Some(interrupt) = computer.interrupt {
-            println!("{:?}", interrupt);
+            println!("{:?}\n\n{:?}", interrupt, computer.registers);
             break;
         }
     }
