@@ -596,7 +596,7 @@ pub static INSTRUCTION_KINDS: [InstructionKindProperties; 16] = [
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::RegisterWriteOnly,
         ],
-        base_time: 4,
+        base_time: 2,
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
@@ -607,7 +607,7 @@ pub static INSTRUCTION_KINDS: [InstructionKindProperties; 16] = [
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::RegisterWriteOnly,
         ],
-        base_time: 8,
+        base_time: 4,
         conditional_time: Some((1, TimeCondition::SameAsPrevious(InstructionKind::Modulus))),
         ..InstructionKindProperties::DEFAULT
     },
@@ -619,7 +619,7 @@ pub static INSTRUCTION_KINDS: [InstructionKindProperties; 16] = [
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::RegisterWriteOnly,
         ],
-        base_time: 8,
+        base_time: 4,
         conditional_time: Some((1, TimeCondition::SameAsPrevious(InstructionKind::Divide))),
         ..InstructionKindProperties::DEFAULT
     },
