@@ -73,9 +73,11 @@ impl Computer {
                 .get(self.instruction as usize);
 
             if let Some(instruction) = instruction {
-                if self.executed_instructions[instruction.kind]
-                    >= instruction.kind.get_properties().maximum_calls_per_tick
-                {
+                let limit = instruction.kind.get_properties().calls_per_tick_limit;
+
+                if limit.is_some_and(|limit| {
+                    self.executed_instructions[instruction.kind] >= limit.get()
+                }) {
                     self.end_of_tick();
                     return false;
                 }

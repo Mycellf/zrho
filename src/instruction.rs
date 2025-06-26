@@ -1,6 +1,7 @@
 use std::{
     array,
     cmp::Ordering,
+    num::NonZeroU8,
     ops::{Index, IndexMut},
 };
 
@@ -512,7 +513,7 @@ pub struct InstructionKindProperties {
     pub arguments: [ArgumentRequirement; Instruction::NUM_ARGUMENTS],
     pub base_time: u32,
     pub conditional_time: Option<(u32, TimeCondition)>,
-    pub maximum_calls_per_tick: u8,
+    pub calls_per_tick_limit: Option<NonZeroU8>,
 }
 
 impl InstructionKindProperties {
@@ -522,7 +523,7 @@ impl InstructionKindProperties {
         arguments: [ArgumentRequirement::Empty; Instruction::NUM_ARGUMENTS],
         base_time: 0,
         conditional_time: None,
-        maximum_calls_per_tick: 1,
+        calls_per_tick_limit: Some(NonZeroU8::new(1).unwrap()),
     };
 }
 
@@ -804,6 +805,7 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
             ArgumentRequirement::Empty,
             ArgumentRequirement::Empty,
         ],
+        calls_per_tick_limit: None,
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
