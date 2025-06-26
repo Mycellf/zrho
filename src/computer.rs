@@ -84,7 +84,6 @@ impl Computer {
 
                     if time == 0 {
                         self.tick_complete = false;
-                        println!("incomplete");
                     } else if time > 0 {
                         self.block_time = time - 1;
                     }
