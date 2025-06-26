@@ -643,7 +643,7 @@ pub static INSTRUCTION_KINDS: InstructionKindSet<InstructionKindProperties> = In
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
-        kind: InstructionKind::Subtract,
+        kind: InstructionKind::Negate,
         name: "NEG",
         arguments: [
             ArgumentRequirement::Register,
