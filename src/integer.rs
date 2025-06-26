@@ -28,19 +28,27 @@ impl DigitInteger {
         }
     }
 
+    #[must_use]
+    pub fn zero(digits: u8) -> Self {
+        Self { value: 0, digits }
+    }
+
     pub fn try_set(&mut self, value: Integer) -> Result<(), AssignIntegerError> {
         self.value = Self::check_value(value, self.digits)?;
         Ok(())
     }
 
+    #[must_use]
     pub fn get(&self) -> Integer {
         self.value
     }
 
+    #[must_use]
     pub fn get_bigger(&self) -> BiggerInteger {
         self.value as BiggerInteger
     }
 
+    #[must_use]
     fn check_value(value: Integer, digits: u8) -> Result<Integer, AssignIntegerError> {
         let digit_range = Self::range_of_digits(digits);
 
@@ -59,14 +67,17 @@ impl DigitInteger {
         }
     }
 
+    #[must_use]
     pub fn maximum(&self) -> Integer {
         Self::range_of_digits(self.digits)
     }
 
+    #[must_use]
     pub fn minimum(&self) -> Integer {
         -self.maximum()
     }
 
+    #[must_use]
     fn range_of_digits(digits: u8) -> Integer {
         const DIGIT_COMBINATIONS: [Integer; DigitInteger::MAXIMUM_DIGITS] = {
             let mut result = [0; DigitInteger::MAXIMUM_DIGITS];
