@@ -54,11 +54,12 @@ impl Computer {
         }
     }
 
-    pub fn tick_partial(&mut self) {
+    /// Returns whether or not there was any operation run (includes time spent blocking).
+    pub fn tick_partial(&mut self) -> bool {
         self.tick_complete = true;
 
         if self.interrupt.is_some() {
-            return;
+            return false;
         }
 
         if self.block_time > 0 {
@@ -76,7 +77,7 @@ impl Computer {
                     >= instruction.kind.get_properties().maximum_calls_per_tick
                 {
                     self.end_of_tick();
-                    return;
+                    return false;
                 }
 
                 self.executed_instructions[instruction.kind] += 1;
@@ -117,6 +118,8 @@ impl Computer {
         if self.tick_complete {
             self.end_of_tick();
         }
+
+        true
     }
 
     fn end_of_tick(&mut self) {

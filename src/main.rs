@@ -218,19 +218,21 @@ fn main() {
     println!("{:?}\n", computer.registers);
 
     loop {
-        println!("{:?}", computer.instruction);
+        println!("Instruction {:?}:", computer.instruction);
 
-        computer.tick_partial();
+        let modified = computer.tick_partial();
 
         if let Some(interrupt) = computer.interrupt {
             println!("{:?}\n\n{:?}", interrupt, computer.registers);
             break;
         }
 
-        if computer.block_time == 0 {
-            println!("{:?}\n", computer.registers);
-        } else {
-            println!("waiting...");
+        if modified {
+            if computer.block_time == 0 {
+                println!("{:?}\n", computer.registers);
+            } else {
+                println!("waiting...");
+            }
         }
 
         if computer.tick_complete {
