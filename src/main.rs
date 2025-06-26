@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, io::BufRead};
 
 use crate::{
     computer::{Computer, Program, Register, RegisterSet, RegisterValues},
@@ -261,7 +261,16 @@ fn main() {
         }
 
         if computer.tick_complete {
-            println!("completed tick\n");
+            println!("completed tick");
+
+            let string = &mut String::new();
+
+            std::io::stdin().lock().read_line(string).unwrap();
+
+            // When not running interactively, add the missing newline
+            if string.len() == 0 {
+                println!();
+            }
         }
     }
 }
