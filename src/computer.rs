@@ -66,11 +66,11 @@ impl Computer {
                         )
                     }) {
                     Some(Ok((time, argument_values))) => {
+                        self.previous_instruction = Some((previous_instruction, argument_values));
+
                         if time == 0 {
                             continue;
                         } else if time > 0 {
-                            self.previous_instruction =
-                                Some((previous_instruction, argument_values));
                             self.block_time = time - 1;
                         }
                     }
