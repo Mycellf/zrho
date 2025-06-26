@@ -169,7 +169,7 @@ fn main() {
                             NumberSource::Constant(DigitInteger::new(11, 3).unwrap()),
                         ],
                     }),
-                    Argument::Instruction(10),
+                    Argument::Instruction(11),
                     Argument::Empty,
                 ],
             })
