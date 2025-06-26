@@ -16,7 +16,7 @@ pub struct DigitInteger {
 }
 
 impl DigitInteger {
-    pub const MAXIMUM_DIGITS: usize = Integer::MAX.ilog10() as usize;
+    pub const MAXIMUM_DIGITS: usize = Integer::MAX.ilog10() as usize - 1;
 
     pub fn new(value: Integer, digits: u8) -> Result<Self, AssignIntegerError> {
         if digits <= Self::MAXIMUM_DIGITS as u8 {
@@ -78,8 +78,8 @@ impl DigitInteger {
 
     #[must_use]
     fn range_of_digits(digits: u8) -> Integer {
-        const DIGIT_COMBINATIONS: [Integer; DigitInteger::MAXIMUM_DIGITS] = {
-            let mut result = [0; DigitInteger::MAXIMUM_DIGITS];
+        const DIGIT_COMBINATIONS: [Integer; DigitInteger::MAXIMUM_DIGITS + 1] = {
+            let mut result = [0; DigitInteger::MAXIMUM_DIGITS + 1];
             let mut acc = 0;
 
             let mut i = 0;

@@ -105,6 +105,11 @@ impl Program {
             instructions: Vec::new(),
         }
     }
+
+    pub fn instruction(mut self, instruction: Instruction) -> Self {
+        self.instructions.push(instruction);
+        self
+    }
 }
 
 #[derive(Clone, Debug)]

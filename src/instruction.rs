@@ -11,7 +11,7 @@ pub type ArgumentValues = [Option<Integer>; Instruction::NUM_ARGUMENTS];
 pub struct Instruction {
     pub kind: InstructionKind,
     pub line: u32,
-    arguments: [Argument; Self::NUM_ARGUMENTS],
+    pub arguments: [Argument; Self::NUM_ARGUMENTS],
 }
 
 impl Instruction {
