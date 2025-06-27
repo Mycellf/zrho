@@ -71,7 +71,7 @@ fn main() {
         .unwrap(),
         RegisterSet::new_empty()
             .with_register(
-                computer::register_with_name('X').unwrap(),
+                'X',
                 Register {
                     values: RegisterValues::Scalar(DigitInteger::zero(3)),
                     indexes_array: None,
@@ -80,7 +80,7 @@ fn main() {
                 },
             )
             .with_register(
-                computer::register_with_name('Y').unwrap(),
+                'Y',
                 Register {
                     values: RegisterValues::Scalar(DigitInteger::zero(3)),
                     indexes_array: None,
@@ -89,7 +89,7 @@ fn main() {
                 },
             )
             .with_register(
-                computer::register_with_name('I').unwrap(),
+                'I',
                 Register {
                     values: RegisterValues::Scalar(DigitInteger::zero(3)),
                     indexes_array: Some(computer::register_with_name('D').unwrap()),
@@ -98,7 +98,7 @@ fn main() {
                 },
             )
             .with_register(
-                computer::register_with_name('D').unwrap(),
+                'D',
                 Register {
                     values: RegisterValues::Vector {
                         values: Box::new([DigitInteger::zero(3); 25]),

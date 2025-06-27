@@ -158,8 +158,9 @@ impl RegisterSet {
     }
 
     #[must_use]
-    pub fn with_register(mut self, index: u32, register: Register) -> Self {
-        self.add_register(index, register).unwrap();
+    pub fn with_register(mut self, register_name: char, register: Register) -> Self {
+        self.add_register(register_with_name(register_name).unwrap(), register)
+            .unwrap();
         self
     }
 
