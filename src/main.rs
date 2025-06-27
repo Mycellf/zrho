@@ -216,7 +216,7 @@ fn main() {
                 computer::register_with_name('D').unwrap(),
                 Register {
                     values: RegisterValues::Vector {
-                        values: Box::new([DigitInteger::zero(3); 10]),
+                        values: Box::new([DigitInteger::zero(3); 50]),
                         index: 0,
                     },
                     indexes_array: None,
