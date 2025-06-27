@@ -1,11 +1,13 @@
 use std::{cmp::Ordering, io::BufRead};
 
 use crate::{
+    argument::{Argument, Comparison, NumberSource},
     computer::{Computer, Program, Register, RegisterSet, RegisterValues},
-    instruction::{Argument, Comparison, Instruction, InstructionKind, NumberSource},
+    instruction::{Instruction, InstructionKind},
     integer::DigitInteger,
 };
 
+pub mod argument;
 pub mod computer;
 pub mod instruction;
 pub mod integer;
