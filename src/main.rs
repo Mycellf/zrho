@@ -1,9 +1,7 @@
-use std::{cmp::Ordering, io::BufRead};
+use std::io::BufRead;
 
 use crate::{
-    argument::{Argument, Comparison, NumberSource},
-    computer::{Computer, Register, RegisterSet, RegisterValues},
-    instruction::{Instruction, InstructionKind},
+    computer::{Computer, Register, RegisterMap, RegisterSet, RegisterValues},
     integer::DigitInteger,
     program::Program,
 };
@@ -16,205 +14,41 @@ pub mod program;
 
 fn main() {
     let mut computer = Computer::new(
-        Program::new_empty("Test Program".to_owned())
-            .instruction(Instruction {
-                kind: InstructionKind::Add,
-                line: 0,
-                arguments: [
-                    Argument::Number(NumberSource::Constant(DigitInteger::new(3, 3).unwrap())),
-                    Argument::Number(NumberSource::Constant(DigitInteger::new(2, 3).unwrap())),
-                    Argument::Number(NumberSource::Register(
-                        computer::register_with_name('X').unwrap(),
-                    )),
-                ],
-            })
-            .instruction(Instruction {
-                kind: InstructionKind::Set,
-                line: 0,
-                arguments: [
-                    Argument::Number(NumberSource::Register(
-                        computer::register_with_name('Y').unwrap(),
-                    )),
-                    Argument::Number(NumberSource::Constant(DigitInteger::new(10, 3).unwrap())),
-                    Argument::Empty,
-                ],
-            })
-            .instruction(Instruction {
-                kind: InstructionKind::Negate,
-                line: 2,
-                arguments: [
-                    Argument::Number(NumberSource::Register(
-                        computer::register_with_name('X').unwrap(),
-                    )),
-                    Argument::Empty,
-                    Argument::Empty,
-                ],
-            })
-            .instruction(Instruction {
-                kind: InstructionKind::Negate,
-                line: 3,
-                arguments: [
-                    Argument::Number(NumberSource::Register(
-                        computer::register_with_name('Y').unwrap(),
-                    )),
-                    Argument::Empty,
-                    Argument::Empty,
-                ],
-            })
-            .instruction(Instruction {
-                kind: InstructionKind::Add,
-                line: 4,
-                arguments: [
-                    Argument::Number(NumberSource::Register(
-                        computer::register_with_name('X').unwrap(),
-                    )),
-                    Argument::Number(NumberSource::Constant(DigitInteger::new(1, 3).unwrap())),
-                    Argument::Number(NumberSource::Register(
-                        computer::register_with_name('D').unwrap(),
-                    )),
-                ],
-            })
-            .instruction(Instruction {
-                kind: InstructionKind::Set,
-                line: 5,
-                arguments: [
-                    Argument::Number(NumberSource::Register(
-                        computer::register_with_name('I').unwrap(),
-                    )),
-                    Argument::Number(NumberSource::Constant(DigitInteger::new(1, 3).unwrap())),
-                    Argument::Empty,
-                ],
-            })
-            .instruction(Instruction {
-                kind: InstructionKind::Set,
-                line: 6,
-                arguments: [
-                    Argument::Number(NumberSource::Register(
-                        computer::register_with_name('D').unwrap(),
-                    )),
-                    Argument::Number(NumberSource::Constant(DigitInteger::new(1, 3).unwrap())),
-                    Argument::Empty,
-                ],
-            })
-            .instruction(Instruction {
-                kind: InstructionKind::Multiply,
-                line: 7,
-                arguments: [
-                    Argument::Number(NumberSource::Register(
-                        computer::register_with_name('I').unwrap(),
-                    )),
-                    Argument::Number(NumberSource::Constant(DigitInteger::new(2, 3).unwrap())),
-                    Argument::Number(NumberSource::Register(
-                        computer::register_with_name('I').unwrap(),
-                    )),
-                ],
-            })
-            .instruction(Instruction {
-                kind: InstructionKind::Divide,
-                line: 8,
-                arguments: [
-                    Argument::Number(NumberSource::Register(
-                        computer::register_with_name('X').unwrap(),
-                    )),
-                    Argument::Number(NumberSource::Constant(DigitInteger::new(2, 3).unwrap())),
-                    Argument::Number(NumberSource::Register(
-                        computer::register_with_name('Y').unwrap(),
-                    )),
-                ],
-            })
-            .instruction(Instruction {
-                kind: InstructionKind::Modulus,
-                line: 9,
-                arguments: [
-                    Argument::Number(NumberSource::Register(
-                        computer::register_with_name('X').unwrap(),
-                    )),
-                    Argument::Number(NumberSource::Constant(DigitInteger::new(2, 3).unwrap())),
-                    Argument::Number(NumberSource::Register(
-                        computer::register_with_name('I').unwrap(),
-                    )),
-                ],
-            })
-            .instruction(Instruction {
-                kind: InstructionKind::Divide,
-                line: 10,
-                arguments: [
-                    Argument::Number(NumberSource::Register(
-                        computer::register_with_name('X').unwrap(),
-                    )),
-                    Argument::Number(NumberSource::Constant(DigitInteger::new(2, 3).unwrap())),
-                    Argument::Number(NumberSource::Register(
-                        computer::register_with_name('Y').unwrap(),
-                    )),
-                ],
-            })
-            .instruction(Instruction {
-                kind: InstructionKind::Add,
-                line: 11,
-                arguments: [
-                    Argument::Number(NumberSource::Register(
-                        computer::register_with_name('X').unwrap(),
-                    )),
-                    Argument::Number(NumberSource::Constant(DigitInteger::new(1, 3).unwrap())),
-                    Argument::Number(NumberSource::Register(
-                        computer::register_with_name('X').unwrap(),
-                    )),
-                ],
-            })
-            .instruction(Instruction {
-                kind: InstructionKind::JumpCondLikely,
-                line: 12,
-                arguments: [
-                    Argument::Comparison(Comparison {
-                        ordering: Ordering::Less,
-                        invert: false,
-                        values: [
-                            NumberSource::Register(computer::register_with_name('X').unwrap()),
-                            NumberSource::Constant(DigitInteger::new(11, 3).unwrap()),
-                        ],
-                    }),
-                    Argument::Instruction(11),
-                    Argument::Empty,
-                ],
-            })
-            .instruction(Instruction {
-                kind: InstructionKind::Sleep,
-                line: 13,
-                arguments: [
-                    Argument::Number(NumberSource::Register(
-                        computer::register_with_name('X').unwrap(),
-                    )),
-                    Argument::Empty,
-                    Argument::Empty,
-                ],
-            })
-            .instruction(Instruction {
-                kind: InstructionKind::Sleep,
-                line: 14,
-                arguments: [
-                    Argument::Number(NumberSource::Constant(DigitInteger::zero(3))),
-                    Argument::Empty,
-                    Argument::Empty,
-                ],
-            })
-            .instruction(Instruction {
-                kind: InstructionKind::Sleep,
-                line: 15,
-                arguments: [
-                    Argument::Number(NumberSource::Constant(DigitInteger::zero(3))),
-                    Argument::Empty,
-                    Argument::Empty,
-                ],
-            })
-            .instruction(Instruction {
-                kind: InstructionKind::Sleep,
-                line: 16,
-                arguments: [
-                    Argument::Number(NumberSource::Constant(DigitInteger::zero(3))),
-                    Argument::Empty,
-                    Argument::Empty,
-                ],
-            }),
+        Program::assemble_from(
+            "Test Program".to_owned(),
+            r"
+                ADD 3 2 X
+                SET Y 10
+
+                NEG X
+                NEG Y
+
+                ADD X 1 D
+                SET I 1
+                SET D 1
+                MUL I 2 I
+
+                DIV X 2 Y
+                MOD X 2 I
+                DIV X 2 Y
+
+                LBL LOOP
+                ADD X 1 X
+                LJP X < 11 LOOP
+
+                SLP X
+
+                SLP 0
+                SLP 0
+                SLP 0
+            ",
+            RegisterMap::from_element(false)
+                .with_value('D', true)
+                .with_value('I', true)
+                .with_value('X', true)
+                .with_value('Y', true),
+        )
+        .unwrap(),
         RegisterSet::new_empty()
             .with_register(
                 computer::register_with_name('X').unwrap(),

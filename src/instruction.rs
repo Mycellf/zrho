@@ -3,6 +3,7 @@ use std::{
     fmt::Display,
     num::NonZeroU8,
     ops::{Index, IndexMut},
+    str::FromStr,
 };
 
 use crate::{
@@ -52,7 +53,7 @@ impl Instruction {
                     let (value, register) = source.value(registers)?;
 
                     total_time += register.map_or(0, |register| register.read_time);
-                    Some(value.get())
+                    Some(value)
                 }
                 Argument::Comparison(comparison) => {
                     let (value, registers) = comparison.evaluate(registers)?;
@@ -356,6 +357,24 @@ impl InstructionKind {
     }
 }
 
+impl FromStr for InstructionKind {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() != 3 {
+            return Err(());
+        }
+
+        for properties in &INSTRUCTION_KINDS.0 {
+            if properties.name == s {
+                return Ok(properties.kind);
+            }
+        }
+
+        Err(())
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct InstructionKindMap<T>(pub [T; 16]);
 
@@ -427,6 +446,17 @@ pub enum ArgumentRequirement {
     Empty,
 }
 
+impl ArgumentRequirement {
+    pub fn allows_empty(self) -> bool {
+        matches!(
+            self,
+            ArgumentRequirement::Empty
+                | ArgumentRequirement::AnyValueOrEmpty
+                | ArgumentRequirement::ConstantOrEmpty
+        )
+    }
+}
+
 pub struct InstructionKindProperties {
     pub kind: InstructionKind,
     pub name: &'static str,
@@ -445,6 +475,27 @@ impl InstructionKindProperties {
         conditional_time: None,
         calls_per_tick_limit: Some(NonZeroU8::new(1).unwrap()),
     };
+
+    pub fn minimum_arguments(&self) -> usize {
+        self.arguments
+            .iter()
+            .filter(|requirement| {
+                !matches!(
+                    requirement,
+                    ArgumentRequirement::Empty
+                        | ArgumentRequirement::ConstantOrEmpty
+                        | ArgumentRequirement::AnyValueOrEmpty
+                )
+            })
+            .count()
+    }
+
+    pub fn maximum_arguments(&self) -> usize {
+        self.arguments
+            .iter()
+            .filter(|requirement| !matches!(requirement, ArgumentRequirement::Empty))
+            .count()
+    }
 }
 
 impl Default for InstructionKindProperties {

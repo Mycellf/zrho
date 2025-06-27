@@ -353,3 +353,37 @@ pub const fn register_with_name(name: char) -> Option<u32> {
         None
     }
 }
+
+#[derive(Clone, Copy, Debug)]
+pub struct RegisterMap<T>(pub [T; 26]);
+
+impl<T> RegisterMap<T> {
+    pub fn from_element(element: T) -> Self
+    where
+        T: Clone,
+    {
+        Self(array::from_fn(|_| element.clone()))
+    }
+
+    pub fn with_value(mut self, register_name: char, value: T) -> Self {
+        let index = register_with_name(register_name).unwrap();
+
+        self[index as usize] = value;
+
+        self
+    }
+}
+
+impl<T> Deref for RegisterMap<T> {
+    type Target = [T; 26];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> DerefMut for RegisterMap<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}

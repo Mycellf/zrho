@@ -3,7 +3,7 @@ use std::{cmp::Ordering, fmt::Display};
 use crate::{
     computer::{self, Register, RegisterAccessError, RegisterSet},
     instruction::{ArgumentRequirement, InstructionEvaluationInterrupt},
-    integer::{DigitInteger, Integer},
+    integer::Integer,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -104,14 +104,14 @@ impl Display for Argument {
 #[derive(Clone, Copy, Debug)]
 pub enum NumberSource {
     Register(u32),
-    Constant(DigitInteger),
+    Constant(Integer),
 }
 
 impl NumberSource {
     pub fn value<'a>(
         &self,
         registers: &'a RegisterSet,
-    ) -> Result<(DigitInteger, Option<&'a Register>), InstructionEvaluationInterrupt> {
+    ) -> Result<(Integer, Option<&'a Register>), InstructionEvaluationInterrupt> {
         match self {
             NumberSource::Register(index) => {
                 let register =
@@ -128,7 +128,7 @@ impl NumberSource {
                         register: *index,
                         error,
                     })
-                    .map(|value| (*value, Some(register)))
+                    .map(|value| (value.get(), Some(register)))
             }
             NumberSource::Constant(value) => Ok((*value, None)),
         }
@@ -144,7 +144,7 @@ impl NumberSource {
     }
 
     #[must_use]
-    pub fn as_constant(&self) -> Option<&DigitInteger> {
+    pub fn as_constant(&self) -> Option<&Integer> {
         if let Self::Constant(v) = self {
             Some(v)
         } else {
