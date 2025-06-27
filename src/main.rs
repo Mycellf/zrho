@@ -183,6 +183,33 @@ fn main() {
                     Argument::Empty,
                     Argument::Empty,
                 ],
+            })
+            .instruction(Instruction {
+                kind: InstructionKind::Sleep,
+                line: 14,
+                arguments: [
+                    Argument::Number(NumberSource::Constant(DigitInteger::zero(3))),
+                    Argument::Empty,
+                    Argument::Empty,
+                ],
+            })
+            .instruction(Instruction {
+                kind: InstructionKind::Sleep,
+                line: 15,
+                arguments: [
+                    Argument::Number(NumberSource::Constant(DigitInteger::zero(3))),
+                    Argument::Empty,
+                    Argument::Empty,
+                ],
+            })
+            .instruction(Instruction {
+                kind: InstructionKind::Sleep,
+                line: 16,
+                arguments: [
+                    Argument::Number(NumberSource::Constant(DigitInteger::zero(3))),
+                    Argument::Empty,
+                    Argument::Empty,
+                ],
             }),
         RegisterSet::new_empty()
             .with_register(
