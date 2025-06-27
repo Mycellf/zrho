@@ -17,6 +17,8 @@ fn main() {
         Program::assemble_from(
             "Test Program".to_owned(),
             r"
+                ; NOODLE AROUND
+
                 ADD 3 2 X
                 SET Y 10
 
@@ -41,6 +43,24 @@ fn main() {
                 SLP 0
                 SLP 0
                 SLP 0
+
+                ; COMPUTE THE FIBONACCI SEQUENCE
+
+                SET I 0
+                SET X 1
+                SET Y 0
+
+                LBL FIBONACCI
+
+                ADD X Y X
+                SET D X
+                ADD I 1 I
+
+                ADD X Y Y
+                SET D Y
+                ADD I 1 I
+
+                LJP I < 20 FIBONACCI
             ",
             RegisterMap::from_element(false)
                 .with_value('D', true)
@@ -81,7 +101,7 @@ fn main() {
                 computer::register_with_name('D').unwrap(),
                 Register {
                     values: RegisterValues::Vector {
-                        values: Box::new([DigitInteger::zero(3); 50]),
+                        values: Box::new([DigitInteger::zero(3); 25]),
                         index: 0,
                     },
                     indexes_array: None,
