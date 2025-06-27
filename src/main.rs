@@ -295,7 +295,7 @@ fn main() {
             std::io::stdin().lock().read_line(string).unwrap();
 
             // When not running interactively, add the missing newline
-            if string.len() == 0 {
+            if string.is_empty() {
                 println!();
             }
         }
