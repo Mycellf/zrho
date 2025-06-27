@@ -519,80 +519,87 @@ pub enum TimeCondition {
     },
 }
 
+const fn arguments<const N: usize>(
+    arguments: [ArgumentRequirement; N],
+) -> [ArgumentRequirement; Instruction::NUM_ARGUMENTS] {
+    let mut all_arguments = [ArgumentRequirement::Empty; Instruction::NUM_ARGUMENTS];
+
+    let mut i = 0;
+
+    while i < arguments.len() {
+        all_arguments[i] = arguments[i];
+
+        i += 1;
+    }
+
+    all_arguments
+}
+
 #[allow(clippy::needless_update)]
 pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = InstructionKindMap([
     InstructionKindProperties {
         kind: InstructionKind::Set,
         name: "SET",
-        arguments: [
+        arguments: arguments([
             ArgumentRequirement::RegisterWriteOnly,
             ArgumentRequirement::ConstantOrRegister,
-            ArgumentRequirement::Empty,
-        ],
+        ]),
         base_time: 1,
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
         kind: InstructionKind::Try,
         name: "TRY",
-        arguments: [
-            ArgumentRequirement::Register,
-            ArgumentRequirement::Empty,
-            ArgumentRequirement::Empty,
-        ],
+        arguments: arguments([ArgumentRequirement::Register]),
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
         kind: InstructionKind::Add,
         name: "ADD",
-        arguments: [
+        arguments: arguments([
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::RegisterWriteOnly,
-        ],
+        ]),
         base_time: 1,
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
         kind: InstructionKind::Subtract,
         name: "SUB",
-        arguments: [
+        arguments: arguments([
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::RegisterWriteOnly,
-        ],
+        ]),
         base_time: 1,
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
         kind: InstructionKind::Negate,
         name: "NEG",
-        arguments: [
-            ArgumentRequirement::Register,
-            ArgumentRequirement::Empty,
-            ArgumentRequirement::Empty,
-        ],
+        arguments: arguments([ArgumentRequirement::Register]),
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
         kind: InstructionKind::Multiply,
         name: "MUL",
-        arguments: [
+        arguments: arguments([
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::RegisterWriteOnly,
-        ],
+        ]),
         base_time: 2,
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
         kind: InstructionKind::Divide,
         name: "DIV",
-        arguments: [
+        arguments: arguments([
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::RegisterWriteOnly,
-        ],
+        ]),
         base_time: 4,
         conditional_time: Some((
             1,
@@ -606,11 +613,11 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
     InstructionKindProperties {
         kind: InstructionKind::Modulus,
         name: "MOD",
-        arguments: [
+        arguments: arguments([
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::RegisterWriteOnly,
-        ],
+        ]),
         base_time: 4,
         conditional_time: Some((
             1,
@@ -624,44 +631,40 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
     InstructionKindProperties {
         kind: InstructionKind::Compare,
         name: "CMP",
-        arguments: [
+        arguments: arguments([
             ArgumentRequirement::Comparison,
             ArgumentRequirement::RegisterWriteOnly,
-            ArgumentRequirement::Empty,
-        ],
+        ]),
         base_time: 1,
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
         kind: InstructionKind::CompareSetIfTrue,
         name: "TCP",
-        arguments: [
+        arguments: arguments([
             ArgumentRequirement::Comparison,
             ArgumentRequirement::RegisterWriteOnly,
-            ArgumentRequirement::Empty,
-        ],
+        ]),
         base_time: 2,
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
         kind: InstructionKind::CompareSetIfFalse,
         name: "FCP",
-        arguments: [
+        arguments: arguments([
             ArgumentRequirement::Comparison,
             ArgumentRequirement::RegisterWriteOnly,
-            ArgumentRequirement::Empty,
-        ],
+        ]),
         base_time: 2,
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
         kind: InstructionKind::Jump,
         name: "JMP",
-        arguments: [
+        arguments: arguments([
             ArgumentRequirement::AnyValueOrEmpty,
             ArgumentRequirement::Instruction,
-            ArgumentRequirement::Empty,
-        ],
+        ]),
         base_time: 1,
         conditional_time: Some((
             0,
@@ -675,11 +678,10 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
     InstructionKindProperties {
         kind: InstructionKind::JumpCondLikely,
         name: "LJP",
-        arguments: [
+        arguments: arguments([
             ArgumentRequirement::AnyValue,
             ArgumentRequirement::Instruction,
-            ArgumentRequirement::Empty,
-        ],
+        ]),
         base_time: 0,
         conditional_time: Some((
             5,
@@ -693,11 +695,10 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
     InstructionKindProperties {
         kind: InstructionKind::JumpCondUnlikely,
         name: "UJP",
-        arguments: [
+        arguments: arguments([
             ArgumentRequirement::AnyValue,
             ArgumentRequirement::Instruction,
-            ArgumentRequirement::Empty,
-        ],
+        ]),
         base_time: 5,
         conditional_time: Some((
             0,
@@ -711,22 +712,14 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
     InstructionKindProperties {
         kind: InstructionKind::Sleep,
         name: "SLP",
-        arguments: [
-            ArgumentRequirement::ConstantOrRegister,
-            ArgumentRequirement::Empty,
-            ArgumentRequirement::Empty,
-        ],
+        arguments: arguments([ArgumentRequirement::ConstantOrRegister]),
         calls_per_tick_limit: None,
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
         kind: InstructionKind::End,
         name: "END",
-        arguments: [
-            ArgumentRequirement::Empty,
-            ArgumentRequirement::Empty,
-            ArgumentRequirement::Empty,
-        ],
+        arguments: arguments([]),
         ..InstructionKindProperties::DEFAULT
     },
 ]);
