@@ -5,10 +5,9 @@ use std::{
 };
 
 use crate::{
-    instruction::{
-        ArgumentValues, Instruction, InstructionEvaluationInterrupt, InstructionKindMap,
-    },
+    instruction::{ArgumentValues, InstructionEvaluationInterrupt, InstructionKindMap},
     integer::{AssignIntegerError, DigitInteger, Integer},
+    program::Program,
 };
 
 #[derive(Clone, Debug)]
@@ -127,26 +126,6 @@ impl Computer {
 
     fn end_of_tick(&mut self) {
         self.executed_instructions = InstructionKindMap::from_element(0);
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct Program {
-    pub name: String,
-    pub instructions: Vec<Instruction>,
-}
-
-impl Program {
-    pub fn new_empty(name: String) -> Self {
-        Self {
-            name,
-            instructions: Vec::new(),
-        }
-    }
-
-    pub fn instruction(mut self, instruction: Instruction) -> Self {
-        self.instructions.push(instruction);
-        self
     }
 }
 

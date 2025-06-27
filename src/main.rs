@@ -2,15 +2,17 @@ use std::{cmp::Ordering, io::BufRead};
 
 use crate::{
     argument::{Argument, Comparison, NumberSource},
-    computer::{Computer, Program, Register, RegisterSet, RegisterValues},
+    computer::{Computer, Register, RegisterSet, RegisterValues},
     instruction::{Instruction, InstructionKind},
     integer::DigitInteger,
+    program::Program,
 };
 
 pub mod argument;
 pub mod computer;
 pub mod instruction;
 pub mod integer;
+pub mod program;
 
 fn main() {
     let mut computer = Computer::new(
