@@ -6,6 +6,9 @@ use crate::{
     instruction::{ArgumentRequirement, Instruction, InstructionKind},
 };
 
+pub const COMMENT_SEPARATOR: char = ';';
+pub const LABEL_PSEUDO_INSTRUCTION: &str = "LBL";
+
 #[derive(Clone, Debug)]
 pub struct Program {
     pub name: String,
@@ -411,6 +414,3 @@ pub enum ParseArgumentError<'a> {
     InvalidLabel { got: &'a str },
     InvalidComparison,
 }
-
-pub const COMMENT_SEPARATOR: char = ';';
-pub const LABEL_PSEUDO_INSTRUCTION: &str = "LBL";
