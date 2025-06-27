@@ -1,6 +1,6 @@
 use std::{
     array,
-    fmt::Debug,
+    fmt::{Debug, Display},
     ops::{Deref, DerefMut},
 };
 
@@ -150,7 +150,7 @@ impl Program {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RegisterSet {
     pub registers: Box<[Option<Register>; NUM_REGISTERS]>,
 }
@@ -220,7 +220,7 @@ impl RegisterSet {
     }
 }
 
-impl Debug for RegisterSet {
+impl Display for RegisterSet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (i, register) in self.registers.iter().enumerate() {
             let Some(register) = register else {
@@ -229,7 +229,7 @@ impl Debug for RegisterSet {
 
             let name = name_of_register(i as u32).unwrap();
 
-            writeln!(f, "{name}: {register:?}")?;
+            writeln!(f, "{name}: {register}")?;
         }
 
         Ok(())
@@ -254,6 +254,33 @@ pub struct Register {
     pub read_time: u32,
     pub write_time: u32,
     // pub block_time: u32,
+}
+
+impl Display for Register {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.values {
+            RegisterValues::Scalar(value) => write!(f, "{value}")?,
+            RegisterValues::Vector { values, index } => {
+                write!(f, "[")?;
+
+                for (i, &value) in values.into_iter().enumerate() {
+                    if i != 0 {
+                        write!(f, ", ")?;
+                    }
+
+                    write!(f, "{value}")?;
+                }
+
+                write!(f, "][{index}]")?;
+            }
+        };
+
+        if let Some(array) = self.indexes_array {
+            write!(f, " (Indexes {})", name_of_register(array).unwrap())?;
+        }
+
+        Ok(())
+    }
 }
 
 impl Deref for Register {

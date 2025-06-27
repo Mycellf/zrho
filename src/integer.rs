@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
 pub type Integer = i32;
 pub type BiggerInteger = i64;
@@ -99,6 +99,12 @@ impl DigitInteger {
         };
 
         DIGIT_COMBINATIONS[digits as usize]
+    }
+}
+
+impl Display for DigitInteger {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.get())
     }
 }
 

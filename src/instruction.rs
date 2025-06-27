@@ -1,12 +1,13 @@
 use std::{
     array,
     cmp::Ordering,
+    fmt::Display,
     num::NonZeroU8,
     ops::{Index, IndexMut},
 };
 
 use crate::{
-    computer::{Register, RegisterAccessError, RegisterSet},
+    computer::{self, Register, RegisterAccessError, RegisterSet},
     integer::{AssignIntegerError, BiggerInteger, DigitInteger, Integer},
 };
 
@@ -297,6 +298,22 @@ impl Instruction {
     }
 }
 
+impl Display for Instruction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.kind.get_properties().name)?;
+
+        for argument in self.arguments {
+            if argument.is_empty() {
+                continue;
+            }
+
+            write!(f, " {argument}")?;
+        }
+
+        Ok(())
+    }
+}
+
 trait IntoDebugResult {
     fn into_debug_result(self) -> Result<BiggerInteger, InstructionEvaluationInterrupt>;
 }
@@ -420,6 +437,17 @@ impl Argument {
     }
 }
 
+impl Display for Argument {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Argument::Instruction(line) => write!(f, "INDEX_{line}"),
+            Argument::Number(source) => write!(f, "{source}"),
+            Argument::Comparison(comparison) => write!(f, "{comparison}"),
+            Argument::Empty => write!(f, "_"),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub enum NumberSource {
     Register(u32),
@@ -472,6 +500,17 @@ impl NumberSource {
     }
 }
 
+impl Display for NumberSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            NumberSource::Register(register) => {
+                write!(f, "{}", computer::name_of_register(*register).unwrap())
+            }
+            NumberSource::Constant(value) => write!(f, "{value}"),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Comparison {
     pub ordering: Ordering,
@@ -490,6 +529,21 @@ impl Comparison {
         let result = (lhs.cmp(&rhs) == self.ordering) ^ self.invert;
 
         Ok((result as Integer, [lhs_register, rhs_register]))
+    }
+}
+
+impl Display for Comparison {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        const SYMBOLS: [char; 6] = ['<', '=', '>', '≥', '≠', '≤'];
+        let index = (self.ordering as isize + 1) as usize + self.invert as usize * 3;
+
+        write!(
+            f,
+            "{lhs} {comparison} {rhs}",
+            lhs = self.values[0],
+            rhs = self.values[1],
+            comparison = SYMBOLS[index],
+        )
     }
 }
 

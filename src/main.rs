@@ -226,7 +226,7 @@ fn main() {
             ),
     );
 
-    println!("{:?}", computer.registers);
+    println!("{}", computer.registers);
 
     let mut last_instruction = 0;
 
@@ -238,7 +238,7 @@ fn main() {
             .instructions
             .get(last_instruction as usize)
         {
-            print!(" ({:?})", instruction);
+            print!(" ({instruction})");
         }
 
         println!(":");
@@ -246,13 +246,13 @@ fn main() {
         let modified = computer.tick_partial();
 
         if let Some(interrupt) = computer.interrupt {
-            println!("{:?}\n{:?}", interrupt, computer.registers);
+            println!("{:?}\n{}", interrupt, computer.registers);
             break;
         }
 
         if modified {
             if computer.block_time == 0 {
-                println!("{:?}", computer.registers);
+                println!("{}", computer.registers);
 
                 last_instruction = computer.instruction;
             } else {
