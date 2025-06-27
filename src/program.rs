@@ -270,6 +270,20 @@ impl<'a> InstructionIntermediate<'a> {
             arguments[i] = argument;
         }
 
+        match next_argument() {
+            Ok(argument) => {
+                return Err(ProgramAssemblyError {
+                    line: index,
+                    kind: ProgramAssemblyErrorKind::TooManyArguments { got: argument },
+                });
+            }
+            Err(ProgramAssemblyError {
+                kind: ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::OutOfTokens),
+                ..
+            }) => (),
+            Err(error) => return Err(error),
+        };
+
         Ok(ParseInstructionResult::Instruction(Self {
             kind: instruction_kind,
             line: index,
