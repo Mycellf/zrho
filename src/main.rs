@@ -16,57 +16,13 @@ fn main() {
     let mut computer = Computer::new(
         Program::assemble_from(
             "Test Program".to_owned(),
-            r"
-                ; NOODLE AROUND
-
-                ADD 3 2 X
-                SET Y 10
-
-                NEG X
-                NEG Y
-
-                ADD X 1 D
-                SET I 1
-                SET D 1
-                MUL I 2 I
-
-                DIV X 2 Y
-                MOD X 2 I
-                DIV X 2 Y
-
-                LBL LOOP
-                ADD X 1 X
-                LJP X < 11 LOOP
-
-                SLP X
-
-                SLP 0
-                SLP 0
-                SLP 0
-
-                ; COMPUTE THE FIBONACCI SEQUENCE
-
-                SET I 0
-                SET X 1
-                SET Y 0
-
-                LBL FIBONACCI
-
-                ADD X Y X
-                SET D X
-                ADD I 1 I
-
-                ADD X Y Y
-                SET D Y
-                ADD I 1 I
-
-                LJP I < 20 FIBONACCI
-            ",
+            PRIME_NUMBERS,
             RegisterMap::from_element(false)
                 .with_value('D', true)
                 .with_value('I', true)
                 .with_value('X', true)
-                .with_value('Y', true),
+                .with_value('Y', true)
+                .with_value('Z', true),
         )
         .unwrap(),
         RegisterSet::new_empty()
@@ -89,6 +45,15 @@ fn main() {
                 },
             )
             .with_register(
+                'Z',
+                Register {
+                    values: RegisterValues::Scalar(DigitInteger::zero(3)),
+                    indexes_array: None,
+                    read_time: 0,
+                    write_time: 0,
+                },
+            )
+            .with_register(
                 'I',
                 Register {
                     values: RegisterValues::Scalar(DigitInteger::zero(3)),
@@ -101,7 +66,7 @@ fn main() {
                 'D',
                 Register {
                     values: RegisterValues::Vector {
-                        values: Box::new([DigitInteger::zero(3); 25]),
+                        values: Box::new([DigitInteger::zero(3); 100]),
                         index: 0,
                     },
                     indexes_array: None,
@@ -159,3 +124,77 @@ fn main() {
         }
     }
 }
+
+pub const RANDOM_TESTS: &str = r"
+    ; NOODLE AROUND
+
+    ADD 3 2 X
+    SET Y 10
+
+    NEG X
+    NEG Y
+
+    ADD X 1 D
+    SET I 1
+    SET D 1
+    MUL I 2 I
+
+    DIV X 2 Y
+    MOD X 2 I
+    DIV X 2 Y
+
+    LBL LOOP
+    ADD X 1 X
+    LJP X < 11 LOOP
+
+    SLP X
+
+    SLP 0
+    SLP 0
+    SLP 0
+";
+
+pub const FIBONACCI_SEQUENCE: &str = r"
+    ; COMPUTE THE FIBONACCI SEQUENCE
+
+    SET I 0
+    SET X 1
+    SET Y 0
+
+    LBL FIBONACCI
+
+    ADD X Y X
+    SET D X
+    ADD I 1 I
+
+    ADD X Y Y
+    SET D Y
+    ADD I 1 I
+
+    LJP I < 20 FIBONACCI
+";
+
+pub const PRIME_NUMBERS: &str = r"
+    ; COMPUTE THE PRIME NUMBERS
+
+    SET D 2 ; COMPUTED PRIME NUMBERS
+    SET Y 1 ; AMOUNT COMPUTED
+    SET X 2 ; CURRENT NUMBER
+
+    LBL NEXT_NUMBER
+    SET I 0
+    ADD X 1 X
+
+    LBL CHECK_NUMBER
+    MOD X D Z
+
+    JMP Z = 0 NEXT_NUMBER
+
+    ADD I 1 I
+    LJP I < Y CHECK_NUMBER
+
+    SET D X
+
+    ADD Y 1 Y
+    JMP NEXT_NUMBER
+";
