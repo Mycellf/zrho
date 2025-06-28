@@ -138,7 +138,11 @@ impl Computer {
     fn end_of_tick(&mut self) {
         self.executed_instructions = InstructionKindMap::from_element(0);
 
-        self.runtime += 1;
+        if let Some(runtime) = self.runtime.checked_add(1) {
+            self.runtime = runtime;
+        } else {
+            self.interrupt = Some(InstructionEvaluationInterrupt::RuntimeCounterOverflow);
+        }
     }
 }
 

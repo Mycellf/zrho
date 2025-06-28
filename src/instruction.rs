@@ -434,6 +434,7 @@ pub enum InstructionEvaluationInterrupt {
         error: ArithmaticError,
     },
     ProgramComplete,
+    RuntimeCounterOverflow,
 }
 
 impl From<ArithmaticError> for InstructionEvaluationInterrupt {
