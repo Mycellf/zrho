@@ -125,6 +125,7 @@ impl Computer {
 
         if self.block_time == 0 {
             self.instruction = self.next_instruction;
+            self.registers.apply_buffered_writes();
         }
 
         if self.tick_complete {
@@ -144,6 +145,7 @@ impl Computer {
 #[derive(Clone, Debug)]
 pub struct RegisterSet {
     pub registers: Box<[Option<Register>; NUM_REGISTERS]>,
+    buffered_writes: Vec<(u32, Integer)>,
 }
 
 impl RegisterSet {
@@ -151,7 +153,18 @@ impl RegisterSet {
     pub fn new_empty() -> Self {
         Self {
             registers: Box::new(array::from_fn(|_| None)),
+            buffered_writes: Vec::new(),
         }
+    }
+
+    pub fn apply_buffered_writes(&mut self) {
+        let mut buffered_writes = std::mem::take(&mut self.buffered_writes);
+
+        for (register, value) in buffered_writes.drain(..) {
+            self.write(register, value).unwrap();
+        }
+
+        self.buffered_writes = buffered_writes;
     }
 
     pub fn add_register(
@@ -186,7 +199,25 @@ impl RegisterSet {
         self.registers.get_mut(index as usize)?.as_mut()
     }
 
-    pub fn write(&mut self, index: u32, value: Integer) -> Result<&Register, RegisterAccessError> {
+    pub fn buffered_write(
+        &mut self,
+        index: u32,
+        value: Integer,
+    ) -> Result<(), RegisterAccessError> {
+        let register = self
+            .get(index)
+            .ok_or(RegisterAccessError::NoSuchRegister { got: index })?;
+        register
+            .value()?
+            .is_valid(value)
+            .map_err(|error| RegisterAccessError::InvalidAssignment { error })?;
+
+        self.buffered_writes.push((index, value));
+
+        Ok(())
+    }
+
+    pub fn write(&mut self, index: u32, value: Integer) -> Result<(), RegisterAccessError> {
         let register = self
             .get_mut(index)
             .ok_or(RegisterAccessError::NoSuchRegister { got: index })?;
@@ -208,7 +239,7 @@ impl RegisterSet {
             }
         }
 
-        Ok(self.get(index).unwrap())
+        Ok(())
     }
 }
 

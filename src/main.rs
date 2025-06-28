@@ -94,22 +94,20 @@ fn main() {
                 print!(" ({instruction})");
             }
 
-            print!(":");
+            println!(":");
 
             if modified {
-                if computer.block_time == 0 {
-                    println!();
-                } else {
-                    println!(" WAITING...");
-                }
-
                 println!("{}", computer.registers);
             }
         }
 
         if computer.tick_complete {
             if skip_ticks == 0 {
-                println!("completed tick");
+                if computer.block_time == 0 {
+                    println!("completed tick");
+                } else {
+                    println!("waiting...");
+                }
 
                 let string = &mut String::new();
 

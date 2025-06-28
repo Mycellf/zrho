@@ -246,10 +246,11 @@ impl Instruction {
     ) -> Result<u32, InstructionEvaluationInterrupt> {
         let register = self.register_of_argument(destination);
 
-        Ok(registers
-            .write(register, value)
-            .map_err(|error| InstructionEvaluationInterrupt::RegisterError { register, error })?
-            .write_time)
+        registers
+            .buffered_write(register, value)
+            .map_err(|error| InstructionEvaluationInterrupt::RegisterError { register, error })?;
+
+        Ok(registers.get(register).unwrap().write_time)
     }
 
     /// # Panics

@@ -40,6 +40,10 @@ impl DigitInteger {
         Ok(())
     }
 
+    pub fn is_valid(&self, value: Integer) -> Result<(), AssignIntegerError> {
+        Self::check_value(value, self.digits).map(|_| ())
+    }
+
     #[must_use]
     pub fn get(&self) -> Integer {
         self.value
