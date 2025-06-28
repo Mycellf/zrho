@@ -81,7 +81,7 @@ fn main() {
             break;
         }
 
-        if skip_ticks == 0 {
+        if skip_ticks == 0 && computer.block_time == 0 {
             print!("Instruction {:?}", instruction);
 
             if let Some(instruction) = computer
@@ -104,21 +104,27 @@ fn main() {
                 if computer.block_time == 0 {
                     println!("completed tick");
                 } else {
-                    println!("waiting...");
-                }
-
-                let string = &mut String::new();
-
-                std::io::stdin().lock().read_line(string).unwrap();
-
-                // When not running interactively, add the missing newline
-                if string.is_empty() {
-                    println!();
-                } else if let Ok(input) = string.trim().parse::<u64>() {
-                    skip_ticks = input;
+                    println!(
+                        "waiting {} tick{}...",
+                        computer.block_time,
+                        if computer.block_time == 1 { "" } else { "s" },
+                    );
                 }
             } else {
                 skip_ticks -= 1;
+            }
+        }
+
+        if skip_ticks == 0 && computer.block_time == 0 {
+            let string = &mut String::new();
+
+            std::io::stdin().lock().read_line(string).unwrap();
+
+            if string.is_empty() {
+                // When not running interactively, add the missing newline
+                println!();
+            } else if let Ok(input) = string.trim().parse::<u64>() {
+                skip_ticks = input;
             }
         }
     }
