@@ -21,8 +21,7 @@ fn main() {
                 .with_value('D', true)
                 .with_value('I', true)
                 .with_value('X', true)
-                .with_value('Y', true)
-                .with_value('Z', true),
+                .with_value('Y', true),
         )
         .unwrap(),
         RegisterSet::new_empty()
@@ -37,15 +36,6 @@ fn main() {
             )
             .with_register(
                 'Y',
-                Register {
-                    values: RegisterValues::Scalar(DigitInteger::zero(3)),
-                    indexes_array: None,
-                    read_time: 0,
-                    write_time: 0,
-                },
-            )
-            .with_register(
-                'Z',
                 Register {
                     values: RegisterValues::Scalar(DigitInteger::zero(3)),
                     indexes_array: None,
@@ -182,6 +172,39 @@ pub const FIBONACCI_SEQUENCE: &str = r"
 
 pub const PRIME_NUMBERS: &str = r"
     ; COMPUTE THE PRIME NUMBERS
+
+    SET D 2 ; COMPUTED PRIME NUMBERS
+    SET X 2 ; CURRENT NUMBER
+
+    LBL NEXT_NUMBER
+    SET I 0
+    ADD X 1 X
+
+    LBL CHECK_NUMBER
+    MOD X D Y
+
+    ; JMP: 46860
+    ; LJP: 67640
+    ; UJP: 43315
+    UJP Y = 0 NEXT_NUMBER
+
+    ADD I 1 I
+    ; JMP: 48125
+    ; LJP: 43315
+    ; UJP: 68850
+    LJP D CHECK_NUMBER
+
+    SET D X
+
+    ; JMP: 43409
+    ; LJP: 43315
+    ; UJP: 43800
+    LJP I < 99 NEXT_NUMBER
+";
+
+pub const PRIME_NUMBERS_FAST: &str = r"
+    ; COMPUTE THE PRIME NUMBERS
+    ; FASTER, BUT REQUIRES A THRID REGISTER
 
     SET D 2 ; COMPUTED PRIME NUMBERS
     SET Y 1 ; AMOUNT COMPUTED
