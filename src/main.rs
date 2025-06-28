@@ -68,44 +68,42 @@ fn main() {
 
     println!("{}", computer.registers);
 
-    let mut last_instruction = 0;
-
     let mut skip_ticks = 0;
 
     loop {
-        if skip_ticks == 0 {
-            print!("Instruction {:?}", last_instruction);
-
-            if let Some(instruction) = computer
-                .loaded_program
-                .instructions
-                .get(last_instruction as usize)
-            {
-                print!(" ({instruction})");
-            }
-
-            println!(":");
-        }
+        let instruction = computer.instruction;
 
         let modified = computer.tick_partial();
 
         if let Some(interrupt) = computer.interrupt {
             println!(
-                "{:?}\n{}\n\nRuntime: {}",
+                "\n{:?}\n{}\n\nRuntime: {}",
                 interrupt, computer.registers, computer.runtime,
             );
             break;
         }
 
-        if modified {
-            if computer.block_time == 0 {
-                if skip_ticks == 0 {
-                    println!("{}", computer.registers);
+        if skip_ticks == 0 {
+            print!("Instruction {:?}", instruction);
+
+            if let Some(instruction) = computer
+                .loaded_program
+                .instructions
+                .get(instruction as usize)
+            {
+                print!(" ({instruction})");
+            }
+
+            print!(":");
+
+            if modified {
+                if computer.block_time == 0 {
+                    println!();
+                } else {
+                    println!(" WAITING...");
                 }
 
-                last_instruction = computer.instruction;
-            } else if skip_ticks == 0 {
-                println!("waiting...");
+                println!("{}", computer.registers);
             }
         }
 

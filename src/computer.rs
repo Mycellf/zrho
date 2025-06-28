@@ -20,6 +20,8 @@ pub struct Computer {
     pub block_time: u32,
     pub tick_complete: bool,
 
+    next_instruction: u32,
+
     pub runtime: u64,
 
     executed_instructions: InstructionKindMap<u8>,
@@ -38,6 +40,8 @@ impl Computer {
             instruction: 0,
             block_time: 0,
             tick_complete: true,
+
+            next_instruction: 0,
 
             runtime: 0,
 
@@ -69,12 +73,10 @@ impl Computer {
         if self.block_time > 0 {
             self.block_time -= 1;
         } else {
-            let previous_instruction = self.instruction;
-
             let instruction = self
                 .loaded_program
                 .instructions
-                .get(self.instruction as usize);
+                .get(self.next_instruction as usize);
 
             if let Some(instruction) = instruction {
                 let limit = instruction.kind.get_properties().calls_per_tick_limit;
@@ -98,11 +100,11 @@ impl Computer {
                             )
                         },
                     ),
-                    &mut self.instruction,
+                    &mut self.next_instruction,
                 ) {
                     Ok((time, argument_values, update_previous_instruction)) => {
                         self.previous_instruction = update_previous_instruction
-                            .then_some((previous_instruction, argument_values));
+                            .then_some((self.instruction, argument_values));
 
                         if time == 0 {
                             self.tick_complete = false;
@@ -119,6 +121,10 @@ impl Computer {
                 self.interrupt = Some(InstructionEvaluationInterrupt::ProgramComplete);
                 self.previous_instruction = None;
             }
+        }
+
+        if self.block_time == 0 {
+            self.instruction = self.next_instruction;
         }
 
         if self.tick_complete {
