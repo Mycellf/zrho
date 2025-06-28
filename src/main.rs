@@ -193,13 +193,22 @@ pub const PRIME_NUMBERS: &str = r"
     LBL CHECK_NUMBER
     MOD X D Z
 
-    JMP Z = 0 NEXT_NUMBER
+    ; JMP: 41655
+    ; LJP: 62435
+    ; UJP: 38110
+    UJP Z = 0 NEXT_NUMBER
 
     ADD I 1 I
+    ; JMP: 42920
+    ; LJP: 38110
+    ; UJP: 63645
     LJP I < Y CHECK_NUMBER
 
     SET D X
 
     ADD Y 1 Y
-    JMP NEXT_NUMBER
+    ; JMP: 38204
+    ; LJP: 38110
+    ; UJP: 38595
+    LJP Y < 100 NEXT_NUMBER
 ";
