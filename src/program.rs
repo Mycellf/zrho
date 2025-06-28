@@ -76,9 +76,9 @@ impl Program {
                             continue;
                         };
 
-                        *argument = ArgumentIntermediate::Finished(Argument::Instruction(index));
+                        *argument = ArgumentIntermediate::Completed(Argument::Instruction(index));
                     }
-                    ArgumentIntermediate::Finished(_) => (),
+                    ArgumentIntermediate::Completed(_) => (),
                 }
             }
         }
@@ -137,7 +137,7 @@ enum ParseInstructionResult<'a> {
 
 #[derive(Clone, Copy, Debug)]
 pub enum ArgumentIntermediate<'a> {
-    Finished(Argument),
+    Completed(Argument),
     Label(&'a str),
 }
 
@@ -207,7 +207,7 @@ impl<'a> InstructionIntermediate<'a> {
                     },
                 })?;
 
-        let mut arguments = array::from_fn(|_| ArgumentIntermediate::Finished(Argument::Empty));
+        let mut arguments = array::from_fn(|_| ArgumentIntermediate::Completed(Argument::Empty));
         let mut previous_argument: Option<ArgumentIntermediate> = None;
 
         for (i, requirement) in instruction_kind
@@ -255,7 +255,7 @@ impl<'a> InstructionIntermediate<'a> {
                 }
             };
 
-            if let ArgumentIntermediate::Finished(Argument::Number(NumberSource::Register(
+            if let ArgumentIntermediate::Completed(Argument::Number(NumberSource::Register(
                 register,
             ))) = argument
             {
@@ -358,7 +358,7 @@ impl<'a> ArgumentIntermediate<'a> {
                 .as_number_source()?,
         ];
 
-        Ok(ArgumentIntermediate::Finished(Argument::Comparison(
+        Ok(ArgumentIntermediate::Completed(Argument::Comparison(
             Comparison {
                 ordering,
                 invert,
@@ -375,13 +375,13 @@ impl<'a> ArgumentIntermediate<'a> {
                 if token.len() > 1 {
                     Ok(Self::Label(token))
                 } else {
-                    Ok(Self::Finished(Argument::Number(NumberSource::Register(
+                    Ok(Self::Completed(Argument::Number(NumberSource::Register(
                         computer::register_with_name(start)
                             .ok_or(ParseArgumentError::InvalidRegister { got: token })?,
                     ))))
                 }
             }
-            '0'..='9' | '-' => Ok(Self::Finished(Argument::Number(NumberSource::Constant(
+            '0'..='9' | '-' => Ok(Self::Completed(Argument::Number(NumberSource::Constant(
                 token
                     .parse()
                     .map_err(|error| ParseArgumentError::InvalidInteger { got: token, error })?,
@@ -392,7 +392,7 @@ impl<'a> ArgumentIntermediate<'a> {
 
     pub fn matches_requirement(&self, requirement: ArgumentRequirement) -> bool {
         match self {
-            ArgumentIntermediate::Finished(argument) => argument.matches_requirement(requirement),
+            ArgumentIntermediate::Completed(argument) => argument.matches_requirement(requirement),
             ArgumentIntermediate::Label(_) => {
                 matches!(requirement, ArgumentRequirement::Instruction)
             }
@@ -401,14 +401,14 @@ impl<'a> ArgumentIntermediate<'a> {
 
     fn complete(self) -> Option<Argument> {
         match self {
-            ArgumentIntermediate::Finished(argument) => Some(argument),
+            ArgumentIntermediate::Completed(argument) => Some(argument),
             _ => None,
         }
     }
 
     fn as_number_source(self) -> Result<NumberSource, ParseArgumentError<'a>> {
         match self {
-            ArgumentIntermediate::Finished(argument) => match argument {
+            ArgumentIntermediate::Completed(argument) => match argument {
                 Argument::Number(source) => Ok(source),
                 _ => Err(ParseArgumentError::InvalidComparison),
             },
