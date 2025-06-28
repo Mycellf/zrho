@@ -148,6 +148,10 @@ pub const RANDOM_TESTS: &str = r"
     SLP 0
     SLP 0
     SLP 0
+
+    JMP END
+    SLP 9999
+    LBL END
 ";
 
 pub const FIBONACCI_SEQUENCE: &str = r"
