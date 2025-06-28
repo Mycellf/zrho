@@ -71,11 +71,15 @@ impl Instruction {
             };
         }
 
+        let mut read_time = 0;
+
         for (register, num_reads) in registers_read.into_iter().enumerate() {
             if num_reads > 0 {
-                total_time += registers.get(register as u32).unwrap().read_time;
+                read_time = read_time.max(registers.get(register as u32).unwrap().read_time);
             }
         }
+
+        total_time += read_time;
 
         let (instruction_time, update_previous_instruction) =
             self.execution_time(previous_instruction, &argument_values);
