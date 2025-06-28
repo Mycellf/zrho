@@ -8,7 +8,7 @@ use std::{
 
 use crate::{
     argument::Argument,
-    computer::{RegisterAccessError, RegisterSet},
+    computer::{RegisterAccessError, RegisterMap, RegisterSet},
     integer::{AssignIntegerError, BiggerInteger, Integer},
 };
 
@@ -38,6 +38,8 @@ impl Instruction {
 
         let mut argument_values = [None; 3];
 
+        let mut registers_read = RegisterMap::from_element(0u8);
+
         for (i, value) in argument_values.iter_mut().enumerate() {
             let requirement = properties.arguments[i];
 
@@ -52,19 +54,27 @@ impl Instruction {
                 Argument::Number(source) => {
                     let (value, register) = source.value(registers)?;
 
-                    total_time += register.map_or(0, |register| register.read_time);
+                    if let Some(register) = register {
+                        registers_read[register as usize] += 1;
+                    }
                     Some(value)
                 }
                 Argument::Comparison(comparison) => {
                     let (value, registers) = comparison.evaluate(registers)?;
 
                     for register in registers.into_iter().flatten() {
-                        total_time += register.read_time;
+                        registers_read[register as usize] += 1;
                     }
                     Some(value)
                 }
                 Argument::Empty => None,
             };
+        }
+
+        for (register, num_reads) in registers_read.into_iter().enumerate() {
+            if num_reads > 0 {
+                total_time += registers.get(register as u32).unwrap().read_time;
+            }
         }
 
         let (instruction_time, update_previous_instruction) =

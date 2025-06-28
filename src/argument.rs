@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, fmt::Display};
 
 use crate::{
-    computer::{self, Register, RegisterAccessError, RegisterSet},
+    computer::{self, RegisterAccessError, RegisterSet},
     instruction::{ArgumentRequirement, InstructionEvaluationInterrupt},
     integer::Integer,
 };
@@ -108,10 +108,10 @@ pub enum NumberSource {
 }
 
 impl NumberSource {
-    pub fn value<'a>(
+    pub fn value(
         &self,
-        registers: &'a RegisterSet,
-    ) -> Result<(Integer, Option<&'a Register>), InstructionEvaluationInterrupt> {
+        registers: &RegisterSet,
+    ) -> Result<(Integer, Option<u32>), InstructionEvaluationInterrupt> {
         match self {
             NumberSource::Register(index) => {
                 let register =
@@ -124,11 +124,11 @@ impl NumberSource {
 
                 register
                     .value()
+                    .map(|value| (value.get(), Some(*index)))
                     .map_err(|error| InstructionEvaluationInterrupt::RegisterError {
                         register: *index,
                         error,
                     })
-                    .map(|value| (value.get(), Some(register)))
             }
             NumberSource::Constant(value) => Ok((*value, None)),
         }
@@ -175,7 +175,7 @@ impl Comparison {
     pub fn evaluate<'a>(
         &self,
         registers: &'a RegisterSet,
-    ) -> Result<(Integer, [Option<&'a Register>; 2]), InstructionEvaluationInterrupt> {
+    ) -> Result<(Integer, [Option<u32>; 2]), InstructionEvaluationInterrupt> {
         let (lhs, lhs_register) = self.values[0].value(registers)?;
         let (rhs, rhs_register) = self.values[1].value(registers)?;
 
