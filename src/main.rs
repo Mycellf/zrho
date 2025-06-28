@@ -66,8 +66,6 @@ fn main() {
             ),
     );
 
-    println!("{}", computer.registers);
-
     let mut skip_ticks = 0;
 
     loop {
