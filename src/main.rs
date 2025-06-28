@@ -190,31 +190,22 @@ pub const PRIME_NUMBERS: &str = r"
     ; COMPUTE THE PRIME NUMBERS
 
     SET D 2 ; COMPUTED PRIME NUMBERS
-    SET X 2 ; CURRENT NUMBER
+    SET X 1 ; CURRENT NUMBER
 
     LBL NEXT_NUMBER
     SET I 0
-    ADD X 1 X
+    ADD X 2 X
 
     LBL CHECK_NUMBER
     MOD X D Y
 
-    ; JMP: 46860
-    ; LJP: 67640
-    ; UJP: 43315
     UJP Y = 0 NEXT_NUMBER
 
     ADD I 1 I
-    ; JMP: 48125
-    ; LJP: 43315
-    ; UJP: 68850
     LJP D CHECK_NUMBER
 
     SET D X
 
-    ; JMP: 43409
-    ; LJP: 43315
-    ; UJP: 43800
     LJP I < 99 NEXT_NUMBER
 ";
 
@@ -224,31 +215,22 @@ pub const PRIME_NUMBERS_FAST: &str = r"
 
     SET D 2 ; COMPUTED PRIME NUMBERS
     SET Y 1 ; AMOUNT COMPUTED
-    SET X 2 ; CURRENT NUMBER
+    SET X 1 ; CURRENT NUMBER
 
     LBL NEXT_NUMBER
     SET I 0
-    ADD X 1 X
+    ADD X 2 X
 
     LBL CHECK_NUMBER
     MOD X D Z
 
-    ; JMP: 41655
-    ; LJP: 62435
-    ; UJP: 38110
     UJP Z = 0 NEXT_NUMBER
 
     ADD I 1 I
-    ; JMP: 42920
-    ; LJP: 38110
-    ; UJP: 63645
     LJP I < Y CHECK_NUMBER
 
     SET D X
 
     ADD Y 1 Y
-    ; JMP: 38204
-    ; LJP: 38110
-    ; UJP: 38595
     LJP Y < 100 NEXT_NUMBER
 ";
