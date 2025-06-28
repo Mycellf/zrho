@@ -39,7 +39,7 @@ impl Computer {
 
             instruction: 0,
             block_time: 0,
-            tick_complete: true,
+            tick_complete: false,
 
             next_instruction: 0,
 
