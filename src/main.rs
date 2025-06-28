@@ -140,6 +140,7 @@ pub const RANDOM_TESTS: &str = r"
     NEG Y
 
     ADD X 1 D
+    ADD D D D
     SET I 1
     SET D 1
     MUL I 2 I
