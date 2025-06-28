@@ -262,7 +262,7 @@ impl Display for Register {
         };
 
         if let Some(array) = self.indexes_array {
-            write!(f, " (Indexes {})", name_of_register(array).unwrap())?;
+            write!(f, " → {}", name_of_register(array).unwrap())?;
         }
 
         Ok(())
