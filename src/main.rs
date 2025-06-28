@@ -16,7 +16,7 @@ fn main() {
     let mut computer = Computer::new(
         Program::assemble_from(
             "Test Program".to_owned(),
-            PRIME_NUMBERS,
+            PROGRAM,
             RegisterMap::from_element(false)
                 .with_value('D', true)
                 .with_value('I', true)
@@ -127,6 +127,8 @@ fn main() {
         }
     }
 }
+
+const PROGRAM: &str = PRIME_NUMBERS;
 
 pub const RANDOM_TESTS: &str = r"
     ; NOODLE AROUND
