@@ -70,18 +70,22 @@ fn main() {
 
     let mut last_instruction = 0;
 
+    let mut skip_ticks = 0;
+
     loop {
-        print!("Instruction {:?}", last_instruction);
+        if skip_ticks == 0 {
+            print!("Instruction {:?}", last_instruction);
 
-        if let Some(instruction) = computer
-            .loaded_program
-            .instructions
-            .get(last_instruction as usize)
-        {
-            print!(" ({instruction})");
+            if let Some(instruction) = computer
+                .loaded_program
+                .instructions
+                .get(last_instruction as usize)
+            {
+                print!(" ({instruction})");
+            }
+
+            println!(":");
         }
-
-        println!(":");
 
         let modified = computer.tick_partial();
 
@@ -95,24 +99,32 @@ fn main() {
 
         if modified {
             if computer.block_time == 0 {
-                println!("{}", computer.registers);
+                if skip_ticks == 0 {
+                    println!("{}", computer.registers);
+                }
 
                 last_instruction = computer.instruction;
-            } else {
+            } else if skip_ticks == 0 {
                 println!("waiting...");
             }
         }
 
         if computer.tick_complete {
-            println!("completed tick");
+            if skip_ticks == 0 {
+                println!("completed tick");
 
-            let string = &mut String::new();
+                let string = &mut String::new();
 
-            std::io::stdin().lock().read_line(string).unwrap();
+                std::io::stdin().lock().read_line(string).unwrap();
 
-            // When not running interactively, add the missing newline
-            if string.is_empty() {
-                println!();
+                // When not running interactively, add the missing newline
+                if string.is_empty() {
+                    println!();
+                } else if let Ok(input) = string.trim().parse::<u32>() {
+                    skip_ticks = input;
+                }
+            } else {
+                skip_ticks -= 1;
             }
         }
     }
