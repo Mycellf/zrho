@@ -20,6 +20,8 @@ pub struct Computer {
     pub block_time: u32,
     pub tick_complete: bool,
 
+    pub runtime: u32,
+
     executed_instructions: InstructionKindMap<u8>,
 
     pub previous_instruction: Option<(u32, ArgumentValues)>,
@@ -36,6 +38,8 @@ impl Computer {
             instruction: 0,
             block_time: 0,
             tick_complete: true,
+
+            runtime: 0,
 
             executed_instructions: InstructionKindMap::from_element(0),
 
@@ -126,6 +130,8 @@ impl Computer {
 
     fn end_of_tick(&mut self) {
         self.executed_instructions = InstructionKindMap::from_element(0);
+
+        self.runtime += 1;
     }
 }
 

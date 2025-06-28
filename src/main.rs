@@ -96,7 +96,10 @@ fn main() {
         let modified = computer.tick_partial();
 
         if let Some(interrupt) = computer.interrupt {
-            println!("{:?}\n{}", interrupt, computer.registers);
+            println!(
+                "{:?}\n{}\n\nRuntime: {}",
+                interrupt, computer.registers, computer.runtime,
+            );
             break;
         }
 
