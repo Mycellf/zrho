@@ -20,7 +20,7 @@ pub struct Computer {
     pub block_time: u32,
     pub tick_complete: bool,
 
-    pub runtime: u32,
+    pub runtime: u64,
 
     executed_instructions: InstructionKindMap<u8>,
 

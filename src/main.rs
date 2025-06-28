@@ -120,7 +120,7 @@ fn main() {
                 // When not running interactively, add the missing newline
                 if string.is_empty() {
                     println!();
-                } else if let Ok(input) = string.trim().parse::<u32>() {
+                } else if let Ok(input) = string.trim().parse::<u64>() {
                     skip_ticks = input;
                 }
             } else {
