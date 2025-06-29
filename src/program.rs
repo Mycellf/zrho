@@ -144,7 +144,7 @@ pub enum ArgumentIntermediate<'a> {
 impl<'a> InstructionIntermediate<'a> {
     fn from_line(
         source_line: &'a str,
-        index: u32,
+        line_index: u32,
         allowed_registers: &RegisterMap<bool>,
     ) -> Result<ParseInstructionResult<'a>, ProgramAssemblyError<'a>> {
         let line = source_line
@@ -161,7 +161,7 @@ impl<'a> InstructionIntermediate<'a> {
         let mut next_argument = || match ArgumentIntermediate::pop_from_tokens(&mut tokens) {
             Ok(argument) => Ok(argument),
             Err(error) => Err(ProgramAssemblyError {
-                line: index,
+                line: line_index,
                 kind: ProgramAssemblyErrorKind::InvalidArgument(error),
             }),
         };
@@ -171,7 +171,7 @@ impl<'a> InstructionIntermediate<'a> {
 
             let ArgumentIntermediate::Label(label) = argument else {
                 return Err(ProgramAssemblyError {
-                    line: index,
+                    line: line_index,
                     kind: ProgramAssemblyErrorKind::UnexpectedArgument {
                         got: argument,
                         expected: ArgumentRequirement::Instruction,
@@ -187,7 +187,7 @@ impl<'a> InstructionIntermediate<'a> {
             }) = next_argument
             else {
                 return Err(ProgramAssemblyError {
-                    line: index,
+                    line: line_index,
                     kind: ProgramAssemblyErrorKind::TooManyArguments {
                         got: next_argument?,
                     },
@@ -201,7 +201,7 @@ impl<'a> InstructionIntermediate<'a> {
             instruction_code
                 .parse::<InstructionKind>()
                 .map_err(|_| ProgramAssemblyError {
-                    line: index,
+                    line: line_index,
                     kind: ProgramAssemblyErrorKind::NoSuchOperation {
                         got: instruction_code,
                     },
@@ -229,7 +229,7 @@ impl<'a> InstructionIntermediate<'a> {
                     continue;
                 } else {
                     return Err(ProgramAssemblyError {
-                        line: index,
+                        line: line_index,
                         kind: ProgramAssemblyErrorKind::UnexpectedArgument {
                             got: argument,
                             expected: requirement,
@@ -246,7 +246,7 @@ impl<'a> InstructionIntermediate<'a> {
                     continue;
                 } else {
                     return Err(ProgramAssemblyError {
-                        line: index,
+                        line: line_index,
                         kind: ProgramAssemblyErrorKind::UnexpectedArgument {
                             got: argument,
                             expected: requirement,
@@ -261,7 +261,7 @@ impl<'a> InstructionIntermediate<'a> {
             {
                 if !allowed_registers[register as usize] {
                     return Err(ProgramAssemblyError {
-                        line: index,
+                        line: line_index,
                         kind: ProgramAssemblyErrorKind::NoSuchRegister { got: register },
                     });
                 }
@@ -273,7 +273,7 @@ impl<'a> InstructionIntermediate<'a> {
         match next_argument() {
             Ok(argument) => {
                 return Err(ProgramAssemblyError {
-                    line: index,
+                    line: line_index,
                     kind: ProgramAssemblyErrorKind::TooManyArguments { got: argument },
                 });
             }
@@ -286,7 +286,7 @@ impl<'a> InstructionIntermediate<'a> {
 
         Ok(ParseInstructionResult::Instruction(Self {
             kind: instruction_kind,
-            line: index,
+            line: line_index,
             arguments,
         }))
     }
