@@ -258,7 +258,7 @@ impl Instruction {
     /// Will panic if the argument does not contain a register
     #[must_use]
     fn register_of_argument(&self, argument: usize) -> u32 {
-        *self.arguments[argument]
+        self.arguments[argument]
             .as_number()
             .unwrap()
             .as_register()

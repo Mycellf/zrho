@@ -50,6 +50,16 @@ impl Argument {
     }
 
     #[must_use]
+    pub fn as_constant(&self) -> Option<Integer> {
+        self.as_number()?.as_constant()
+    }
+
+    #[must_use]
+    pub fn as_register(&self) -> Option<u32> {
+        self.as_number()?.as_register()
+    }
+
+    #[must_use]
     pub fn as_comparison(&self) -> Option<&Comparison> {
         if let Self::Comparison(v) = self {
             Some(v)
@@ -159,8 +169,8 @@ impl NumberSource {
     }
 
     #[must_use]
-    pub fn as_register(&self) -> Option<&u32> {
-        if let Self::Register(v) = self {
+    pub fn as_register(&self) -> Option<u32> {
+        if let &Self::Register(v) = self {
             Some(v)
         } else {
             None
@@ -168,8 +178,8 @@ impl NumberSource {
     }
 
     #[must_use]
-    pub fn as_constant(&self) -> Option<&Integer> {
-        if let Self::Constant(v) = self {
+    pub fn as_constant(&self) -> Option<Integer> {
+        if let &Self::Constant(v) = self {
             Some(v)
         } else {
             None

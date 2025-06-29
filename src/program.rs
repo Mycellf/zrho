@@ -67,6 +67,23 @@ impl Program {
             }
         }
 
+        if !errors.is_empty() {
+            return Err(errors);
+        }
+
+        for instruction in &program.instructions {
+            for argument in instruction.arguments {
+                if let Some(register) = argument.as_register() {
+                    if !allowed_registers[register as usize] {
+                        errors.push(ProgramAssemblyError {
+                            line: instruction.line,
+                            kind: ProgramAssemblyErrorKind::RegisterNotSupported(register),
+                        });
+                    }
+                }
+            }
+        }
+
         if errors.is_empty() {
             Ok(program)
         } else {
