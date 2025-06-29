@@ -105,9 +105,6 @@ pub enum ProgramAssemblyErrorKind<'a> {
     NoSuchLabel(&'a str),
     NoSuchOperation(&'a str),
     InvalidArgument(ParseArgumentError),
-    MissingArgument {
-        expected: ArgumentRequirement,
-    },
     UnexpectedArgument {
         got: ArgumentIntermediate<'a>,
         expected: ArgumentRequirement,
@@ -137,7 +134,7 @@ enum ParseInstructionResult<'a> {
 
 #[derive(Clone, Copy, Debug)]
 pub enum ArgumentIntermediate<'a> {
-    Value(&'a str),
+    Token(&'a str),
     Comparison {
         ordering: Ordering,
         invert: bool,
@@ -183,7 +180,7 @@ impl<'a> InstructionIntermediate<'a> {
 
             let argument = arguments[0];
 
-            let ArgumentIntermediate::Value(label) = argument else {
+            let ArgumentIntermediate::Token(label) = argument else {
                 return Err(ProgramAssemblyError {
                     line: line_index,
                     kind: ProgramAssemblyErrorKind::UnexpectedArgument {
@@ -252,7 +249,24 @@ impl<'a> InstructionIntermediate<'a> {
                     instruction.arguments[i] = argument;
                     arguments.next();
                 }
-                None => todo!(),
+                None => {
+                    if let (ArgumentRequirement::Instruction, ArgumentIntermediate::Token(label)) =
+                        (requirement, argument_intermediate)
+                    {
+                        return Err(ProgramAssemblyError {
+                            line: self.line,
+                            kind: ProgramAssemblyErrorKind::NoSuchLabel(*label),
+                        });
+                    }
+
+                    return Err(ProgramAssemblyError {
+                        line: self.line,
+                        kind: ProgramAssemblyErrorKind::UnexpectedArgument {
+                            got: *argument_intermediate,
+                            expected: requirement,
+                        },
+                    });
+                }
             }
         }
 
@@ -296,7 +310,7 @@ impl<'a> ArgumentIntermediate<'a> {
         };
 
         let Some(&comparison_token) = tokens.peek() else {
-            return Ok(ArgumentIntermediate::Value(first_value));
+            return Ok(ArgumentIntermediate::Token(first_value));
         };
 
         let Some((index, _)) = [
@@ -310,7 +324,7 @@ impl<'a> ArgumentIntermediate<'a> {
         .into_iter()
         .enumerate()
         .find(|&(_, values)| values.contains(&comparison_token)) else {
-            return Ok(ArgumentIntermediate::Value(first_value));
+            return Ok(ArgumentIntermediate::Token(first_value));
         };
 
         tokens.next();
@@ -362,21 +376,21 @@ impl<'a> ArgumentIntermediate<'a> {
 
     pub fn as_label(&self) -> Option<&'a str> {
         match self {
-            ArgumentIntermediate::Value(label) => Some(label),
+            ArgumentIntermediate::Token(label) => Some(label),
             ArgumentIntermediate::Comparison { .. } => None,
         }
     }
 
     pub fn as_constant(&self) -> Result<Integer, Option<ParseIntError>> {
         match self {
-            ArgumentIntermediate::Value(value) => value.parse().map_err(|error| Some(error)),
+            ArgumentIntermediate::Token(value) => value.parse().map_err(|error| Some(error)),
             ArgumentIntermediate::Comparison { .. } => Err(None),
         }
     }
 
     pub fn as_register(&self) -> Option<u32> {
         match self {
-            ArgumentIntermediate::Value(value) => {
+            ArgumentIntermediate::Token(value) => {
                 if value.len() == 1 {
                     computer::register_with_name(value.chars().next().unwrap())
                 } else {
@@ -401,12 +415,12 @@ impl<'a> ArgumentIntermediate<'a> {
 
     pub fn as_comparison(&self) -> Result<Comparison, Option<ParseComparisonError>> {
         match self {
-            ArgumentIntermediate::Value(_) => Err(None),
+            ArgumentIntermediate::Token(_) => Err(None),
             ArgumentIntermediate::Comparison {
                 ordering,
                 invert,
                 values,
-            } => match values.map(|value| ArgumentIntermediate::Value(value).as_number_source()) {
+            } => match values.map(|value| ArgumentIntermediate::Token(value).as_number_source()) {
                 [Some(lhs), Some(rhs)] => Ok(Comparison {
                     ordering: *ordering,
                     invert: *invert,
