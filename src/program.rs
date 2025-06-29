@@ -4,6 +4,7 @@ use crate::{
     argument::{Argument, Comparison, NumberSource},
     computer::{self, RegisterMap},
     instruction::{ArgumentRequirement, Instruction, InstructionKind},
+    integer::Integer,
 };
 
 pub const COMMENT_SEPARATOR: char = ';';
@@ -35,17 +36,11 @@ impl Program {
     ) -> Result<Self, Vec<ProgramAssemblyError>> {
         let mut errors = Vec::new();
 
-        let mut program = Self::new_empty(name);
-
         let mut instructions = Vec::new();
         let mut labels = HashMap::new();
 
         for (i, line) in source_code.lines().enumerate() {
-            match InstructionIntermediate::from_line(
-                line,
-                i.try_into().unwrap(),
-                &allowed_registers,
-            ) {
+            match InstructionIntermediate::from_line(line, i.try_into().unwrap()) {
                 Ok(instruction_result) => match instruction_result {
                     ParseInstructionResult::Instruction(instruction) => {
                         instructions.push(instruction);
@@ -63,35 +58,20 @@ impl Program {
             return Err(errors);
         }
 
-        for instruction in &mut instructions {
-            for argument in &mut instruction.arguments {
-                match argument {
-                    ArgumentIntermediate::Label(label) => {
-                        let Some(&index) = labels.get(label) else {
-                            errors.push(ProgramAssemblyError {
-                                line: instruction.line,
-                                kind: ProgramAssemblyErrorKind::NoSuchLabel { got: label },
-                            });
+        let mut program = Self::new_empty(name);
 
-                            continue;
-                        };
-
-                        *argument = ArgumentIntermediate::Completed(Argument::Instruction(index));
-                    }
-                    ArgumentIntermediate::Completed(_) => (),
-                }
+        for instruction in instructions {
+            match instruction.parse(&labels) {
+                Ok(instruction) => program.instructions.push(instruction),
+                Err(error) => errors.push(error),
             }
         }
 
-        if !errors.is_empty() {
-            return Err(errors);
+        if errors.is_empty() {
+            Ok(program)
+        } else {
+            Err(errors)
         }
-
-        for instruction in instructions {
-            program.instructions.push(instruction.complete().unwrap());
-        }
-
-        Ok(program)
     }
 }
 
@@ -103,30 +83,33 @@ pub struct ProgramAssemblyError<'a> {
 
 #[derive(Clone, Debug)]
 pub enum ProgramAssemblyErrorKind<'a> {
-    NoSuchRegister {
-        got: u32,
+    NoSuchRegister(&'a str),
+    RegisterNotSupported(u32),
+    NoSuchLabel(&'a str),
+    NoSuchOperation(&'a str),
+    InvalidArgument(ParseArgumentError),
+    MissingArgument {
+        expected: ArgumentRequirement,
     },
-    NoSuchLabel {
-        got: &'a str,
-    },
-    NoSuchOperation {
-        got: &'a str,
-    },
-    InvalidArgument(ParseArgumentError<'a>),
     UnexpectedArgument {
         got: ArgumentIntermediate<'a>,
         expected: ArgumentRequirement,
     },
     TooManyArguments {
-        got: ArgumentIntermediate<'a>,
+        got: usize,
+        maximum: usize,
+    },
+    TooFewArguments {
+        got: usize,
+        minimum: usize,
     },
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 struct InstructionIntermediate<'a> {
     kind: InstructionKind,
     line: u32,
-    arguments: [ArgumentIntermediate<'a>; Instruction::NUM_ARGUMENTS],
+    arguments: Vec<ArgumentIntermediate<'a>>,
 }
 
 enum ParseInstructionResult<'a> {
@@ -137,15 +120,18 @@ enum ParseInstructionResult<'a> {
 
 #[derive(Clone, Copy, Debug)]
 pub enum ArgumentIntermediate<'a> {
-    Completed(Argument),
-    Label(&'a str),
+    Value(&'a str),
+    Comparison {
+        ordering: Ordering,
+        invert: bool,
+        values: [&'a str; 2],
+    },
 }
 
 impl<'a> InstructionIntermediate<'a> {
     fn from_line(
         source_line: &'a str,
         line_index: u32,
-        allowed_registers: &RegisterMap<bool>,
     ) -> Result<ParseInstructionResult<'a>, ProgramAssemblyError<'a>> {
         let line = source_line
             .split_once(COMMENT_SEPARATOR)
@@ -158,38 +144,34 @@ impl<'a> InstructionIntermediate<'a> {
             return Ok(ParseInstructionResult::Empty);
         };
 
-        let mut next_argument = || match ArgumentIntermediate::pop_from_tokens(&mut tokens) {
-            Ok(argument) => Ok(argument),
-            Err(error) => Err(ProgramAssemblyError {
-                line: line_index,
-                kind: ProgramAssemblyErrorKind::InvalidArgument(error),
-            }),
-        };
+        let mut arguments = Vec::new();
+
+        loop {
+            match ArgumentIntermediate::pop_from_tokens(&mut tokens) {
+                Ok(argument) => arguments.push(argument),
+                Err(error) => match error {
+                    ParseArgumentError::OutOfTokens => break,
+                    ParseArgumentError::InvalidComparison => {
+                        return Err(ProgramAssemblyError {
+                            line: line_index,
+                            kind: ProgramAssemblyErrorKind::InvalidArgument(error),
+                        });
+                    }
+                },
+            }
+        }
 
         if instruction_code == LABEL_PSEUDO_INSTRUCTION {
-            let argument = next_argument()?;
+            Self::check_argument_length(arguments.len(), 1, 1, line_index)?;
 
-            let ArgumentIntermediate::Label(label) = argument else {
+            let argument = arguments[0];
+
+            let ArgumentIntermediate::Value(label) = argument else {
                 return Err(ProgramAssemblyError {
                     line: line_index,
                     kind: ProgramAssemblyErrorKind::UnexpectedArgument {
                         got: argument,
                         expected: ArgumentRequirement::Instruction,
-                    },
-                });
-            };
-
-            let next_argument = next_argument();
-
-            let Err(ProgramAssemblyError {
-                kind: ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::OutOfTokens),
-                ..
-            }) = next_argument
-            else {
-                return Err(ProgramAssemblyError {
-                    line: line_index,
-                    kind: ProgramAssemblyErrorKind::TooManyArguments {
-                        got: next_argument?,
                     },
                 });
             };
@@ -202,87 +184,8 @@ impl<'a> InstructionIntermediate<'a> {
                 .parse::<InstructionKind>()
                 .map_err(|_| ProgramAssemblyError {
                     line: line_index,
-                    kind: ProgramAssemblyErrorKind::NoSuchOperation {
-                        got: instruction_code,
-                    },
+                    kind: ProgramAssemblyErrorKind::NoSuchOperation(instruction_code),
                 })?;
-
-        let mut arguments = array::from_fn(|_| ArgumentIntermediate::Completed(Argument::Empty));
-        let mut previous_argument: Option<ArgumentIntermediate> = None;
-
-        for (i, requirement) in instruction_kind
-            .get_properties()
-            .arguments
-            .into_iter()
-            .enumerate()
-        {
-            if matches!(requirement, ArgumentRequirement::Empty) {
-                continue;
-            }
-
-            let argument = if let Some(argument) = previous_argument {
-                if argument.matches_requirement(requirement) {
-                    previous_argument = None;
-
-                    argument
-                } else if requirement.allows_empty() {
-                    continue;
-                } else {
-                    return Err(ProgramAssemblyError {
-                        line: line_index,
-                        kind: ProgramAssemblyErrorKind::UnexpectedArgument {
-                            got: argument,
-                            expected: requirement,
-                        },
-                    });
-                }
-            } else {
-                let argument = next_argument()?;
-
-                if argument.matches_requirement(requirement) {
-                    argument
-                } else if requirement.allows_empty() {
-                    previous_argument = Some(argument);
-                    continue;
-                } else {
-                    return Err(ProgramAssemblyError {
-                        line: line_index,
-                        kind: ProgramAssemblyErrorKind::UnexpectedArgument {
-                            got: argument,
-                            expected: requirement,
-                        },
-                    });
-                }
-            };
-
-            if let ArgumentIntermediate::Completed(Argument::Number(NumberSource::Register(
-                register,
-            ))) = argument
-            {
-                if !allowed_registers[register as usize] {
-                    return Err(ProgramAssemblyError {
-                        line: line_index,
-                        kind: ProgramAssemblyErrorKind::NoSuchRegister { got: register },
-                    });
-                }
-            }
-
-            arguments[i] = argument;
-        }
-
-        match next_argument() {
-            Ok(argument) => {
-                return Err(ProgramAssemblyError {
-                    line: line_index,
-                    kind: ProgramAssemblyErrorKind::TooManyArguments { got: argument },
-                });
-            }
-            Err(ProgramAssemblyError {
-                kind: ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::OutOfTokens),
-                ..
-            }) => (),
-            Err(error) => return Err(error),
-        };
 
         Ok(ParseInstructionResult::Instruction(Self {
             kind: instruction_kind,
@@ -291,33 +194,92 @@ impl<'a> InstructionIntermediate<'a> {
         }))
     }
 
-    pub fn complete(self) -> Option<Instruction> {
-        let mut arguments = array::from_fn(|_| Argument::Empty);
+    pub fn parse(
+        self,
+        labels: &HashMap<&str, u32>,
+    ) -> Result<Instruction, ProgramAssemblyError<'a>> {
+        let properties = self.kind.get_properties();
 
-        for (i, argument) in self.arguments.into_iter().enumerate() {
-            arguments[i] = argument.complete()?;
-        }
+        let min_arguments = properties.minimum_arguments();
+        let max_arguments = properties.maximum_arguments();
 
-        Some(Instruction {
+        Self::check_argument_length(
+            self.arguments.len(),
+            min_arguments,
+            max_arguments,
+            self.line,
+        )?;
+
+        let mut skipped = 0;
+
+        let mut arguments = self.arguments.iter().peekable();
+
+        let mut instruction = Instruction {
             kind: self.kind,
             line: self.line,
-            arguments,
-        })
+            arguments: array::from_fn(|_| Argument::Empty),
+        };
+
+        for (i, requirement) in properties.arguments.into_iter().enumerate() {
+            if requirement == ArgumentRequirement::Empty
+                || requirement.allows_empty() && max_arguments > skipped + self.arguments.len()
+            {
+                skipped += 1;
+                continue;
+            }
+
+            let argument_intermediate = *arguments.peek().unwrap();
+
+            match argument_intermediate.as_requirement(requirement, labels) {
+                Some(argument) => {
+                    instruction.arguments[i] = argument;
+                    arguments.next();
+                }
+                None => todo!(),
+            }
+        }
+
+        Ok(instruction)
+    }
+
+    fn check_argument_length(
+        length: usize,
+        minimum: usize,
+        maximum: usize,
+        line: u32,
+    ) -> Result<(), ProgramAssemblyError<'a>> {
+        if length < minimum {
+            return Err(ProgramAssemblyError {
+                line: line,
+                kind: ProgramAssemblyErrorKind::TooFewArguments {
+                    got: length,
+                    minimum,
+                },
+            });
+        } else if length > maximum {
+            return Err(ProgramAssemblyError {
+                line: line,
+                kind: ProgramAssemblyErrorKind::TooManyArguments {
+                    got: length,
+                    maximum,
+                },
+            });
+        } else {
+            Ok(())
+        }
     }
 }
 
 impl<'a> ArgumentIntermediate<'a> {
     pub fn pop_from_tokens(
         tokens: &mut Peekable<impl Iterator<Item = &'a str>>,
-    ) -> Result<Self, ParseArgumentError<'a>> {
-        let Some(token) = tokens.next() else {
+    ) -> Result<Self, ParseArgumentError> {
+        let Some(first_value) = tokens.next() else {
             return Err(ParseArgumentError::OutOfTokens);
         };
 
-        let argument = Self::from_token(token)?;
-
-        let Some(&token) = tokens.peek() else {
-            return Ok(argument);
+        let Some(&comparison_token) = tokens.peek() else {
+            return Ok(ArgumentIntermediate::Value(first_value));
         };
 
         let Some((index, _)) = [
@@ -330,8 +292,8 @@ impl<'a> ArgumentIntermediate<'a> {
         ]
         .into_iter()
         .enumerate()
-        .find(|&(_, values)| values.contains(&token)) else {
-            return Ok(argument);
+        .find(|&(_, values)| values.contains(&comparison_token)) else {
+            return Ok(ArgumentIntermediate::Value(first_value));
         };
 
         tokens.next();
@@ -344,87 +306,120 @@ impl<'a> ArgumentIntermediate<'a> {
             _ => unreachable!(),
         };
 
-        let Some(token) = tokens.next() else {
-            return Err(ParseArgumentError::OutOfTokens);
+        let Some(second_value) = tokens.next() else {
+            return Err(ParseArgumentError::InvalidComparison);
         };
 
-        let values = [
-            argument.as_number_source()?,
-            Self::from_token(token)
-                .map_err(|error| match error {
-                    ParseArgumentError::OutOfTokens => ParseArgumentError::InvalidComparison,
-                    other => other,
-                })?
-                .as_number_source()?,
-        ];
+        Ok(ArgumentIntermediate::Comparison {
+            ordering,
+            invert,
+            values: [first_value, second_value],
+        })
+    }
 
-        Ok(ArgumentIntermediate::Completed(Argument::Comparison(
-            Comparison {
+    pub fn as_requirement(
+        &self,
+        requirement: ArgumentRequirement,
+        labels: &HashMap<&str, u32>,
+    ) -> Option<Argument> {
+        Some(match requirement {
+            ArgumentRequirement::Constant | ArgumentRequirement::ConstantOrEmpty => {
+                self.as_constant().ok()?.into()
+            }
+            ArgumentRequirement::RegisterWriteOnly | ArgumentRequirement::Register => {
+                self.as_register()?.into()
+            }
+            ArgumentRequirement::ConstantOrRegister => self.as_number_source()?.into(),
+            ArgumentRequirement::Comparison => self.as_comparison().ok()?.into(),
+            ArgumentRequirement::AnyValue | ArgumentRequirement::AnyValueOrEmpty => {
+                self.as_value().ok()?
+            }
+            ArgumentRequirement::Instruction => {
+                let label = self.as_label()?;
+
+                Argument::Instruction(*labels.get(label)?)
+            }
+            ArgumentRequirement::Empty => return None,
+        })
+    }
+
+    pub fn as_label(&self) -> Option<&'a str> {
+        match self {
+            ArgumentIntermediate::Value(label) => Some(label),
+            ArgumentIntermediate::Comparison { .. } => None,
+        }
+    }
+
+    pub fn as_constant(&self) -> Result<Integer, Option<ParseIntError>> {
+        match self {
+            ArgumentIntermediate::Value(value) => value.parse().map_err(|error| Some(error)),
+            ArgumentIntermediate::Comparison { .. } => Err(None),
+        }
+    }
+
+    pub fn as_register(&self) -> Option<u32> {
+        match self {
+            ArgumentIntermediate::Value(value) => {
+                if value.len() == 1 {
+                    computer::register_with_name(value.chars().next().unwrap())
+                } else {
+                    None
+                }
+            }
+            ArgumentIntermediate::Comparison { .. } => None,
+        }
+    }
+
+    pub fn as_number_source(&self) -> Option<NumberSource> {
+        if let Ok(constant) = self.as_constant() {
+            return Some(NumberSource::Constant(constant));
+        }
+
+        if let Some(register) = self.as_register() {
+            return Some(NumberSource::Register(register));
+        }
+
+        None
+    }
+
+    pub fn as_comparison(&self) -> Result<Comparison, Option<ParseComparisonError>> {
+        match self {
+            ArgumentIntermediate::Value(_) => Err(None),
+            ArgumentIntermediate::Comparison {
                 ordering,
                 invert,
                 values,
+            } => match values.map(|value| ArgumentIntermediate::Value(value).as_number_source()) {
+                [Some(lhs), Some(rhs)] => Ok(Comparison {
+                    ordering: *ordering,
+                    invert: *invert,
+                    values: [lhs, rhs],
+                }),
+                values => Err(Some(ParseComparisonError {
+                    lhs_invalid: values[0].is_none(),
+                    rhs_invalid: values[1].is_none(),
+                })),
             },
-        )))
-    }
-
-    fn from_token(token: &'a str) -> Result<Self, ParseArgumentError<'a>> {
-        let start = token.chars().next().unwrap();
-
-        match start {
-            'A'..='Z' | '_' => {
-                if token.len() > 1 {
-                    Ok(Self::Label(token))
-                } else {
-                    Ok(Self::Completed(Argument::Number(NumberSource::Register(
-                        computer::register_with_name(start)
-                            .ok_or(ParseArgumentError::InvalidRegister { got: token })?,
-                    ))))
-                }
-            }
-            '0'..='9' | '-' => Ok(Self::Completed(Argument::Number(NumberSource::Constant(
-                token
-                    .parse()
-                    .map_err(|error| ParseArgumentError::InvalidInteger { got: token, error })?,
-            )))),
-            _ => return Err(ParseArgumentError::InvalidToken { got: token }),
         }
     }
 
-    pub fn matches_requirement(&self, requirement: ArgumentRequirement) -> bool {
-        match self {
-            ArgumentIntermediate::Completed(argument) => argument.matches_requirement(requirement),
-            ArgumentIntermediate::Label(_) => {
-                matches!(requirement, ArgumentRequirement::Instruction)
-            }
+    pub fn as_value(&self) -> Result<Argument, Option<ParseComparisonError>> {
+        if let Some(source) = self.as_number_source() {
+            return Ok(source.into());
         }
-    }
 
-    fn complete(self) -> Option<Argument> {
-        match self {
-            ArgumentIntermediate::Completed(argument) => Some(argument),
-            _ => None,
-        }
-    }
-
-    fn as_number_source(self) -> Result<NumberSource, ParseArgumentError<'a>> {
-        match self {
-            ArgumentIntermediate::Completed(argument) => match argument {
-                Argument::Number(source) => Ok(source),
-                _ => Err(ParseArgumentError::InvalidComparison),
-            },
-            ArgumentIntermediate::Label(label) => {
-                Err(ParseArgumentError::InvalidLabel { got: label })
-            }
-        }
+        self.as_comparison().map(Comparison::into)
     }
 }
 
-#[derive(Clone, Debug)]
-pub enum ParseArgumentError<'a> {
+#[derive(Clone, Copy, Debug)]
+pub enum ParseArgumentError {
     OutOfTokens,
-    InvalidToken { got: &'a str },
-    InvalidRegister { got: &'a str },
-    InvalidInteger { got: &'a str, error: ParseIntError },
-    InvalidLabel { got: &'a str },
     InvalidComparison,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ParseComparisonError {
+    pub lhs_invalid: bool,
+    pub rhs_invalid: bool,
 }

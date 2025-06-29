@@ -368,7 +368,9 @@ pub enum InstructionKind {
 
 impl InstructionKind {
     pub fn get_properties(self) -> &'static InstructionKindProperties {
-        &INSTRUCTION_KINDS[self]
+        let properties = &INSTRUCTION_KINDS[self];
+        assert_eq!(properties.kind, self);
+        properties
     }
 }
 

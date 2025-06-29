@@ -90,6 +90,30 @@ impl Argument {
     }
 }
 
+impl From<Integer> for Argument {
+    fn from(constant: Integer) -> Self {
+        Argument::Number(NumberSource::Constant(constant))
+    }
+}
+
+impl From<u32> for Argument {
+    fn from(register: u32) -> Self {
+        Argument::Number(NumberSource::Register(register))
+    }
+}
+
+impl From<NumberSource> for Argument {
+    fn from(source: NumberSource) -> Self {
+        Argument::Number(source)
+    }
+}
+
+impl From<Comparison> for Argument {
+    fn from(comparison: Comparison) -> Self {
+        Self::Comparison(comparison)
+    }
+}
+
 impl Display for Argument {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
