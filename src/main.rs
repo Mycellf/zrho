@@ -13,6 +13,8 @@ pub mod integer;
 pub mod program;
 
 fn main() {
+    const DIGITS: u8 = 3;
+
     let mut computer = Computer::new(
         Program::assemble_from(
             "Test Program".to_owned(),
@@ -28,7 +30,7 @@ fn main() {
             .with_register(
                 'X',
                 Register {
-                    values: RegisterValues::Scalar(DigitInteger::zero(3)),
+                    values: RegisterValues::Scalar(DigitInteger::zero(DIGITS)),
                     indexes_array: None,
                     read_time: 0,
                     write_time: 0,
@@ -37,7 +39,7 @@ fn main() {
             .with_register(
                 'Y',
                 Register {
-                    values: RegisterValues::Scalar(DigitInteger::zero(3)),
+                    values: RegisterValues::Scalar(DigitInteger::zero(DIGITS)),
                     indexes_array: None,
                     read_time: 0,
                     write_time: 0,
@@ -46,7 +48,7 @@ fn main() {
             .with_register(
                 'I',
                 Register {
-                    values: RegisterValues::Scalar(DigitInteger::zero(3)),
+                    values: RegisterValues::Scalar(DigitInteger::zero(DIGITS)),
                     indexes_array: Some(computer::register_with_name('D').unwrap()),
                     read_time: 0,
                     write_time: 0,
@@ -56,7 +58,7 @@ fn main() {
                 'D',
                 Register {
                     values: RegisterValues::Vector {
-                        values: Box::new([DigitInteger::zero(3); 100]),
+                        values: Box::new([DigitInteger::zero(DIGITS); 100]),
                         index: 0,
                     },
                     indexes_array: None,
