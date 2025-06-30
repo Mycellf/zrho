@@ -197,40 +197,31 @@ impl Instruction {
         let properties = self.kind.get_properties();
 
         if let &Some((time, ref condition)) = &properties.conditional_time {
-            match condition {
-                TimeCondition::SameAsPrevious {
-                    kind,
-                    allow_cascade,
-                } => 'outer: {
-                    let Some((previous_instruction, previous_argument_values)) =
-                        previous_instruction
-                    else {
-                        break 'outer;
-                    };
-
-                    if previous_instruction.kind == *kind
-                        && previous_argument_values == argument_values
-                    {
-                        return (time, *allow_cascade);
-                    }
-                }
-                TimeCondition::ArgumentMatches { argument, value } => {
-                    if argument_values[*argument] == Some(*value) {
-                        return (time, true);
-                    }
-                }
-                TimeCondition::ArgumentTypeMatches {
-                    argument,
-                    requirement,
-                } => {
-                    if self.arguments[*argument].matches_requirement(*requirement) {
-                        return (time, true);
-                    }
-                }
+            if condition.matches_context(previous_instruction, self.arguments, argument_values) {
+                return (time, !condition.allows_cascade());
             }
         }
 
         (properties.base_time, true)
+    }
+
+    pub fn group(
+        &self,
+        previous_instruction: Option<(&Instruction, &ArgumentValues)>,
+    ) -> InstructionKind {
+        let properties = self.kind.get_properties();
+
+        if let &Some((group, ref condition)) = &properties.group {
+            if condition.matches_context(
+                previous_instruction,
+                self.arguments,
+                &ArgumentValues::default(),
+            ) {
+                return group;
+            }
+        }
+
+        self.kind
     }
 
     /// Returns the amount of time taken by the instruction, or an interrupt.
@@ -500,9 +491,9 @@ pub struct InstructionKindProperties {
     pub name: &'static str,
     pub arguments: [ArgumentRequirement; Instruction::NUM_ARGUMENTS],
     pub base_time: u32,
-    pub conditional_time: Option<(u32, TimeCondition)>,
+    pub conditional_time: Option<(u32, PropertyCondition)>,
     pub calls_per_tick_limit: Option<NonZeroU8>,
-    pub group: Option<InstructionKind>,
+    pub group: Option<(InstructionKind, PropertyCondition)>,
 }
 
 impl InstructionKindProperties {
@@ -515,13 +506,6 @@ impl InstructionKindProperties {
         calls_per_tick_limit: Some(NonZeroU8::new(1).unwrap()),
         group: None,
     };
-
-    pub fn group(&self) -> InstructionKind {
-        match self.group {
-            Some(group) => group,
-            None => self.kind,
-        }
-    }
 
     pub fn minimum_arguments(&self) -> usize {
         self.arguments
@@ -551,7 +535,7 @@ impl Default for InstructionKindProperties {
     }
 }
 
-pub enum TimeCondition {
+pub enum PropertyCondition {
     SameAsPrevious {
         kind: InstructionKind,
         allow_cascade: bool,
@@ -564,6 +548,41 @@ pub enum TimeCondition {
         argument: usize,
         requirement: ArgumentRequirement,
     },
+    Always,
+}
+
+impl PropertyCondition {
+    #[must_use]
+    pub fn matches_context<const N: usize>(
+        &self,
+        previous_instruction: Option<(&Instruction, &ArgumentValues)>,
+        arguments: [Argument; N],
+        argument_values: &ArgumentValues,
+    ) -> bool {
+        match self {
+            PropertyCondition::SameAsPrevious { kind, .. } => previous_instruction.is_some_and(
+                |(previous_instruction, previous_argument_values)| {
+                    previous_instruction.kind == *kind
+                        && previous_argument_values == argument_values
+                },
+            ),
+            PropertyCondition::ArgumentMatches { argument, value } => {
+                argument_values[*argument] == Some(*value)
+            }
+            PropertyCondition::ArgumentTypeMatches {
+                argument,
+                requirement,
+            } => arguments[*argument].matches_requirement(*requirement),
+            PropertyCondition::Always => true,
+        }
+    }
+
+    pub fn allows_cascade(&self) -> bool {
+        match self {
+            PropertyCondition::SameAsPrevious { allow_cascade, .. } => *allow_cascade,
+            _ => true,
+        }
+    }
 }
 
 const fn arguments<const N: usize>(
@@ -637,7 +656,13 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
             ArgumentRequirement::RegisterWriteOnly,
         ]),
         base_time: 1,
-        group: Some(InstructionKind::Negate),
+        group: Some((
+            InstructionKind::Negate,
+            PropertyCondition::ArgumentTypeMatches {
+                argument: 1,
+                requirement: ArgumentRequirement::Register,
+            },
+        )),
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
@@ -668,7 +693,7 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
         base_time: 4,
         conditional_time: Some((
             1,
-            TimeCondition::SameAsPrevious {
+            PropertyCondition::SameAsPrevious {
                 kind: InstructionKind::Modulus,
                 allow_cascade: false,
             },
@@ -686,7 +711,7 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
         base_time: 4,
         conditional_time: Some((
             1,
-            TimeCondition::SameAsPrevious {
+            PropertyCondition::SameAsPrevious {
                 kind: InstructionKind::Divide,
                 allow_cascade: false,
             },
@@ -733,7 +758,7 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
         base_time: 1,
         conditional_time: Some((
             0,
-            TimeCondition::ArgumentTypeMatches {
+            PropertyCondition::ArgumentTypeMatches {
                 argument: 0,
                 requirement: ArgumentRequirement::ConstantOrEmpty,
             },
@@ -750,12 +775,12 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
         base_time: 0,
         conditional_time: Some((
             5,
-            TimeCondition::ArgumentMatches {
+            PropertyCondition::ArgumentMatches {
                 argument: 0,
                 value: 0,
             },
         )),
-        group: Some(InstructionKind::Jump),
+        group: Some((InstructionKind::Jump, PropertyCondition::Always)),
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
@@ -768,12 +793,12 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
         base_time: 5,
         conditional_time: Some((
             0,
-            TimeCondition::ArgumentMatches {
+            PropertyCondition::ArgumentMatches {
                 argument: 0,
                 value: 0,
             },
         )),
-        group: Some(InstructionKind::Jump),
+        group: Some((InstructionKind::Jump, PropertyCondition::Always)),
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {

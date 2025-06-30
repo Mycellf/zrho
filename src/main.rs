@@ -157,13 +157,14 @@ pub const RANDOM_TESTS: &str = r"
     LJP 1 NEXT
     LBL NEXT
 
-    NEG X
     ADD 3 2 X
+    NEG X
     SET Y 10
 
+    NEG Y
     SUB Y 1 Y
     NEG X
-    SUB Y 1 Y
+    SUB Y X Y
 
     NEG X
     NEG Y

@@ -98,11 +98,20 @@ impl Computer {
                 .get(self.next_instruction as usize);
 
             if let Some(instruction) = instruction {
+                let previous_instruction = self.previous_instruction.as_ref().map(
+                    |&(instruction, ref argument_values)| {
+                        (
+                            &self.loaded_program.instructions[instruction as usize],
+                            argument_values,
+                        )
+                    },
+                );
+
                 let properties = instruction.kind.get_properties();
 
                 let limit = properties.calls_per_tick_limit;
 
-                let group = properties.group();
+                let group = instruction.group(previous_instruction);
 
                 if limit.is_some_and(|limit| self.executed_instructions[group] >= limit.get()) {
                     self.end_of_tick();
@@ -113,14 +122,7 @@ impl Computer {
 
                 match instruction.evaluate(
                     &mut self.registers,
-                    self.previous_instruction.as_ref().map(
-                        |&(instruction, ref argument_values)| {
-                            (
-                                &self.loaded_program.instructions[instruction as usize],
-                                argument_values,
-                            )
-                        },
-                    ),
+                    previous_instruction,
                     &mut self.next_instruction,
                 ) {
                     Ok((time, argument_values, update_previous_instruction)) => {
