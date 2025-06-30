@@ -100,7 +100,6 @@ pub struct ProgramAssemblyError<'a> {
 
 #[derive(Clone, Debug)]
 pub enum ProgramAssemblyErrorKind<'a> {
-    NoSuchRegister(&'a str),
     RegisterNotSupported(u32),
     NoSuchLabel(&'a str),
     NoSuchOperation(&'a str),
