@@ -125,6 +125,8 @@ fn main() {
             if string.is_empty() {
                 // When not running interactively, add the missing newline
                 println!();
+            } else if ["e", "end"].contains(&string.trim()) {
+                skip_ticks = u64::MAX;
             } else if let Ok(input) = string.trim().parse::<u64>() {
                 skip_ticks = input;
             }
