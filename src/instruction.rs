@@ -367,10 +367,8 @@ pub enum InstructionKind {
 }
 
 impl InstructionKind {
-    pub fn get_properties(self) -> &'static InstructionKindProperties {
-        let properties = &INSTRUCTION_KINDS[self];
-        assert_eq!(properties.kind, self);
-        properties
+    pub const fn get_properties(self) -> &'static InstructionKindProperties {
+        INSTRUCTION_KINDS.get(self)
     }
 }
 
@@ -403,11 +401,11 @@ impl<T> InstructionKindMap<T> {
         Self(array::from_fn(|_| element.clone()))
     }
 
-    pub fn get(&self, kind: InstructionKind) -> &T {
+    pub const fn get(&self, kind: InstructionKind) -> &T {
         &self.0[kind as usize]
     }
 
-    pub fn get_mut(&mut self, kind: InstructionKind) -> &mut T {
+    pub const fn get_mut(&mut self, kind: InstructionKind) -> &mut T {
         &mut self.0[kind as usize]
     }
 }
@@ -583,6 +581,22 @@ const fn arguments<const N: usize>(
 
     all_arguments
 }
+
+const _: () = {
+    let mut i = 0;
+
+    while i < INSTRUCTION_KINDS.0.len() {
+        let expected_kind = unsafe { std::mem::transmute::<u8, InstructionKind>(i as u8) };
+        let stored_kind = expected_kind.get_properties().kind;
+
+        assert!(
+            expected_kind as u8 == stored_kind as u8,
+            "Properties stored in INSTRUCTION_KINDS do not match their indecies",
+        );
+
+        i += 1;
+    }
+};
 
 #[allow(clippy::needless_update)]
 pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = InstructionKindMap([
