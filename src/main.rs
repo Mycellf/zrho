@@ -33,7 +33,7 @@ fn main() {
         }
     };
 
-    let mut computer = Computer::new(
+    let computer = Computer::new(
         program,
         RegisterSet::new_empty()
             .with_register(
@@ -77,6 +77,10 @@ fn main() {
             ),
     );
 
+    interactively_run(computer);
+}
+
+fn interactively_run(mut computer: Computer) {
     let mut skip_ticks = 0;
 
     loop {
