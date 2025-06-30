@@ -504,6 +504,7 @@ pub struct InstructionKindProperties {
     pub base_time: u32,
     pub conditional_time: Option<(u32, TimeCondition)>,
     pub calls_per_tick_limit: Option<NonZeroU8>,
+    pub group: Option<InstructionKind>,
 }
 
 impl InstructionKindProperties {
@@ -514,7 +515,15 @@ impl InstructionKindProperties {
         base_time: 0,
         conditional_time: None,
         calls_per_tick_limit: Some(NonZeroU8::new(1).unwrap()),
+        group: None,
     };
+
+    pub fn group(&self) -> InstructionKind {
+        match self.group {
+            Some(group) => group,
+            None => self.kind,
+        }
+    }
 
     pub fn minimum_arguments(&self) -> usize {
         self.arguments
@@ -613,6 +622,7 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
             ArgumentRequirement::RegisterWriteOnly,
         ]),
         base_time: 1,
+        group: Some(InstructionKind::Negate),
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
@@ -730,6 +740,7 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
                 value: 0,
             },
         )),
+        group: Some(InstructionKind::Jump),
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
@@ -747,6 +758,7 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
                 value: 0,
             },
         )),
+        group: Some(InstructionKind::Jump),
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {

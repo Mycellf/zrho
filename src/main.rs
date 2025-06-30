@@ -147,13 +147,23 @@ fn interactively_run(mut computer: Computer) {
     }
 }
 
-const PROGRAM: &str = PRIME_NUMBERS;
+const PROGRAM: &str = RANDOM_TESTS;
 
 pub const RANDOM_TESTS: &str = r"
     ; NOODLE AROUND
 
+    JMP 0 END
+    UJP 0 END
+    LJP 1 NEXT
+    LBL NEXT
+
+    NEG X
     ADD 3 2 X
     SET Y 10
+
+    SUB Y 1 Y
+    NEG X
+    SUB Y 1 Y
 
     NEG X
     NEG Y

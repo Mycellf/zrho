@@ -98,16 +98,18 @@ impl Computer {
                 .get(self.next_instruction as usize);
 
             if let Some(instruction) = instruction {
-                let limit = instruction.kind.get_properties().calls_per_tick_limit;
+                let properties = instruction.kind.get_properties();
 
-                if limit.is_some_and(|limit| {
-                    self.executed_instructions[instruction.kind] >= limit.get()
-                }) {
+                let limit = properties.calls_per_tick_limit;
+
+                let group = properties.group();
+
+                if limit.is_some_and(|limit| self.executed_instructions[group] >= limit.get()) {
                     self.end_of_tick();
                     return false;
                 }
 
-                self.executed_instructions[instruction.kind] += 1;
+                self.executed_instructions[group] += 1;
 
                 match instruction.evaluate(
                     &mut self.registers,
