@@ -600,6 +600,7 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
         kind: InstructionKind::Try,
         name: "TRY",
         arguments: arguments([ArgumentRequirement::Register]),
+        calls_per_tick_limit: None,
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
