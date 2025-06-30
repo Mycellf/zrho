@@ -1,6 +1,4 @@
-use std::{
-    array, cmp::Ordering, collections::HashMap, fmt::Display, iter::Peekable, num::ParseIntError,
-};
+use std::{array, cmp::Ordering, collections::HashMap, fmt::Display, iter::Peekable};
 
 use crate::{
     argument::{Argument, Comparison, NumberSource},
@@ -356,15 +354,15 @@ impl<'a> ArgumentIntermediate<'a> {
     ) -> Option<Argument> {
         Some(match requirement {
             ArgumentRequirement::Constant | ArgumentRequirement::ConstantOrEmpty => {
-                self.as_constant().ok()?.into()
+                self.as_constant()?.into()
             }
             ArgumentRequirement::RegisterWriteOnly | ArgumentRequirement::Register => {
                 self.as_register()?.into()
             }
             ArgumentRequirement::ConstantOrRegister => self.as_number_source()?.into(),
-            ArgumentRequirement::Comparison => self.as_comparison().ok()?.into(),
+            ArgumentRequirement::Comparison => self.as_comparison()?.into(),
             ArgumentRequirement::AnyValue | ArgumentRequirement::AnyValueOrEmpty => {
-                self.as_value().ok()?
+                self.as_value()?
             }
             ArgumentRequirement::Instruction => {
                 let label = self.as_label()?;
@@ -382,10 +380,10 @@ impl<'a> ArgumentIntermediate<'a> {
         }
     }
 
-    pub fn as_constant(&self) -> Result<Integer, Option<ParseIntError>> {
+    pub fn as_constant(&self) -> Option<Integer> {
         match self {
-            ArgumentIntermediate::Token(value) => value.parse().map_err(|error| Some(error)),
-            ArgumentIntermediate::Comparison { .. } => Err(None),
+            ArgumentIntermediate::Token(value) => value.parse().ok(),
+            ArgumentIntermediate::Comparison { .. } => None,
         }
     }
 
@@ -403,7 +401,7 @@ impl<'a> ArgumentIntermediate<'a> {
     }
 
     pub fn as_number_source(&self) -> Option<NumberSource> {
-        if let Ok(constant) = self.as_constant() {
+        if let Some(constant) = self.as_constant() {
             return Some(NumberSource::Constant(constant));
         }
 
@@ -414,30 +412,27 @@ impl<'a> ArgumentIntermediate<'a> {
         None
     }
 
-    pub fn as_comparison(&self) -> Result<Comparison, Option<ParseComparisonError>> {
+    pub fn as_comparison(&self) -> Option<Comparison> {
         match self {
-            ArgumentIntermediate::Token(_) => Err(None),
+            ArgumentIntermediate::Token(_) => None,
             ArgumentIntermediate::Comparison {
                 ordering,
                 invert,
                 values,
             } => match values.map(|value| ArgumentIntermediate::Token(value).as_number_source()) {
-                [Some(lhs), Some(rhs)] => Ok(Comparison {
+                [Some(lhs), Some(rhs)] => Some(Comparison {
                     ordering: *ordering,
                     invert: *invert,
                     values: [lhs, rhs],
                 }),
-                values => Err(Some(ParseComparisonError {
-                    lhs_invalid: values[0].is_none(),
-                    rhs_invalid: values[1].is_none(),
-                })),
+                _ => None,
             },
         }
     }
 
-    pub fn as_value(&self) -> Result<Argument, Option<ParseComparisonError>> {
+    pub fn as_value(&self) -> Option<Argument> {
         if let Some(source) = self.as_number_source() {
-            return Ok(source.into());
+            return Some(source.into());
         }
 
         self.as_comparison().map(Comparison::into)
