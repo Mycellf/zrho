@@ -4,7 +4,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use crate::{
+use crate::simulation::{
     instruction::{ArgumentValues, InstructionEvaluationInterrupt, InstructionKindMap},
     integer::{AssignIntegerError, DigitInteger, Integer},
     program::Program,

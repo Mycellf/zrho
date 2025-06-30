@@ -1,16 +1,12 @@
 use std::io::BufRead;
 
-use crate::{
+use crate::simulation::{
     computer::{Computer, Register, RegisterMap, RegisterSet, RegisterValues},
     integer::DigitInteger,
     program::Program,
 };
 
-pub mod argument;
-pub mod computer;
-pub mod instruction;
-pub mod integer;
-pub mod program;
+pub mod simulation;
 
 fn main() {
     const DIGITS: u8 = 3;
@@ -52,7 +48,7 @@ fn main() {
                 'I',
                 Register {
                     values: RegisterValues::Scalar(DigitInteger::zero(DIGITS)),
-                    indexes_array: Some(computer::register_with_name('D').unwrap()),
+                    indexes_array: Some(simulation::computer::register_with_name('D').unwrap()),
                     read_time: 0,
                     write_time: 0,
                 },
@@ -147,7 +143,7 @@ fn interactively_run(mut computer: Computer) {
     }
 }
 
-const PROGRAM: &str = RANDOM_TESTS;
+const PROGRAM: &str = PRIME_NUMBERS;
 
 pub const RANDOM_TESTS: &str = r"
     ; NOODLE AROUND

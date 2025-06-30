@@ -1,6 +1,6 @@
 use std::{array, cmp::Ordering, collections::HashMap, fmt::Display, iter::Peekable};
 
-use crate::{
+use crate::simulation::{
     argument::{Argument, Comparison, NumberSource},
     computer::{self, RegisterMap},
     instruction::{ArgumentRequirement, Instruction, InstructionKind},

@@ -6,7 +6,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::{
+use crate::simulation::{
     argument::Argument,
     computer::{RegisterAccessError, RegisterMap, RegisterSet},
     integer::{AssignIntegerError, BiggerInteger, Integer},
