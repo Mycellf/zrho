@@ -24,7 +24,8 @@ pub struct Computer {
 
     pub runtime: u64,
 
-    executed_instructions: InstructionKindMap<u8>,
+    pub executed_instructions: InstructionKindMap<u8>,
+    pub executed_instruction_groups: InstructionKindMap<u8>,
 
     pub previous_instruction: Option<(u32, ArgumentValues)>,
     pub interrupt: Option<InstructionEvaluationInterrupt>,
@@ -46,6 +47,7 @@ impl Computer {
             runtime: 0,
 
             executed_instructions: InstructionKindMap::from_element(0),
+            executed_instruction_groups: InstructionKindMap::from_element(0),
 
             previous_instruction: None,
             interrupt: None,
@@ -113,12 +115,14 @@ impl Computer {
 
                 let group = instruction.group(previous_instruction);
 
-                if limit.is_some_and(|limit| self.executed_instructions[group] >= limit.get()) {
+                if limit.is_some_and(|limit| self.executed_instruction_groups[group] >= limit.get())
+                {
                     self.end_of_tick();
                     return false;
                 }
 
-                self.executed_instructions[group] += 1;
+                self.executed_instructions[instruction.kind] += 1;
+                self.executed_instruction_groups[group] += 1;
 
                 match instruction.evaluate(
                     &mut self.registers,
@@ -160,6 +164,7 @@ impl Computer {
 
     fn end_of_tick(&mut self) {
         self.executed_instructions = InstructionKindMap::from_element(0);
+        self.executed_instruction_groups = InstructionKindMap::from_element(0);
 
         if let Some(runtime) = self.runtime.checked_add(1) {
             self.runtime = runtime;
