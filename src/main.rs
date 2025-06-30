@@ -86,7 +86,7 @@ fn interactively_run(mut computer: Computer) {
     loop {
         let instruction = computer.instruction;
 
-        let modified = computer.tick_partial();
+        let modified = computer.step_cycle();
 
         if let Some(interrupt) = computer.interrupt {
             println!(

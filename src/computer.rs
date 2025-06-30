@@ -52,9 +52,9 @@ impl Computer {
         }
     }
 
-    pub fn tick(&mut self) {
+    pub fn step_tick(&mut self) {
         loop {
-            self.tick_partial();
+            self.step_cycle();
 
             if self.tick_complete {
                 break;
@@ -67,7 +67,7 @@ impl Computer {
         let mut ticks = 0;
 
         loop {
-            let did_something = self.tick_partial();
+            let did_something = self.step_cycle();
 
             if self.tick_complete {
                 ticks += 1;
@@ -82,7 +82,7 @@ impl Computer {
     }
 
     /// Returns whether or not there was any operation run (includes time spent blocking).
-    pub fn tick_partial(&mut self) -> bool {
+    pub fn step_cycle(&mut self) -> bool {
         self.tick_complete = true;
 
         if self.interrupt.is_some() {
