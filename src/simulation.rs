@@ -1,6 +1,6 @@
 use std::io::BufRead;
 
-use crate::simulation::computer::Computer;
+use computer::Computer;
 
 pub mod argument;
 pub mod computer;

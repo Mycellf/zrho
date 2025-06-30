@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, fmt::Display};
 
-use crate::simulation::{
+use super::{
     computer::{self, RegisterAccessError, RegisterSet},
     instruction::{ArgumentRequirement, InstructionEvaluationInterrupt},
     integer::Integer,

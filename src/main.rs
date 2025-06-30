@@ -1,5 +1,5 @@
 use crate::simulation::{
-    computer::{Computer, Register, RegisterMap, RegisterSet, RegisterValues},
+    computer::{self, Computer, Register, RegisterMap, RegisterSet, RegisterValues},
     integer::DigitInteger,
     program::Program,
 };
@@ -46,7 +46,7 @@ fn main() {
                 'I',
                 Register {
                     values: RegisterValues::Scalar(DigitInteger::zero(DIGITS)),
-                    indexes_array: Some(simulation::computer::register_with_name('D').unwrap()),
+                    indexes_array: Some(computer::register_with_name('D').unwrap()),
                     read_time: 0,
                     write_time: 0,
                 },
