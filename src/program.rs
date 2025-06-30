@@ -1,4 +1,6 @@
-use std::{array, cmp::Ordering, collections::HashMap, iter::Peekable, num::ParseIntError};
+use std::{
+    array, cmp::Ordering, collections::HashMap, fmt::Display, iter::Peekable, num::ParseIntError,
+};
 
 use crate::{
     argument::{Argument, Comparison, NumberSource},
@@ -439,6 +441,77 @@ impl<'a> ArgumentIntermediate<'a> {
         }
 
         self.as_comparison().map(Comparison::into)
+    }
+}
+
+impl Display for ArgumentIntermediate<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ArgumentIntermediate::Token(token) => write!(f, "{token}"),
+            ArgumentIntermediate::Comparison {
+                ordering,
+                invert,
+                values,
+            } => {
+                const SYMBOLS: [char; 6] = ['<', '=', '>', '≥', '≠', '≤'];
+                let index = (*ordering as isize + 1) as usize + *invert as usize * 3;
+
+                write!(
+                    f,
+                    "{lhs} {comparison} {rhs}",
+                    lhs = values[0],
+                    rhs = values[1],
+                    comparison = SYMBOLS[index],
+                )
+            }
+        }
+    }
+}
+
+impl Display for ProgramAssemblyError<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Line {line}: {error}",
+            line = self.line,
+            error = self.kind,
+        )
+    }
+}
+
+impl Display for ProgramAssemblyErrorKind<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ProgramAssemblyErrorKind::RegisterNotSupported(register) => {
+                write!(
+                    f,
+                    "\"{name}\" register not supported on this machine",
+                    name = computer::name_of_register(*register).unwrap(),
+                )
+            }
+            ProgramAssemblyErrorKind::NoSuchLabel(label) => write!(f, "No such label \"{label}\""),
+            ProgramAssemblyErrorKind::NoSuchOperation(operation) => {
+                write!(f, "No such operation \"{operation}\"")
+            }
+            ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::InvalidComparison) => {
+                write!(
+                    f,
+                    "A constant or register must follow a comparison operator"
+                )
+            }
+            ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::OutOfTokens) => {
+                write!(f, "Ran out of tokens when parsing arguments")
+            }
+            ProgramAssemblyErrorKind::UnexpectedArgument { got, expected } => {
+                write!(f, "Got \"{got}\", expected {expected}")
+            }
+            ProgramAssemblyErrorKind::TooManyArguments { got, maximum } => {
+                write!(f, "Too many arguments (got {got}, maximum {maximum})")
+            }
+            ProgramAssemblyErrorKind::TooFewArguments { got, minimum } => {
+                write!(f, "Not enough arguments (got {got}, minimum {minimum})")
+            }
+        }
     }
 }
 

@@ -15,17 +15,26 @@ pub mod program;
 fn main() {
     const DIGITS: u8 = 3;
 
+    let program = match Program::assemble_from(
+        "Test Program".to_owned(),
+        PROGRAM,
+        RegisterMap::from_element(false)
+            .with_value('D', true)
+            .with_value('I', true)
+            .with_value('X', true)
+            .with_value('Y', true),
+    ) {
+        Ok(program) => program,
+        Err(errors) => {
+            for error in errors {
+                println!("{error}");
+            }
+            return;
+        }
+    };
+
     let mut computer = Computer::new(
-        Program::assemble_from(
-            "Test Program".to_owned(),
-            PROGRAM,
-            RegisterMap::from_element(false)
-                .with_value('D', true)
-                .with_value('I', true)
-                .with_value('X', true)
-                .with_value('Y', true),
-        )
-        .unwrap(),
+        program,
         RegisterSet::new_empty()
             .with_register(
                 'D',

@@ -475,6 +475,28 @@ impl ArgumentRequirement {
     }
 }
 
+impl Display for ArgumentRequirement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                ArgumentRequirement::Constant => "a constant",
+                ArgumentRequirement::RegisterWriteOnly | ArgumentRequirement::Register =>
+                    "a register",
+                ArgumentRequirement::ConstantOrRegister => "a constant or register",
+                ArgumentRequirement::Comparison => "a comparison",
+                ArgumentRequirement::AnyValue => "a constant, register, or comparison",
+                ArgumentRequirement::AnyValueOrEmpty =>
+                    "a constant, register, comparison, or nothing",
+                ArgumentRequirement::Instruction => "a label",
+                ArgumentRequirement::ConstantOrEmpty => "a constant or nothing",
+                ArgumentRequirement::Empty => "nothing",
+            }
+        )
+    }
+}
+
 pub struct InstructionKindProperties {
     pub kind: InstructionKind,
     pub name: &'static str,
