@@ -62,6 +62,25 @@ impl Computer {
         }
     }
 
+    /// Returns the amount of ticks taken by the instruction
+    pub fn step_instruction(&mut self) -> u64 {
+        let mut ticks = 0;
+
+        loop {
+            let did_something = self.tick_partial();
+
+            if self.tick_complete {
+                ticks += 1;
+            }
+
+            if did_something && self.block_time == 0 {
+                break;
+            }
+        }
+
+        ticks
+    }
+
     /// Returns whether or not there was any operation run (includes time spent blocking).
     pub fn tick_partial(&mut self) -> bool {
         self.tick_complete = true;
