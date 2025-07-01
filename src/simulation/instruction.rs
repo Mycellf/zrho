@@ -208,7 +208,10 @@ impl Instruction {
 
                 let bound = value.maximum() as u64 + 1;
 
-                let clock = (runtime % bound) as Integer;
+                let digits = argument_values[1].unwrap_or(0).max(0) as u32;
+                let divisor = 10u64.pow(digits);
+
+                let clock = (runtime / divisor % bound) as Integer;
 
                 total_time += self.write_to_argument(registers, 0, clock)?;
             }
@@ -859,7 +862,10 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
     InstructionKindProperties {
         kind: InstructionKind::Clock,
         name: "CLK",
-        arguments: arguments([ArgumentRequirement::RegisterWriteOnly]),
+        arguments: arguments([
+            ArgumentRequirement::RegisterWriteOnly,
+            ArgumentRequirement::ConstantOrEmpty,
+        ]),
         ..InstructionKindProperties::DEFAULT
     },
 ]);
