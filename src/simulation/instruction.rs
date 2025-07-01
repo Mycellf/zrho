@@ -208,7 +208,7 @@ impl Instruction {
 
                 let bound = value.maximum() as u64 + 1;
 
-                let digits = argument_values[1].unwrap_or(0).min(0) as u32;
+                let digits = argument_values[1].unwrap_or(0).max(0) as u32;
 
                 let clock = {
                     if let Some(divisor) = 10u64.checked_pow(digits) {
