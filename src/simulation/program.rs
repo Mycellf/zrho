@@ -1,4 +1,6 @@
-use std::{array, cmp::Ordering, collections::HashMap, fmt::Display, iter::Peekable};
+use std::{
+    array, cmp::Ordering, collections::HashMap, fmt::Display, iter::Peekable, num::ParseIntError,
+};
 
 use crate::simulation::integer::{self, AssignIntegerError, DigitInteger};
 
@@ -64,7 +66,7 @@ impl Program {
         let mut program = Self::new_empty(name);
 
         for instruction in instructions {
-            match instruction.parse(&labels) {
+            match instruction.parse(&labels, maximum_digits) {
                 Ok(instruction) => program.instructions.push(instruction),
                 Err(error) => errors.push(error),
             }
@@ -118,7 +120,6 @@ pub struct ProgramAssemblyError<'a> {
 pub enum ProgramAssemblyErrorKind<'a> {
     RegisterNotSupported(u32),
     InvalidConstant(AssignIntegerError),
-    NoSuchLabel(&'a str),
     NoSuchOperation(&'a str),
     InvalidArgument(ParseArgumentError<'a>),
     UnexpectedArgument {
@@ -227,6 +228,7 @@ impl<'a> InstructionIntermediate<'a> {
     pub fn parse(
         self,
         labels: &HashMap<&str, u32>,
+        maximum_digits: u8,
     ) -> Result<Instruction, ProgramAssemblyError<'a>> {
         let properties = self.kind.get_properties();
 
@@ -260,28 +262,26 @@ impl<'a> InstructionIntermediate<'a> {
 
             let argument_intermediate = *arguments.peek().unwrap();
 
-            match argument_intermediate.as_requirement(requirement, labels) {
-                Some(argument) => {
+            match argument_intermediate.as_requirement(requirement, labels, maximum_digits) {
+                Ok(argument) => {
                     instruction.arguments[i] = argument;
                     arguments.next();
                 }
-                None => {
-                    if let (ArgumentRequirement::Instruction, ArgumentIntermediate::Token(label)) =
-                        (requirement, argument_intermediate)
-                    {
-                        return Err(ProgramAssemblyError {
+                Err(error) => {
+                    return if let ParseArgumentError::IncorrectType = error {
+                        Err(ProgramAssemblyError {
                             line: self.line,
-                            kind: ProgramAssemblyErrorKind::NoSuchLabel(*label),
-                        });
-                    }
-
-                    return Err(ProgramAssemblyError {
-                        line: self.line,
-                        kind: ProgramAssemblyErrorKind::UnexpectedArgument {
-                            got: *argument_intermediate,
-                            expected: requirement,
-                        },
-                    });
+                            kind: ProgramAssemblyErrorKind::UnexpectedArgument {
+                                got: *argument_intermediate,
+                                expected: requirement,
+                            },
+                        })
+                    } else {
+                        Err(ProgramAssemblyError {
+                            line: self.line,
+                            kind: ProgramAssemblyErrorKind::InvalidArgument(error),
+                        })
+                    };
                 }
             }
         }
@@ -368,91 +368,138 @@ impl<'a> ArgumentIntermediate<'a> {
         &self,
         requirement: ArgumentRequirement,
         labels: &HashMap<&str, u32>,
-    ) -> Option<Argument> {
-        Some(match requirement {
+        maximum_digits: u8,
+    ) -> Result<Argument, ParseArgumentError<'a>> {
+        Ok(match requirement {
             ArgumentRequirement::Constant | ArgumentRequirement::ConstantOrEmpty => {
-                self.as_constant()?.into()
+                self.as_constant(maximum_digits)?.into()
             }
             ArgumentRequirement::RegisterWriteOnly | ArgumentRequirement::Register => {
                 self.as_register()?.into()
             }
-            ArgumentRequirement::ConstantOrRegister => self.as_number_source()?.into(),
-            ArgumentRequirement::Comparison => self.as_comparison()?.into(),
+            ArgumentRequirement::ConstantOrRegister => {
+                self.as_number_source(maximum_digits)?.into()
+            }
+            ArgumentRequirement::Comparison => self.as_comparison(maximum_digits)?.into(),
             ArgumentRequirement::AnyValue | ArgumentRequirement::AnyValueOrEmpty => {
-                self.as_value()?
+                self.as_value(maximum_digits)?
             }
             ArgumentRequirement::Instruction => {
                 let label = self.as_label()?;
 
-                Argument::Instruction(*labels.get(label)?)
+                Argument::Instruction(
+                    *labels
+                        .get(label)
+                        .ok_or(ParseArgumentError::NoSuchLabel(label))?,
+                )
             }
-            ArgumentRequirement::Empty => return None,
+            ArgumentRequirement::Empty => return Err(ParseArgumentError::IncorrectType),
         })
     }
 
-    pub fn as_label(&self) -> Option<&'a str> {
+    pub fn as_label(&self) -> Result<&'a str, ParseArgumentError<'a>> {
         match self {
-            ArgumentIntermediate::Token(label) => Some(label),
-            ArgumentIntermediate::Comparison { .. } => None,
+            ArgumentIntermediate::Token(label) => Ok(label),
+            ArgumentIntermediate::Comparison { .. } => Err(ParseArgumentError::IncorrectType),
         }
     }
 
-    pub fn as_constant(&self) -> Option<Integer> {
+    pub fn as_constant(&self, maximum_digits: u8) -> Result<Integer, ParseArgumentError<'a>> {
         match self {
-            ArgumentIntermediate::Token(value) => value.parse().ok(),
-            ArgumentIntermediate::Comparison { .. } => None,
+            ArgumentIntermediate::Token(value) => {
+                value
+                    .parse()
+                    .map_err(|error: ParseIntError| match error.kind() {
+                        std::num::IntErrorKind::PosOverflow => ParseArgumentError::ConstantTooBig {
+                            got: value,
+                            maximum: DigitInteger::range_of_digits(maximum_digits),
+                        },
+                        std::num::IntErrorKind::NegOverflow => {
+                            ParseArgumentError::ConstantTooSmall {
+                                got: value,
+                                minimum: -DigitInteger::range_of_digits(maximum_digits),
+                            }
+                        }
+                        _ => ParseArgumentError::IncorrectType,
+                    })
+            }
+            ArgumentIntermediate::Comparison { .. } => Err(ParseArgumentError::IncorrectType),
         }
     }
 
-    pub fn as_register(&self) -> Option<u32> {
+    pub fn as_register(&self) -> Result<u32, ParseArgumentError<'a>> {
         match self {
             ArgumentIntermediate::Token(value) => {
                 if value.len() == 1 {
                     computer::register_with_name(value.chars().next().unwrap())
+                        .ok_or(ParseArgumentError::IncorrectType)
                 } else {
-                    None
+                    Err(ParseArgumentError::IncorrectType)
                 }
             }
-            ArgumentIntermediate::Comparison { .. } => None,
+            ArgumentIntermediate::Comparison { .. } => Err(ParseArgumentError::IncorrectType),
         }
     }
 
-    pub fn as_number_source(&self) -> Option<NumberSource> {
-        if let Some(constant) = self.as_constant() {
-            return Some(NumberSource::Constant(constant));
-        }
+    pub fn as_number_source(
+        &self,
+        maximum_digits: u8,
+    ) -> Result<NumberSource, ParseArgumentError<'a>> {
+        let as_constant_error = match self.as_constant(maximum_digits) {
+            Ok(constant) => return Ok(NumberSource::Constant(constant)),
+            Err(error) => error,
+        };
 
-        if let Some(register) = self.as_register() {
-            return Some(NumberSource::Register(register));
-        }
+        let as_register_error = match self.as_register() {
+            Ok(register) => return Ok(NumberSource::Register(register)),
+            Err(error) => error,
+        };
 
-        None
+        Err(
+            if matches!(as_constant_error, ParseArgumentError::IncorrectType) {
+                as_register_error
+            } else {
+                as_constant_error
+            },
+        )
     }
 
-    pub fn as_comparison(&self) -> Option<Comparison> {
+    pub fn as_comparison(&self, maximum_digits: u8) -> Result<Comparison, ParseArgumentError<'a>> {
         match self {
-            ArgumentIntermediate::Token(_) => None,
+            ArgumentIntermediate::Token(_) => Err(ParseArgumentError::IncorrectType),
             ArgumentIntermediate::Comparison {
                 ordering,
                 invert,
-                values,
-            } => match values.map(|value| ArgumentIntermediate::Token(value).as_number_source()) {
-                [Some(lhs), Some(rhs)] => Some(Comparison {
-                    ordering: *ordering,
-                    invert: *invert,
-                    values: [lhs, rhs],
-                }),
-                _ => None,
-            },
+                values: [lhs, rhs],
+            } => Ok(Comparison {
+                ordering: *ordering,
+                invert: *invert,
+                values: [
+                    ArgumentIntermediate::Token(lhs).as_number_source(maximum_digits)?,
+                    ArgumentIntermediate::Token(rhs).as_number_source(maximum_digits)?,
+                ],
+            }),
         }
     }
 
-    pub fn as_value(&self) -> Option<Argument> {
-        if let Some(source) = self.as_number_source() {
-            return Some(source.into());
-        }
+    pub fn as_value(&self, maximum_digits: u8) -> Result<Argument, ParseArgumentError<'a>> {
+        let as_source_error = match self.as_number_source(maximum_digits) {
+            Ok(source) => return Ok(source.into()),
+            Err(error) => error,
+        };
 
-        self.as_comparison().map(Comparison::into)
+        let as_comparison_error = match self.as_comparison(maximum_digits) {
+            Ok(comparison) => return Ok(comparison.into()),
+            Err(error) => error,
+        };
+
+        Err(
+            if matches!(as_source_error, ParseArgumentError::IncorrectType) {
+                as_comparison_error
+            } else {
+                as_source_error
+            },
+        )
     }
 }
 
@@ -502,7 +549,6 @@ impl Display for ProgramAssemblyErrorKind<'_> {
                 )
             }
             ProgramAssemblyErrorKind::InvalidConstant(error) => write!(f, "{error}"),
-            ProgramAssemblyErrorKind::NoSuchLabel(label) => write!(f, "No such label \"{label}\""),
             ProgramAssemblyErrorKind::NoSuchOperation(operation) => {
                 write!(f, "No such operation \"{operation}\"")
             }
@@ -523,6 +569,12 @@ impl Display for ProgramAssemblyErrorKind<'_> {
             ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::OutOfTokens) => {
                 write!(f, "Ran out of tokens when parsing arguments")
             }
+            ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::NoSuchLabel(label)) => {
+                write!(f, "No such label \"{label}\"")
+            }
+            ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::IncorrectType) => {
+                write!(f, "(internal error) Invalid argument")
+            }
             ProgramAssemblyErrorKind::UnexpectedArgument { got, expected } => {
                 write!(f, "Got \"{got}\", expected {expected}")
             }
@@ -542,6 +594,8 @@ pub enum ParseArgumentError<'a> {
     IncompleteComparison,
     ConstantTooBig { got: &'a str, maximum: Integer },
     ConstantTooSmall { got: &'a str, minimum: Integer },
+    NoSuchLabel(&'a str),
+    IncorrectType,
 }
 
 #[derive(Clone, Copy, Debug)]

@@ -83,7 +83,7 @@ impl DigitInteger {
     }
 
     #[must_use]
-    fn range_of_digits(digits: u8) -> Integer {
+    pub fn range_of_digits(digits: u8) -> Integer {
         const DIGIT_COMBINATIONS: [Integer; DigitInteger::MAXIMUM_DIGITS + 1] = {
             let mut result = [0; DigitInteger::MAXIMUM_DIGITS + 1];
             let mut acc = 0;
