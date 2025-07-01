@@ -128,6 +128,7 @@ impl Computer {
                     &mut self.registers,
                     previous_instruction,
                     &mut self.next_instruction,
+                    self.runtime,
                 ) {
                     Ok((time, argument_values, update_previous_instruction)) => {
                         self.previous_instruction = update_previous_instruction

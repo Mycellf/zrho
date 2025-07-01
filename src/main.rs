@@ -79,6 +79,13 @@ const PROGRAM: &str = PRIME_NUMBERS;
 pub const RANDOM_TESTS: &str = r"
     ; NOODLE AROUND
 
+    CLK X
+
+    TRY D
+    TRW D
+
+    CLK Y
+
     JMP 0 END
     UJP 0 END
     LJP 1 NEXT

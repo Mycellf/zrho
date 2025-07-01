@@ -30,7 +30,8 @@ impl Instruction {
         &self,
         registers: &mut RegisterSet,
         previous_instruction: Option<(&Instruction, &ArgumentValues)>,
-        instruction: &mut u32,
+        next_instruction: &mut u32,
+        runtime: u64,
     ) -> Result<(u32, ArgumentValues, bool), InstructionEvaluationInterrupt> {
         let properties = self.kind.get_properties();
 
@@ -92,7 +93,6 @@ impl Instruction {
             InstructionKind::Set => {
                 total_time += self.write_to_argument(registers, 0, argument_values[1].unwrap())?;
             }
-            InstructionKind::Try => (),
             InstructionKind::Add => {
                 total_time += self.apply_operation(
                     argument_values,
@@ -175,12 +175,49 @@ impl Instruction {
                 total_time += argument_values[0].unwrap().max(0) as u32;
             }
             InstructionKind::End => return Err(InstructionEvaluationInterrupt::ProgramComplete),
+            InstructionKind::TryRead => (),
+            InstructionKind::TryWrite => {
+                let register = self.register_of_argument(0);
+
+                total_time += registers
+                    .get(register)
+                    .ok_or_else(|| InstructionEvaluationInterrupt::RegisterError {
+                        register,
+                        error: RegisterAccessError::NoSuchRegister { got: register },
+                    })?
+                    .write_time;
+            }
+            InstructionKind::Clock => {
+                let register_index = self.register_of_argument(0);
+
+                let register = registers.get(register_index).ok_or_else(|| {
+                    InstructionEvaluationInterrupt::RegisterError {
+                        register: register_index,
+                        error: RegisterAccessError::NoSuchRegister {
+                            got: register_index,
+                        },
+                    }
+                })?;
+
+                let value = register.value().map_err(|error| {
+                    InstructionEvaluationInterrupt::RegisterError {
+                        register: register_index,
+                        error,
+                    }
+                })?;
+
+                let bound = value.maximum() as u64 + 1;
+
+                let clock = (runtime % bound) as Integer;
+
+                total_time += self.write_to_argument(registers, 0, clock)?;
+            }
         }
 
         if let Some(jump) = jump {
-            *instruction = jump;
+            *next_instruction = jump;
         } else {
-            *instruction += 1;
+            *next_instruction += 1;
         }
 
         Ok((total_time, argument_values, update_previous_instruction))
@@ -249,11 +286,7 @@ impl Instruction {
     /// Will panic if the argument does not contain a register
     #[must_use]
     fn register_of_argument(&self, argument: usize) -> u32 {
-        self.arguments[argument]
-            .as_number()
-            .unwrap()
-            .as_register()
-            .unwrap()
+        self.arguments[argument].as_register().unwrap()
     }
 
     /// # Panics
@@ -340,7 +373,6 @@ impl IntoDebugResult for BiggerInteger {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum InstructionKind {
     Set,
-    Try,
     Add,
     Subtract,
     Negate,
@@ -355,6 +387,9 @@ pub enum InstructionKind {
     JumpCondUnlikely,
     Sleep,
     End,
+    TryRead,
+    TryWrite,
+    Clock,
 }
 
 impl InstructionKind {
@@ -382,7 +417,7 @@ impl FromStr for InstructionKind {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct InstructionKindMap<T>(pub [T; 16]);
+pub struct InstructionKindMap<T>(pub [T; 18]);
 
 impl<T> InstructionKindMap<T> {
     pub fn from_element(element: T) -> Self
@@ -630,13 +665,6 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
-        kind: InstructionKind::Try,
-        name: "TRY",
-        arguments: arguments([ArgumentRequirement::Register]),
-        calls_per_tick_limit: None,
-        ..InstructionKindProperties::DEFAULT
-    },
-    InstructionKindProperties {
         kind: InstructionKind::Add,
         name: "ADD",
         arguments: arguments([
@@ -812,6 +840,26 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
         kind: InstructionKind::End,
         name: "END",
         arguments: arguments([]),
+        ..InstructionKindProperties::DEFAULT
+    },
+    InstructionKindProperties {
+        kind: InstructionKind::TryRead,
+        name: "TRY",
+        arguments: arguments([ArgumentRequirement::Register]),
+        calls_per_tick_limit: None,
+        ..InstructionKindProperties::DEFAULT
+    },
+    InstructionKindProperties {
+        kind: InstructionKind::TryWrite,
+        name: "TRW",
+        arguments: arguments([ArgumentRequirement::RegisterWriteOnly]),
+        calls_per_tick_limit: None,
+        ..InstructionKindProperties::DEFAULT
+    },
+    InstructionKindProperties {
+        kind: InstructionKind::Clock,
+        name: "CLK",
+        arguments: arguments([ArgumentRequirement::RegisterWriteOnly]),
         ..InstructionKindProperties::DEFAULT
     },
 ]);
