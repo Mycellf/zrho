@@ -52,6 +52,14 @@ impl Computer {
         }
     }
 
+    pub fn reset(&mut self) {
+        let mut registers = std::mem::take(&mut self.registers);
+
+        registers.reset_to_zero();
+
+        *self = Computer::new(self.maximum_digits, registers);
+    }
+
     pub fn step_tick(&mut self, program: &Program) {
         loop {
             self.step_cycle(program);
@@ -179,6 +187,23 @@ impl RegisterSet {
         Self {
             registers: Box::new(array::from_fn(|_| None)),
             buffered_writes: Vec::new(),
+        }
+    }
+
+    pub fn reset_to_zero(&mut self) {
+        self.buffered_writes.clear();
+
+        for register in self.registers.iter_mut().flatten() {
+            match &mut register.values {
+                RegisterValues::Scalar(value) => value.try_set(0).unwrap(),
+                RegisterValues::Vector { values, index } => {
+                    for value in values {
+                        value.try_set(0).unwrap();
+                    }
+
+                    *index = 0;
+                }
+            }
         }
     }
 
