@@ -411,8 +411,8 @@ impl<'a> ArgumentIntermediate<'a> {
                         _ => ParseArgumentError::IncorrectType,
                     })?;
 
-                DigitInteger::zero(maximum_digits).is_valid(value).map_err(
-                    |error| match error {
+                if let Err(error) = DigitInteger::new(value, maximum_digits) {
+                    return Err(match error {
                         AssignIntegerError::ValueTooBig { maximum, .. }
                         | AssignIntegerError::ValueMuchTooBig { maximum, .. } => {
                             ParseArgumentError::ConstantTooBig {
@@ -428,10 +428,10 @@ impl<'a> ArgumentIntermediate<'a> {
                             }
                         }
                         AssignIntegerError::NumDigitsNotSupported => {
-                            panic!("maximum_digits should supported")
+                            panic!("maximum_digits should be supported")
                         }
-                    },
-                )?;
+                    });
+                };
 
                 Ok(value)
             }

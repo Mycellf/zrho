@@ -35,7 +35,7 @@ fn main() {
                 'D',
                 Register {
                     values: RegisterValues::Vector {
-                        values: Box::new([DigitInteger::zero(DIGITS); 100]),
+                        values: Box::new([DigitInteger::new(0, DIGITS).unwrap(); 100]),
                         index: 0,
                     },
                     indexes_array: None,
@@ -46,7 +46,7 @@ fn main() {
             .with_register(
                 'I',
                 Register {
-                    values: RegisterValues::Scalar(DigitInteger::zero(DIGITS)),
+                    values: RegisterValues::Scalar(DigitInteger::new(0, DIGITS).unwrap()),
                     indexes_array: Some(computer::register_with_name('D').unwrap()),
                     read_time: 0,
                     write_time: 0,
@@ -55,7 +55,7 @@ fn main() {
             .with_register(
                 'X',
                 Register {
-                    values: RegisterValues::Scalar(DigitInteger::zero(DIGITS)),
+                    values: RegisterValues::Scalar(DigitInteger::new(0, DIGITS).unwrap()),
                     indexes_array: None,
                     read_time: 0,
                     write_time: 0,
@@ -64,7 +64,7 @@ fn main() {
             .with_register(
                 'Y',
                 Register {
-                    values: RegisterValues::Scalar(DigitInteger::zero(DIGITS)),
+                    values: RegisterValues::Scalar(DigitInteger::new(0, DIGITS).unwrap()),
                     indexes_array: None,
                     read_time: 0,
                     write_time: 0,

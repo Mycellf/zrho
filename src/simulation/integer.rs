@@ -30,11 +30,6 @@ impl DigitInteger {
         }
     }
 
-    #[must_use]
-    pub fn zero(digits: u8) -> Self {
-        Self { value: 0, digits }
-    }
-
     pub fn try_set(&mut self, value: Integer) -> Result<(), AssignIntegerError> {
         self.value = Self::check_value(value, self.digits)?;
         Ok(())
