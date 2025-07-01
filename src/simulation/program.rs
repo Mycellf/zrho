@@ -1,6 +1,6 @@
 use std::{array, cmp::Ordering, collections::HashMap, fmt::Display, iter::Peekable};
 
-use crate::simulation::integer::{AssignIntegerError, DigitInteger};
+use crate::simulation::integer::{self, AssignIntegerError, DigitInteger};
 
 use super::{
     argument::{Argument, Comparison, NumberSource},
@@ -120,7 +120,7 @@ pub enum ProgramAssemblyErrorKind<'a> {
     InvalidConstant(AssignIntegerError),
     NoSuchLabel(&'a str),
     NoSuchOperation(&'a str),
-    InvalidArgument(ParseArgumentError),
+    InvalidArgument(ParseArgumentError<'a>),
     UnexpectedArgument {
         got: ArgumentIntermediate<'a>,
         expected: ArgumentRequirement,
@@ -181,7 +181,7 @@ impl<'a> InstructionIntermediate<'a> {
                 Ok(argument) => arguments.push(argument),
                 Err(error) => match error {
                     ParseArgumentError::OutOfTokens => break,
-                    ParseArgumentError::InvalidComparison => {
+                    _ => {
                         return Err(ProgramAssemblyError {
                             line: line_index,
                             kind: ProgramAssemblyErrorKind::InvalidArgument(error),
@@ -320,7 +320,7 @@ impl<'a> InstructionIntermediate<'a> {
 impl<'a> ArgumentIntermediate<'a> {
     pub fn pop_from_tokens(
         tokens: &mut Peekable<impl Iterator<Item = &'a str>>,
-    ) -> Result<Self, ParseArgumentError> {
+    ) -> Result<Self, ParseArgumentError<'a>> {
         let Some(first_value) = tokens.next() else {
             return Err(ParseArgumentError::OutOfTokens);
         };
@@ -354,7 +354,7 @@ impl<'a> ArgumentIntermediate<'a> {
         };
 
         let Some(second_value) = tokens.next() else {
-            return Err(ParseArgumentError::InvalidComparison);
+            return Err(ParseArgumentError::IncompleteComparison);
         };
 
         Ok(ArgumentIntermediate::Comparison {
@@ -506,12 +506,20 @@ impl Display for ProgramAssemblyErrorKind<'_> {
             ProgramAssemblyErrorKind::NoSuchOperation(operation) => {
                 write!(f, "No such operation \"{operation}\"")
             }
-            ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::InvalidComparison) => {
+            ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::IncompleteComparison) => {
                 write!(
                     f,
                     "A constant or register must follow a comparison operator"
                 )
             }
+            ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::ConstantTooBig {
+                got,
+                maximum,
+            }) => integer::format_overflow_error(f, got, *maximum),
+            ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::ConstantTooSmall {
+                got,
+                minimum,
+            }) => integer::format_underflow_error(f, got, *minimum),
             ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::OutOfTokens) => {
                 write!(f, "Ran out of tokens when parsing arguments")
             }
@@ -529,9 +537,11 @@ impl Display for ProgramAssemblyErrorKind<'_> {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum ParseArgumentError {
+pub enum ParseArgumentError<'a> {
     OutOfTokens,
-    InvalidComparison,
+    IncompleteComparison,
+    ConstantTooBig { got: &'a str, maximum: Integer },
+    ConstantTooSmall { got: &'a str, minimum: Integer },
 }
 
 #[derive(Clone, Copy, Debug)]

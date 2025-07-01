@@ -152,25 +152,44 @@ pub enum AssignIntegerError {
 
 impl Display for AssignIntegerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        const OVERFLOW_MESSAGE: &str = "is too big for this machine";
-        const UNDERFLOW_MESSAGE: &str = "is too small for this machine";
-
         match self {
             AssignIntegerError::ValueTooBig { got, maximum } => {
-                write!(f, "\"{got}\" {OVERFLOW_MESSAGE} (maximum: {maximum})")
+                format_overflow_error(f, got, *maximum)
             }
             AssignIntegerError::ValueTooSmall { got, minimum } => {
-                write!(f, "\"{got}\" {UNDERFLOW_MESSAGE} (minimum: {minimum})")
+                format_underflow_error(f, got, *minimum)
             }
             AssignIntegerError::ValueMuchTooBig { got, maximum } => {
-                write!(f, "\"{got}\" {OVERFLOW_MESSAGE} (maximum: {maximum})")
+                format_overflow_error(f, got, *maximum)
             }
             AssignIntegerError::ValueMuchTooSmall { got, minimum } => {
-                write!(f, "\"{got}\" {UNDERFLOW_MESSAGE} (minimum: {minimum})")
+                format_underflow_error(f, got, *minimum)
             }
             AssignIntegerError::NumDigitsNotSupported => {
                 write!(f, "Number of digits not supported")
             }
         }
     }
+}
+
+pub fn format_overflow_error(
+    f: &mut std::fmt::Formatter<'_>,
+    value: &impl Display,
+    maximum: Integer,
+) -> std::fmt::Result {
+    write!(
+        f,
+        "\"{value}\" is too big for this machine (maximum: {maximum})"
+    )
+}
+
+pub fn format_underflow_error(
+    f: &mut std::fmt::Formatter<'_>,
+    value: &impl Display,
+    minimum: Integer,
+) -> std::fmt::Result {
+    write!(
+        f,
+        "\"{value}\" is too small for this machine (minimum: {minimum})"
+    )
 }
