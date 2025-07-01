@@ -181,7 +181,7 @@ impl Instruction {
 
                 total_time += registers
                     .get(register)
-                    .ok_or_else(|| InstructionEvaluationInterrupt::RegisterError {
+                    .ok_or(InstructionEvaluationInterrupt::RegisterError {
                         register,
                         error: RegisterAccessError::NoSuchRegister { got: register },
                     })?
@@ -190,7 +190,7 @@ impl Instruction {
             InstructionKind::Clock => {
                 let register_index = self.register_of_argument(0);
 
-                let register = registers.get(register_index).ok_or_else(|| {
+                let register = registers.get(register_index).ok_or({
                     InstructionEvaluationInterrupt::RegisterError {
                         register: register_index,
                         error: RegisterAccessError::NoSuchRegister {
@@ -529,6 +529,7 @@ impl Display for ArgumentRequirement {
     }
 }
 
+#[non_exhaustive]
 pub struct InstructionKindProperties {
     pub kind: InstructionKind,
     pub name: &'static str,
@@ -660,7 +661,6 @@ const _: () = {
     }
 };
 
-#[allow(clippy::needless_update)]
 pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = InstructionKindMap([
     InstructionKindProperties {
         kind: InstructionKind::Set,

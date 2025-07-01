@@ -296,21 +296,21 @@ impl<'a> InstructionIntermediate<'a> {
         line: u32,
     ) -> Result<(), ProgramAssemblyError<'a>> {
         if length < minimum {
-            return Err(ProgramAssemblyError {
-                line: line,
+            Err(ProgramAssemblyError {
+                line,
                 kind: ProgramAssemblyErrorKind::TooFewArguments {
                     got: length,
                     minimum,
                 },
-            });
+            })
         } else if length > maximum {
-            return Err(ProgramAssemblyError {
-                line: line,
+            Err(ProgramAssemblyError {
+                line,
                 kind: ProgramAssemblyErrorKind::TooManyArguments {
                     got: length,
                     maximum,
                 },
-            });
+            })
         } else {
             Ok(())
         }

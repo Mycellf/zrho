@@ -216,9 +216,9 @@ pub struct Comparison {
 }
 
 impl Comparison {
-    pub fn evaluate<'a>(
+    pub fn evaluate(
         &self,
-        registers: &'a RegisterSet,
+        registers: &RegisterSet,
     ) -> Result<(Integer, [Option<u32>; 2]), InstructionEvaluationInterrupt> {
         let (lhs, lhs_register) = self.values[0].value(registers)?;
         let (rhs, rhs_register) = self.values[1].value(registers)?;
