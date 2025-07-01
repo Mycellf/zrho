@@ -74,7 +74,38 @@ fn main() {
     simulation::interactively_run(computer);
 }
 
-const PROGRAM: &str = PRIME_NUMBERS;
+const PROGRAM: &str = TIME_ASSERTION;
+
+pub const TIME_ASSERTION: &str = r"
+    ; ENSURE THAT THE DURATION OF PROGRAM EXECUTION
+    ; IS EXACTLY AS EXPECTED
+
+    ; PREVIOUS CODE
+    SET I 99
+    SLP 23122
+
+    ; SOMETHING NEFARIOUS EXTERNALLY INSERTED
+    SET I 10
+
+    ; BECAUSE OF THE SECOND DIGIT CHECK, IT
+    ; ONLY OVERFLOWS AFTER 10^8 TICKS
+    SET X 0
+    LBL WAIT
+    SLP 9998
+    ADD X 1 X
+    JMP X < 9999 WAIT
+    SLP 9998
+
+    CLK X
+    UJP X ≠ 3123 ALTERED
+    CLK X 4
+    LJP X = 2 CONTINUE
+    LBL ALTERED
+    END
+
+    LBL CONTINUE
+    SET D 9999
+";
 
 pub const RANDOM_TESTS: &str = r"
     ; NOODLE AROUND
