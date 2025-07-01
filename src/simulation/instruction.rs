@@ -208,10 +208,15 @@ impl Instruction {
 
                 let bound = value.maximum() as u64 + 1;
 
-                let digits = argument_values[1].unwrap_or(0).max(0) as u32;
-                let divisor = 10u64.pow(digits);
+                let digits = argument_values[1].unwrap_or(0).min(0) as u32;
 
-                let clock = (runtime / divisor % bound) as Integer;
+                let clock = {
+                    if let Some(divisor) = 10u64.checked_pow(digits) {
+                        (runtime / divisor % bound) as Integer
+                    } else {
+                        0
+                    }
+                };
 
                 total_time += self.write_to_argument(registers, 0, clock)?;
             }
