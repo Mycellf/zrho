@@ -12,9 +12,8 @@ use super::{
 
 #[derive(Clone, Debug)]
 pub struct Computer {
-    pub loaded_program: Program,
-
     pub registers: RegisterSet,
+    pub maximum_digits: u8,
 
     pub instruction: u32,
     pub block_time: u32,
@@ -32,11 +31,10 @@ pub struct Computer {
 }
 
 impl Computer {
-    pub fn new(program: Program, registers: RegisterSet) -> Self {
+    pub fn new(maximum_digits: u8, registers: RegisterSet) -> Self {
         Self {
-            loaded_program: program,
-
             registers,
+            maximum_digits,
 
             instruction: 0,
             block_time: 0,
@@ -54,9 +52,9 @@ impl Computer {
         }
     }
 
-    pub fn step_tick(&mut self) {
+    pub fn step_tick(&mut self, program: &Program) {
         loop {
-            self.step_cycle();
+            self.step_cycle(program);
 
             if self.tick_complete {
                 break;
@@ -65,11 +63,11 @@ impl Computer {
     }
 
     /// Returns the amount of ticks taken by the instruction
-    pub fn step_instruction(&mut self) -> u64 {
+    pub fn step_instruction(&mut self, program: &Program) -> u64 {
         let mut ticks = 0;
 
         loop {
-            let did_something = self.step_cycle();
+            let did_something = self.step_cycle(program);
 
             if self.tick_complete {
                 ticks += 1;
@@ -84,7 +82,7 @@ impl Computer {
     }
 
     /// Returns whether or not there was any operation run (includes time spent blocking).
-    pub fn step_cycle(&mut self) -> bool {
+    pub fn step_cycle(&mut self, program: &Program) -> bool {
         self.tick_complete = true;
 
         if self.interrupt.is_some() {
@@ -94,18 +92,12 @@ impl Computer {
         if self.block_time > 0 {
             self.block_time -= 1;
         } else {
-            let instruction = self
-                .loaded_program
-                .instructions
-                .get(self.next_instruction as usize);
+            let instruction = program.instructions.get(self.next_instruction as usize);
 
             if let Some(instruction) = instruction {
                 let previous_instruction = self.previous_instruction.as_ref().map(
                     |&(instruction, ref argument_values)| {
-                        (
-                            &self.loaded_program.instructions[instruction as usize],
-                            argument_values,
-                        )
+                        (&program.instructions[instruction as usize], argument_values)
                     },
                 );
 

@@ -2,11 +2,14 @@ use std::{
     array, cmp::Ordering, collections::HashMap, fmt::Display, iter::Peekable, num::ParseIntError,
 };
 
-use crate::simulation::integer::{self, AssignIntegerError, DigitInteger};
+use crate::simulation::{
+    computer::Computer,
+    integer::{self, AssignIntegerError, DigitInteger},
+};
 
 use super::{
     argument::{Argument, Comparison, NumberSource},
-    computer::{self, RegisterMap},
+    computer,
     instruction::{ArgumentRequirement, Instruction, InstructionKind},
     integer::Integer,
 };
@@ -33,12 +36,11 @@ impl Program {
         self
     }
 
-    pub fn assemble_from(
+    pub fn assemble_from<'a>(
         name: String,
-        source_code: &str,
-        allowed_registers: RegisterMap<bool>,
-        maximum_digits: u8,
-    ) -> Result<Self, Vec<ProgramAssemblyError>> {
+        source_code: &'a str,
+        target_computer: &Computer,
+    ) -> Result<Self, Vec<ProgramAssemblyError<'a>>> {
         let mut errors = Vec::new();
 
         let mut instructions = Vec::new();
@@ -66,7 +68,7 @@ impl Program {
         let mut program = Self::new_empty(name);
 
         for instruction in instructions {
-            match instruction.parse(&labels, maximum_digits) {
+            match instruction.parse(&labels, target_computer.maximum_digits) {
                 Ok(instruction) => program.instructions.push(instruction),
                 Err(error) => errors.push(error),
             }
@@ -80,7 +82,7 @@ impl Program {
             for argument in &instruction.arguments {
                 for source in argument.number_sources() {
                     if let Some(register) = source.as_register() {
-                        if !allowed_registers[register as usize] {
+                        if target_computer.registers.get(register).is_none() {
                             errors.push(ProgramAssemblyError {
                                 line: instruction.line,
                                 kind: ProgramAssemblyErrorKind::RegisterNotSupported(register),

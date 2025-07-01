@@ -1,5 +1,5 @@
 use crate::simulation::{
-    computer::{self, Computer, Register, RegisterMap, RegisterSet, RegisterValues},
+    computer::{self, Computer, Register, RegisterSet, RegisterValues},
     integer::DigitInteger,
     program::Program,
 };
@@ -9,27 +9,8 @@ pub mod simulation;
 fn main() {
     const DIGITS: u8 = 3;
 
-    let program = match Program::assemble_from(
-        "Test Program".to_owned(),
-        PROGRAM,
-        RegisterMap::from_element(false)
-            .with_value('D', true)
-            .with_value('I', true)
-            .with_value('X', true)
-            .with_value('Y', true),
-        DIGITS,
-    ) {
-        Ok(program) => program,
-        Err(errors) => {
-            for error in errors {
-                println!("{error}");
-            }
-            return;
-        }
-    };
-
     let computer = Computer::new(
-        program,
+        DIGITS,
         RegisterSet::new_empty()
             .with_register(
                 'D',
@@ -72,7 +53,17 @@ fn main() {
             ),
     );
 
-    simulation::interactively_run(computer);
+    let program = match Program::assemble_from("Test Program".to_owned(), PROGRAM, &computer) {
+        Ok(program) => program,
+        Err(errors) => {
+            for error in errors {
+                println!("{error}");
+            }
+            return;
+        }
+    };
+
+    simulation::interactively_run(computer, program);
 }
 
 const PROGRAM: &str = TIME_ASSERTION;

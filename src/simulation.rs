@@ -2,19 +2,21 @@ use std::io::BufRead;
 
 use computer::Computer;
 
+use crate::simulation::program::Program;
+
 pub mod argument;
 pub mod computer;
 pub mod instruction;
 pub mod integer;
 pub mod program;
 
-pub fn interactively_run(mut computer: Computer) {
+pub fn interactively_run(mut computer: Computer, program: Program) {
     let mut skip_ticks = 0;
 
     loop {
         let instruction = computer.instruction;
 
-        let modified = computer.step_cycle();
+        let modified = computer.step_cycle(&program);
 
         if let Some(interrupt) = computer.interrupt {
             println!(
@@ -27,11 +29,7 @@ pub fn interactively_run(mut computer: Computer) {
         if skip_ticks == 0 && computer.block_time == 0 {
             print!("Instruction {:?}", instruction);
 
-            if let Some(instruction) = computer
-                .loaded_program
-                .instructions
-                .get(instruction as usize)
-            {
+            if let Some(instruction) = program.instructions.get(instruction as usize) {
                 print!(" ({instruction})");
             }
 
