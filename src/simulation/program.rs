@@ -76,8 +76,6 @@ impl Program {
             return Err(errors);
         }
 
-        let constant_pseudo_register = DigitInteger::zero(maximum_digits);
-
         for instruction in &program.instructions {
             for argument in &instruction.arguments {
                 for source in argument.number_sources() {
@@ -86,15 +84,6 @@ impl Program {
                             errors.push(ProgramAssemblyError {
                                 line: instruction.line,
                                 kind: ProgramAssemblyErrorKind::RegisterNotSupported(register),
-                            });
-                        }
-                    }
-
-                    if let Some(constant) = source.as_constant() {
-                        if let Err(error) = constant_pseudo_register.is_valid(constant) {
-                            errors.push(ProgramAssemblyError {
-                                line: instruction.line,
-                                kind: ProgramAssemblyErrorKind::InvalidConstant(error),
                             });
                         }
                     }
@@ -119,7 +108,6 @@ pub struct ProgramAssemblyError<'a> {
 #[derive(Clone, Debug)]
 pub enum ProgramAssemblyErrorKind<'a> {
     RegisterNotSupported(u32),
-    InvalidConstant(AssignIntegerError),
     NoSuchOperation(&'a str),
     InvalidArgument(ParseArgumentError<'a>),
     UnexpectedArgument {
@@ -406,22 +394,46 @@ impl<'a> ArgumentIntermediate<'a> {
 
     pub fn as_constant(&self, maximum_digits: u8) -> Result<Integer, ParseArgumentError<'a>> {
         match self {
-            ArgumentIntermediate::Token(value) => {
-                value
+            ArgumentIntermediate::Token(token) => {
+                let value = token
                     .parse()
                     .map_err(|error: ParseIntError| match error.kind() {
                         std::num::IntErrorKind::PosOverflow => ParseArgumentError::ConstantTooBig {
-                            got: value,
+                            got: token,
                             maximum: DigitInteger::range_of_digits(maximum_digits),
                         },
                         std::num::IntErrorKind::NegOverflow => {
                             ParseArgumentError::ConstantTooSmall {
-                                got: value,
+                                got: token,
                                 minimum: -DigitInteger::range_of_digits(maximum_digits),
                             }
                         }
                         _ => ParseArgumentError::IncorrectType,
-                    })
+                    })?;
+
+                DigitInteger::zero(maximum_digits).is_valid(value).map_err(
+                    |error| match error {
+                        AssignIntegerError::ValueTooBig { maximum, .. }
+                        | AssignIntegerError::ValueMuchTooBig { maximum, .. } => {
+                            ParseArgumentError::ConstantTooBig {
+                                got: token,
+                                maximum,
+                            }
+                        }
+                        AssignIntegerError::ValueTooSmall { minimum, .. }
+                        | AssignIntegerError::ValueMuchTooSmall { minimum, .. } => {
+                            ParseArgumentError::ConstantTooSmall {
+                                got: token,
+                                minimum,
+                            }
+                        }
+                        AssignIntegerError::NumDigitsNotSupported => {
+                            panic!("maximum_digits should supported")
+                        }
+                    },
+                )?;
+
+                Ok(value)
             }
             ArgumentIntermediate::Comparison { .. } => Err(ParseArgumentError::IncorrectType),
         }
@@ -548,7 +560,6 @@ impl Display for ProgramAssemblyErrorKind<'_> {
                     name = computer::name_of_register(*register).unwrap(),
                 )
             }
-            ProgramAssemblyErrorKind::InvalidConstant(error) => write!(f, "{error}"),
             ProgramAssemblyErrorKind::NoSuchOperation(operation) => {
                 write!(f, "No such operation \"{operation}\"")
             }
