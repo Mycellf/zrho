@@ -375,7 +375,7 @@ impl RegisterValues {
                 )
                 .ok_or_else(|| RegisterAccessError::IndexTooBig {
                     got: *index,
-                    maximum: values.len() as i32 - 1,
+                    maximum: values.len() as Integer - 1,
                 }),
         }
     }
@@ -395,7 +395,7 @@ impl RegisterValues {
                     })?)
                     .ok_or_else(|| RegisterAccessError::IndexTooBig {
                         got: *index,
-                        maximum: length as i32 - 1,
+                        maximum: length as Integer - 1,
                     })
             }
         }
