@@ -17,6 +17,7 @@ fn main() {
             .with_value('I', true)
             .with_value('X', true)
             .with_value('Y', true),
+        DIGITS,
     ) {
         Ok(program) => program,
         Err(errors) => {

@@ -1,5 +1,7 @@
 use std::{array, cmp::Ordering, collections::HashMap, fmt::Display, iter::Peekable};
 
+use crate::simulation::integer::{AssignIntegerError, DigitInteger};
+
 use super::{
     argument::{Argument, Comparison, NumberSource},
     computer::{self, RegisterMap},
@@ -33,6 +35,7 @@ impl Program {
         name: String,
         source_code: &str,
         allowed_registers: RegisterMap<bool>,
+        maximum_digits: u8,
     ) -> Result<Self, Vec<ProgramAssemblyError>> {
         let mut errors = Vec::new();
 
@@ -71,6 +74,8 @@ impl Program {
             return Err(errors);
         }
 
+        let constant_pseudo_register = DigitInteger::zero(maximum_digits);
+
         for instruction in &program.instructions {
             for argument in instruction.arguments {
                 if let Some(register) = argument.as_register() {
@@ -78,6 +83,13 @@ impl Program {
                         errors.push(ProgramAssemblyError {
                             line: instruction.line,
                             kind: ProgramAssemblyErrorKind::RegisterNotSupported(register),
+                        });
+                    }
+                } else if let Some(constant) = argument.as_constant() {
+                    if let Err(error) = constant_pseudo_register.is_valid(constant) {
+                        errors.push(ProgramAssemblyError {
+                            line: instruction.line,
+                            kind: ProgramAssemblyErrorKind::InvalidConstant(error),
                         });
                     }
                 }
@@ -101,6 +113,7 @@ pub struct ProgramAssemblyError<'a> {
 #[derive(Clone, Debug)]
 pub enum ProgramAssemblyErrorKind<'a> {
     RegisterNotSupported(u32),
+    InvalidConstant(AssignIntegerError),
     NoSuchLabel(&'a str),
     NoSuchOperation(&'a str),
     InvalidArgument(ParseArgumentError),
@@ -484,6 +497,7 @@ impl Display for ProgramAssemblyErrorKind<'_> {
                     name = computer::name_of_register(*register).unwrap(),
                 )
             }
+            ProgramAssemblyErrorKind::InvalidConstant(error) => write!(f, "{error}"),
             ProgramAssemblyErrorKind::NoSuchLabel(label) => write!(f, "No such label \"{label}\""),
             ProgramAssemblyErrorKind::NoSuchOperation(operation) => {
                 write!(f, "No such operation \"{operation}\"")

@@ -149,3 +149,28 @@ pub enum AssignIntegerError {
     },
     NumDigitsNotSupported,
 }
+
+impl Display for AssignIntegerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        const OVERFLOW_MESSAGE: &str = "is too big for this machine";
+        const UNDERFLOW_MESSAGE: &str = "is too small for this machine";
+
+        match self {
+            AssignIntegerError::ValueTooBig { got, maximum } => {
+                write!(f, "\"{got}\" {OVERFLOW_MESSAGE} (maximum: {maximum})")
+            }
+            AssignIntegerError::ValueTooSmall { got, minimum } => {
+                write!(f, "\"{got}\" {UNDERFLOW_MESSAGE} (minimum: {minimum})")
+            }
+            AssignIntegerError::ValueMuchTooBig { got, maximum } => {
+                write!(f, "\"{got}\" {OVERFLOW_MESSAGE} (maximum: {maximum})")
+            }
+            AssignIntegerError::ValueMuchTooSmall { got, minimum } => {
+                write!(f, "\"{got}\" {UNDERFLOW_MESSAGE} (minimum: {minimum})")
+            }
+            AssignIntegerError::NumDigitsNotSupported => {
+                write!(f, "Number of digits not supported")
+            }
+        }
+    }
+}
