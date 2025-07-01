@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, fmt::Display};
+use std::{cmp::Ordering, fmt::Display, slice};
 
 use super::{
     computer::{self, RegisterAccessError, RegisterSet},
@@ -96,6 +96,16 @@ impl Argument {
                 )
             }
             ArgumentRequirement::Empty => matches!(self, Argument::Empty),
+        }
+    }
+
+    #[must_use]
+    pub fn number_sources(&self) -> &[NumberSource] {
+        match self {
+            Argument::Instruction(_) => &[],
+            Argument::Number(number_source) => slice::from_ref(number_source),
+            Argument::Comparison(comparison) => &comparison.values,
+            Argument::Empty => &[],
         }
     }
 }

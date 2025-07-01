@@ -77,20 +77,24 @@ impl Program {
         let constant_pseudo_register = DigitInteger::zero(maximum_digits);
 
         for instruction in &program.instructions {
-            for argument in instruction.arguments {
-                if let Some(register) = argument.as_register() {
-                    if !allowed_registers[register as usize] {
-                        errors.push(ProgramAssemblyError {
-                            line: instruction.line,
-                            kind: ProgramAssemblyErrorKind::RegisterNotSupported(register),
-                        });
+            for argument in &instruction.arguments {
+                for source in argument.number_sources() {
+                    if let Some(register) = source.as_register() {
+                        if !allowed_registers[register as usize] {
+                            errors.push(ProgramAssemblyError {
+                                line: instruction.line,
+                                kind: ProgramAssemblyErrorKind::RegisterNotSupported(register),
+                            });
+                        }
                     }
-                } else if let Some(constant) = argument.as_constant() {
-                    if let Err(error) = constant_pseudo_register.is_valid(constant) {
-                        errors.push(ProgramAssemblyError {
-                            line: instruction.line,
-                            kind: ProgramAssemblyErrorKind::InvalidConstant(error),
-                        });
+
+                    if let Some(constant) = source.as_constant() {
+                        if let Err(error) = constant_pseudo_register.is_valid(constant) {
+                            errors.push(ProgramAssemblyError {
+                                line: instruction.line,
+                                kind: ProgramAssemblyErrorKind::InvalidConstant(error),
+                            });
+                        }
                     }
                 }
             }
