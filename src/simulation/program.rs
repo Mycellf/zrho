@@ -317,29 +317,17 @@ impl<'a> ArgumentIntermediate<'a> {
             return Ok(ArgumentIntermediate::Token(first_value));
         };
 
-        let Some((index, _)) = [
-            &["<"][..],
-            &["="],
-            &[">"],
-            &["≥", ">="],
-            &["≠", "!=", "/="],
-            &["≤", "<="],
-        ]
-        .into_iter()
-        .enumerate()
-        .find(|&(_, values)| values.contains(&comparison_token)) else {
-            return Ok(ArgumentIntermediate::Token(first_value));
+        let (ordering, invert) = match comparison_token {
+            "<" => (Ordering::Less, false),
+            "=" => (Ordering::Equal, false),
+            ">" => (Ordering::Greater, false),
+            "≥" | ">=" => (Ordering::Less, true),
+            "≠" | "!=" | "/=" => (Ordering::Equal, true),
+            "≤" | "<=" => (Ordering::Greater, true),
+            _ => return Ok(ArgumentIntermediate::Token(first_value)),
         };
 
         tokens.next();
-
-        let invert = index >= 3;
-        let ordering = match index % 3 {
-            0 => Ordering::Less,
-            1 => Ordering::Equal,
-            2 => Ordering::Greater,
-            _ => unreachable!(),
-        };
 
         let Some(second_value) = tokens.next() else {
             return Err(ParseArgumentError::IncompleteComparison);
