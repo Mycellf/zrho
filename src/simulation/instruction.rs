@@ -581,6 +581,32 @@ impl InstructionProperties {
             .filter(|requirement| !matches!(requirement, ArgumentRequirement::Empty))
             .count()
     }
+
+    pub fn apply_override(&mut self, property_override: &InstructionPropertyOverride) {
+        match property_override {
+            InstructionPropertyOverride::Arguments(arguments) => {
+                for (i, argument) in arguments.iter().enumerate() {
+                    let &Some(argument) = argument else {
+                        continue;
+                    };
+
+                    self.arguments[i] = argument;
+                }
+            }
+            InstructionPropertyOverride::BaseTime(base_time) => {
+                self.base_time = *base_time;
+            }
+            InstructionPropertyOverride::ConditionalTime(conditional_time) => {
+                self.conditional_time = *conditional_time;
+            }
+            InstructionPropertyOverride::CallsPerTickLimit(calls_per_tick_limit) => {
+                self.calls_per_tick_limit = *calls_per_tick_limit;
+            }
+            InstructionPropertyOverride::Group(group) => {
+                self.group = *group;
+            }
+        }
+    }
 }
 
 impl Default for InstructionProperties {
