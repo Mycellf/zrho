@@ -41,7 +41,7 @@ impl Computer {
         instruction_properties: CustomInstructionProperties,
     ) -> Self {
         Self {
-            instruction_properties: instruction_properties,
+            instruction_properties,
 
             registers,
             maximum_digits,
