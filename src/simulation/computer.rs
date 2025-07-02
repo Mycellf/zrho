@@ -4,6 +4,8 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+use crate::simulation::instruction::CustomInstructionProperties;
+
 use super::{
     instruction::{ArgumentValues, InstructionEvaluationInterrupt, InstructionKindMap},
     integer::{AssignIntegerError, DigitInteger, Integer},
@@ -12,6 +14,8 @@ use super::{
 
 #[derive(Clone, Debug)]
 pub struct Computer {
+    pub instruction_properties: CustomInstructionProperties,
+
     pub registers: RegisterSet,
     pub maximum_digits: u8,
 
@@ -31,8 +35,14 @@ pub struct Computer {
 }
 
 impl Computer {
-    pub fn new(maximum_digits: u8, registers: RegisterSet) -> Self {
+    pub fn new(
+        maximum_digits: u8,
+        registers: RegisterSet,
+        instruction_properties: CustomInstructionProperties,
+    ) -> Self {
         Self {
+            instruction_properties: instruction_properties,
+
             registers,
             maximum_digits,
 
@@ -54,10 +64,11 @@ impl Computer {
 
     pub fn reset(&mut self) {
         let mut registers = std::mem::take(&mut self.registers);
-
         registers.reset_to_zero();
 
-        *self = Computer::new(self.maximum_digits, registers);
+        let instruction_properties = std::mem::take(&mut self.instruction_properties);
+
+        *self = Computer::new(self.maximum_digits, registers, instruction_properties);
     }
 
     pub fn step_tick(&mut self, program: &Program) {
@@ -109,11 +120,11 @@ impl Computer {
                     },
                 );
 
-                let properties = instruction.kind.get_default_properties();
+                let properties = self.instruction_properties.get_properties(instruction.kind);
 
                 let limit = properties.calls_per_tick_limit;
 
-                let group = instruction.group(previous_instruction);
+                let group = instruction.group(&self.instruction_properties, previous_instruction);
 
                 if limit.is_some_and(|limit| self.executed_instruction_groups[group] >= limit.get())
                 {
@@ -126,6 +137,7 @@ impl Computer {
 
                 match instruction.evaluate(
                     &mut self.registers,
+                    &self.instruction_properties,
                     previous_instruction,
                     &mut self.next_instruction,
                     self.runtime,

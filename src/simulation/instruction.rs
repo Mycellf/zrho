@@ -29,11 +29,12 @@ impl Instruction {
     pub fn evaluate(
         &self,
         registers: &mut RegisterSet,
+        instruction_properties: &CustomInstructionProperties,
         previous_instruction: Option<(&Instruction, &ArgumentValues)>,
         next_instruction: &mut u32,
         runtime: u64,
     ) -> Result<(u32, ArgumentValues, bool), InstructionEvaluationInterrupt> {
-        let properties = self.kind.get_default_properties();
+        let properties = instruction_properties.get_properties(self.kind);
 
         let mut total_time = 0;
 
@@ -82,8 +83,11 @@ impl Instruction {
 
         total_time += read_time;
 
-        let (instruction_time, update_previous_instruction) =
-            self.execution_time(previous_instruction, &argument_values);
+        let (instruction_time, update_previous_instruction) = self.execution_time(
+            instruction_properties,
+            previous_instruction,
+            &argument_values,
+        );
 
         total_time += instruction_time;
 
@@ -236,10 +240,11 @@ impl Instruction {
     #[must_use]
     pub fn execution_time(
         &self,
+        instruction_properties: &CustomInstructionProperties,
         previous_instruction: Option<(&Instruction, &ArgumentValues)>,
         argument_values: &ArgumentValues,
     ) -> (u32, bool) {
-        let properties = self.kind.get_default_properties();
+        let properties = instruction_properties.get_properties(self.kind);
 
         if let &Some((time, ref condition)) = &properties.conditional_time {
             if condition.matches_context(previous_instruction, self.arguments, argument_values) {
@@ -252,9 +257,10 @@ impl Instruction {
 
     pub fn group(
         &self,
+        instruction_properties: &CustomInstructionProperties,
         previous_instruction: Option<(&Instruction, &ArgumentValues)>,
     ) -> InstructionKind {
-        let properties = self.kind.get_default_properties();
+        let properties = instruction_properties.get_properties(self.kind);
 
         if let &Some((group, ref condition)) = &properties.group {
             if condition.matches_context(
@@ -424,7 +430,7 @@ impl FromStr for InstructionKind {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct InstructionKindMap<T>(pub [T; 18]);
 
 impl<T> InstructionKindMap<T> {
@@ -637,6 +643,7 @@ impl Default for InstructionProperties {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct CustomInstructionProperties {
     properties: InstructionKindMap<(Vec<InstructionPropertyOverride>, InstructionProperties)>,
 }
@@ -680,6 +687,12 @@ impl CustomInstructionProperties {
             overrides.push(property_override);
             None
         }
+    }
+}
+
+impl Default for CustomInstructionProperties {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

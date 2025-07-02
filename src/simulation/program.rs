@@ -4,6 +4,7 @@ use std::{
 
 use crate::simulation::{
     computer::Computer,
+    instruction::CustomInstructionProperties,
     integer::{self, AssignIntegerError, DigitInteger},
 };
 
@@ -68,7 +69,11 @@ impl Program {
         let mut program = Self::new_empty(name);
 
         for instruction in instructions {
-            match instruction.parse(&labels, target_computer.maximum_digits) {
+            match instruction.parse(
+                &labels,
+                target_computer.maximum_digits,
+                &target_computer.instruction_properties,
+            ) {
                 Ok(instruction) => program.instructions.push(instruction),
                 Err(error) => errors.push(error),
             }
@@ -239,8 +244,9 @@ impl<'a> InstructionIntermediate<'a> {
         self,
         labels: &HashMap<&str, u32>,
         maximum_digits: u8,
+        instruction_properties: &CustomInstructionProperties,
     ) -> Result<Instruction, ProgramAssemblyError<'a>> {
-        let properties = self.kind.get_default_properties();
+        let properties = instruction_properties.get_properties(self.kind);
 
         let min_arguments = properties.minimum_arguments();
         let max_arguments = properties.maximum_arguments();
