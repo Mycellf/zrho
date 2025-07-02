@@ -645,15 +645,15 @@ impl Default for InstructionProperties {
 
 #[derive(Clone, Debug)]
 pub struct CustomInstructionProperties {
-    properties: InstructionKindMap<(Vec<InstructionPropertyOverride>, InstructionProperties)>,
+    properties: Box<InstructionKindMap<(Vec<InstructionPropertyOverride>, InstructionProperties)>>,
 }
 
 impl CustomInstructionProperties {
     pub fn new() -> Self {
         Self {
-            properties: InstructionKindMap(array::from_fn(|i| {
+            properties: Box::new(InstructionKindMap(array::from_fn(|i| {
                 (Vec::new(), INSTRUCTION_KINDS.0[i])
-            })),
+            }))),
         }
     }
 
