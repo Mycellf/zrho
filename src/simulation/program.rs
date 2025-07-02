@@ -133,6 +133,7 @@ pub enum ParseArgumentError<'a> {
     ConstantTooBig { got: &'a str, maximum: Integer },
     ConstantTooSmall { got: &'a str, minimum: Integer },
     NoSuchLabel(&'a str),
+    InvalidLabel(&'a str),
     IncorrectType,
 }
 
@@ -207,7 +208,16 @@ impl<'a> InstructionIntermediate<'a> {
                 });
             };
 
-            return Ok(ParseInstructionResult::Label(label));
+            return if is_label_valid(label) {
+                Ok(ParseInstructionResult::Label(label))
+            } else {
+                Err(ProgramAssemblyError {
+                    line: line_index,
+                    kind: ProgramAssemblyErrorKind::InvalidArgument(
+                        ParseArgumentError::InvalidLabel(label),
+                    ),
+                })
+            };
         }
 
         let instruction_kind =
@@ -387,7 +397,13 @@ impl<'a> ArgumentIntermediate<'a> {
 
     pub fn as_label(&self) -> Result<&'a str, ParseArgumentError<'a>> {
         match self {
-            ArgumentIntermediate::Token(label) => Ok(label),
+            ArgumentIntermediate::Token(label) => {
+                if is_label_valid(label) {
+                    Ok(label)
+                } else {
+                    Err(ParseArgumentError::InvalidLabel(label))
+                }
+            }
             ArgumentIntermediate::Comparison { .. } => Err(ParseArgumentError::IncorrectType),
         }
     }
@@ -583,6 +599,12 @@ impl Display for ProgramAssemblyErrorKind<'_> {
             ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::NoSuchLabel(label)) => {
                 write!(f, "No such label \"{label}\"")
             }
+            ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::InvalidLabel(label)) => {
+                write!(
+                    f,
+                    "Invalid label \"{label}\", must contain only _, -, letters, and numbers"
+                )
+            }
             ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::IncorrectType) => {
                 write!(f, "(internal error) Invalid argument")
             }
@@ -597,4 +619,14 @@ impl Display for ProgramAssemblyErrorKind<'_> {
             }
         }
     }
+}
+
+fn is_label_valid(label: &str) -> bool {
+    for character in label.chars() {
+        if !['_', '-'].contains(&character) && !character.is_ascii_alphanumeric() {
+            return false;
+        }
+    }
+
+    true
 }
