@@ -126,6 +126,16 @@ pub enum ProgramAssemblyErrorKind<'a> {
     },
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum ParseArgumentError<'a> {
+    OutOfTokens,
+    IncompleteComparison,
+    ConstantTooBig { got: &'a str, maximum: Integer },
+    ConstantTooSmall { got: &'a str, minimum: Integer },
+    NoSuchLabel(&'a str),
+    IncorrectType,
+}
+
 #[derive(Clone, Debug)]
 struct InstructionIntermediate<'a> {
     kind: InstructionKind,
@@ -587,20 +597,4 @@ impl Display for ProgramAssemblyErrorKind<'_> {
             }
         }
     }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum ParseArgumentError<'a> {
-    OutOfTokens,
-    IncompleteComparison,
-    ConstantTooBig { got: &'a str, maximum: Integer },
-    ConstantTooSmall { got: &'a str, minimum: Integer },
-    NoSuchLabel(&'a str),
-    IncorrectType,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct ParseComparisonError {
-    pub lhs_invalid: bool,
-    pub rhs_invalid: bool,
 }
