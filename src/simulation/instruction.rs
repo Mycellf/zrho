@@ -33,7 +33,7 @@ impl Instruction {
         next_instruction: &mut u32,
         runtime: u64,
     ) -> Result<(u32, ArgumentValues, bool), InstructionEvaluationInterrupt> {
-        let properties = self.kind.get_properties();
+        let properties = self.kind.get_default_properties();
 
         let mut total_time = 0;
 
@@ -239,7 +239,7 @@ impl Instruction {
         previous_instruction: Option<(&Instruction, &ArgumentValues)>,
         argument_values: &ArgumentValues,
     ) -> (u32, bool) {
-        let properties = self.kind.get_properties();
+        let properties = self.kind.get_default_properties();
 
         if let &Some((time, ref condition)) = &properties.conditional_time {
             if condition.matches_context(previous_instruction, self.arguments, argument_values) {
@@ -254,7 +254,7 @@ impl Instruction {
         &self,
         previous_instruction: Option<(&Instruction, &ArgumentValues)>,
     ) -> InstructionKind {
-        let properties = self.kind.get_properties();
+        let properties = self.kind.get_default_properties();
 
         if let &Some((group, ref condition)) = &properties.group {
             if condition.matches_context(
@@ -348,7 +348,7 @@ impl Instruction {
 
 impl Display for Instruction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.kind.get_properties().name)?;
+        write!(f, "{}", self.kind.get_default_properties().name)?;
 
         for argument in self.arguments {
             if argument.is_empty() {
@@ -401,7 +401,7 @@ pub enum InstructionKind {
 }
 
 impl InstructionKind {
-    pub const fn get_properties(self) -> &'static InstructionProperties {
+    pub const fn get_default_properties(self) -> &'static InstructionProperties {
         INSTRUCTION_KINDS.get(self)
     }
 }
@@ -607,11 +607,79 @@ impl InstructionProperties {
             }
         }
     }
+
+    pub fn remove_override(&mut self, property_override: &InstructionPropertyOverride) {
+        let default = self.kind.get_default_properties();
+
+        match property_override {
+            InstructionPropertyOverride::Arguments(_) => {
+                self.arguments = default.arguments;
+            }
+            InstructionPropertyOverride::BaseTime(_) => {
+                self.base_time = default.base_time;
+            }
+            InstructionPropertyOverride::ConditionalTime(_) => {
+                self.conditional_time = default.conditional_time;
+            }
+            InstructionPropertyOverride::CallsPerTickLimit(_) => {
+                self.calls_per_tick_limit = default.calls_per_tick_limit;
+            }
+            InstructionPropertyOverride::Group(_) => {
+                self.group = default.group;
+            }
+        }
+    }
 }
 
 impl Default for InstructionProperties {
     fn default() -> Self {
         Self::DEFAULT
+    }
+}
+
+pub struct CustomInstructionProperties {
+    properties: InstructionKindMap<(Vec<InstructionPropertyOverride>, InstructionProperties)>,
+}
+
+impl CustomInstructionProperties {
+    pub fn new() -> Self {
+        Self {
+            properties: InstructionKindMap(array::from_fn(|i| {
+                (Vec::new(), INSTRUCTION_KINDS.0[i])
+            })),
+        }
+    }
+
+    pub fn get_properties(&self, instruction: InstructionKind) -> &InstructionProperties {
+        &self.properties[instruction].1
+    }
+
+    pub fn with_override(
+        mut self,
+        instruction: InstructionKind,
+        property_override: InstructionPropertyOverride,
+    ) -> Self {
+        self.add_override(instruction, property_override);
+        self
+    }
+
+    pub fn add_override(
+        &mut self,
+        instruction: InstructionKind,
+        property_override: InstructionPropertyOverride,
+    ) -> Option<InstructionPropertyOverride> {
+        let (overrides, properties) = &mut self.properties[instruction];
+
+        properties.apply_override(&property_override);
+
+        if let Some(index) = overrides.iter().position(|other| {
+            std::mem::discriminant(other) == std::mem::discriminant(&property_override)
+        }) {
+            Some(std::mem::replace(&mut overrides[index], property_override))
+        } else {
+            overrides.push(property_override);
+            None
+        }
     }
 }
 
@@ -687,7 +755,7 @@ const _: () = {
 
     while i < INSTRUCTION_KINDS.0.len() {
         let expected_kind = unsafe { std::mem::transmute::<u8, InstructionKind>(i as u8) };
-        let stored_kind = expected_kind.get_properties().kind;
+        let stored_kind = expected_kind.get_default_properties().kind;
 
         assert!(
             expected_kind as u8 == stored_kind as u8,

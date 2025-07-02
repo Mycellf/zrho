@@ -109,7 +109,7 @@ impl Computer {
                     },
                 );
 
-                let properties = instruction.kind.get_properties();
+                let properties = instruction.kind.get_default_properties();
 
                 let limit = properties.calls_per_tick_limit;
 

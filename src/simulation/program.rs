@@ -240,7 +240,7 @@ impl<'a> InstructionIntermediate<'a> {
         labels: &HashMap<&str, u32>,
         maximum_digits: u8,
     ) -> Result<Instruction, ProgramAssemblyError<'a>> {
-        let properties = self.kind.get_properties();
+        let properties = self.kind.get_default_properties();
 
         let min_arguments = properties.minimum_arguments();
         let max_arguments = properties.maximum_arguments();
