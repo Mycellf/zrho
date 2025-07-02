@@ -10,10 +10,7 @@ pub struct TextEditor {
 impl TextEditor {
     pub fn new(text: String) -> Self {
         let lines = Self::line_indecies_from(&text);
-        let cursors = vec![Cursor {
-            position: CharacterPosition { line: 0, column: 0 },
-            index: 0,
-        }];
+        let cursors = vec![Cursor::new()];
 
         Self {
             text,
@@ -191,4 +188,13 @@ pub struct CharacterPosition {
 pub struct Cursor {
     pub position: CharacterPosition,
     pub index: usize,
+}
+
+impl Cursor {
+    pub fn new() -> Self {
+        Self {
+            position: CharacterPosition { line: 0, column: 0 },
+            index: 0,
+        }
+    }
 }
