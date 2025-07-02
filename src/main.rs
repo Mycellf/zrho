@@ -69,7 +69,7 @@ fn main() {
     simulation::interactively_run(computer, program);
 }
 
-const PROGRAM: &str = TIME_ASSERTION;
+const PROGRAM: &str = PRIME_NUMBERS;
 
 pub const TIME_ASSERTION: &str = r"
     ; ENSURE THAT THE DURATION OF PROGRAM EXECUTION
