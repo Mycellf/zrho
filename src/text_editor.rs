@@ -52,6 +52,7 @@ impl TextEditor {
         let end_index = self.index_of_position(range.end)?;
 
         let removed_bytes = end_index.checked_sub(start_index)?;
+        let removed_lines = range.end.line.checked_sub(range.start.line)?;
 
         for moved_line in &mut self.lines[range.end.line + 1..] {
             moved_line.byte_index += text.len() - removed_bytes;
@@ -61,9 +62,11 @@ impl TextEditor {
 
         for (i, byte) in text.bytes().enumerate() {
             if byte == b'\n' {
-                new_lines.push(Line::from_byte_offset(start_index + i));
+                new_lines.push(Line::from_byte_offset(start_index + i + 1));
             }
         }
+
+        let num_new_lines = new_lines.len();
 
         self.lines
             .splice(range.start.line..range.end.line, new_lines);
@@ -82,8 +85,13 @@ impl TextEditor {
 
                 cursor.index += text.len();
 
-                let index = cursor.index;
-                self.cursors[i].position = self.position_of_index(index).unwrap();
+                if cursor.position.line <= range.end.line {
+                    let index = cursor.index;
+                    self.cursors[i].position = self.position_of_index(index).unwrap();
+                } else {
+                    cursor.position.line += num_new_lines;
+                    cursor.position.line -= removed_lines;
+                }
             }
         }
 
