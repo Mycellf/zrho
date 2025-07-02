@@ -2,7 +2,7 @@ use std::{
     array,
     fmt::Display,
     num::NonZeroU8,
-    ops::{Deref, Index, IndexMut},
+    ops::{Index, IndexMut},
     str::FromStr,
 };
 
@@ -534,11 +534,6 @@ pub struct InstructionKindProperties {
     pub kind: InstructionKind,
     pub name: &'static str,
     pub arguments: [ArgumentRequirement; Instruction::NUM_ARGUMENTS],
-    pub performance: InstructionPerformance,
-}
-
-#[non_exhaustive]
-pub struct InstructionPerformance {
     pub base_time: u32,
     pub conditional_time: Option<(u32, PropertyCondition)>,
     pub calls_per_tick_limit: Option<NonZeroU8>,
@@ -550,7 +545,10 @@ impl InstructionKindProperties {
         kind: InstructionKind::Set,
         name: "",
         arguments: [ArgumentRequirement::Empty; Instruction::NUM_ARGUMENTS],
-        performance: InstructionPerformance::DEFAULT,
+        base_time: 0,
+        conditional_time: None,
+        calls_per_tick_limit: Some(NonZeroU8::new(1).unwrap()),
+        group: None,
     };
 
     pub fn minimum_arguments(&self) -> usize {
@@ -576,29 +574,6 @@ impl InstructionKindProperties {
 }
 
 impl Default for InstructionKindProperties {
-    fn default() -> Self {
-        Self::DEFAULT
-    }
-}
-
-impl Deref for InstructionKindProperties {
-    type Target = InstructionPerformance;
-
-    fn deref(&self) -> &Self::Target {
-        &self.performance
-    }
-}
-
-impl InstructionPerformance {
-    pub const DEFAULT: Self = Self {
-        base_time: 0,
-        conditional_time: None,
-        calls_per_tick_limit: Some(NonZeroU8::new(1).unwrap()),
-        group: None,
-    };
-}
-
-impl Default for InstructionPerformance {
     fn default() -> Self {
         Self::DEFAULT
     }
@@ -694,10 +669,7 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
             ArgumentRequirement::RegisterWriteOnly,
             ArgumentRequirement::ConstantOrRegister,
         ]),
-        performance: InstructionPerformance {
-            base_time: 1,
-            ..InstructionPerformance::DEFAULT
-        },
+        base_time: 1,
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
@@ -708,10 +680,7 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::RegisterWriteOnly,
         ]),
-        performance: InstructionPerformance {
-            base_time: 1,
-            ..InstructionPerformance::DEFAULT
-        },
+        base_time: 1,
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
@@ -722,17 +691,14 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::RegisterWriteOnly,
         ]),
-        performance: InstructionPerformance {
-            base_time: 1,
-            group: Some((
-                InstructionKind::Negate,
-                PropertyCondition::ArgumentTypeMatches {
-                    argument: 1,
-                    requirement: ArgumentRequirement::Register,
-                },
-            )),
-            ..InstructionPerformance::DEFAULT
-        },
+        base_time: 1,
+        group: Some((
+            InstructionKind::Negate,
+            PropertyCondition::ArgumentTypeMatches {
+                argument: 1,
+                requirement: ArgumentRequirement::Register,
+            },
+        )),
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
@@ -749,10 +715,7 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::RegisterWriteOnly,
         ]),
-        performance: InstructionPerformance {
-            base_time: 2,
-            ..InstructionPerformance::DEFAULT
-        },
+        base_time: 2,
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
@@ -763,17 +726,14 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::RegisterWriteOnly,
         ]),
-        performance: InstructionPerformance {
-            base_time: 4,
-            conditional_time: Some((
-                1,
-                PropertyCondition::SameAsPrevious {
-                    kind: InstructionKind::Modulus,
-                    allow_cascade: false,
-                },
-            )),
-            ..InstructionPerformance::DEFAULT
-        },
+        base_time: 4,
+        conditional_time: Some((
+            1,
+            PropertyCondition::SameAsPrevious {
+                kind: InstructionKind::Modulus,
+                allow_cascade: false,
+            },
+        )),
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
@@ -784,17 +744,14 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
             ArgumentRequirement::ConstantOrRegister,
             ArgumentRequirement::RegisterWriteOnly,
         ]),
-        performance: InstructionPerformance {
-            base_time: 4,
-            conditional_time: Some((
-                1,
-                PropertyCondition::SameAsPrevious {
-                    kind: InstructionKind::Divide,
-                    allow_cascade: false,
-                },
-            )),
-            ..InstructionPerformance::DEFAULT
-        },
+        base_time: 4,
+        conditional_time: Some((
+            1,
+            PropertyCondition::SameAsPrevious {
+                kind: InstructionKind::Divide,
+                allow_cascade: false,
+            },
+        )),
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
@@ -804,10 +761,7 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
             ArgumentRequirement::Comparison,
             ArgumentRequirement::RegisterWriteOnly,
         ]),
-        performance: InstructionPerformance {
-            base_time: 1,
-            ..InstructionPerformance::DEFAULT
-        },
+        base_time: 1,
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
@@ -817,10 +771,7 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
             ArgumentRequirement::Comparison,
             ArgumentRequirement::RegisterWriteOnly,
         ]),
-        performance: InstructionPerformance {
-            base_time: 2,
-            ..InstructionPerformance::DEFAULT
-        },
+        base_time: 2,
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
@@ -830,10 +781,7 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
             ArgumentRequirement::Comparison,
             ArgumentRequirement::RegisterWriteOnly,
         ]),
-        performance: InstructionPerformance {
-            base_time: 2,
-            ..InstructionPerformance::DEFAULT
-        },
+        base_time: 2,
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
@@ -843,17 +791,14 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
             ArgumentRequirement::AnyValueOrEmpty,
             ArgumentRequirement::Instruction,
         ]),
-        performance: InstructionPerformance {
-            base_time: 1,
-            conditional_time: Some((
-                0,
-                PropertyCondition::ArgumentTypeMatches {
-                    argument: 0,
-                    requirement: ArgumentRequirement::ConstantOrEmpty,
-                },
-            )),
-            ..InstructionPerformance::DEFAULT
-        },
+        base_time: 1,
+        conditional_time: Some((
+            0,
+            PropertyCondition::ArgumentTypeMatches {
+                argument: 0,
+                requirement: ArgumentRequirement::ConstantOrEmpty,
+            },
+        )),
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
@@ -863,18 +808,15 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
             ArgumentRequirement::AnyValue,
             ArgumentRequirement::Instruction,
         ]),
-        performance: InstructionPerformance {
-            base_time: 0,
-            conditional_time: Some((
-                5,
-                PropertyCondition::ArgumentMatches {
-                    argument: 0,
-                    value: 0,
-                },
-            )),
-            group: Some((InstructionKind::Jump, PropertyCondition::Always)),
-            ..InstructionPerformance::DEFAULT
-        },
+        base_time: 0,
+        conditional_time: Some((
+            5,
+            PropertyCondition::ArgumentMatches {
+                argument: 0,
+                value: 0,
+            },
+        )),
+        group: Some((InstructionKind::Jump, PropertyCondition::Always)),
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
@@ -884,28 +826,22 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
             ArgumentRequirement::AnyValue,
             ArgumentRequirement::Instruction,
         ]),
-        performance: InstructionPerformance {
-            base_time: 5,
-            conditional_time: Some((
-                0,
-                PropertyCondition::ArgumentMatches {
-                    argument: 0,
-                    value: 0,
-                },
-            )),
-            group: Some((InstructionKind::Jump, PropertyCondition::Always)),
-            ..InstructionPerformance::DEFAULT
-        },
+        base_time: 5,
+        conditional_time: Some((
+            0,
+            PropertyCondition::ArgumentMatches {
+                argument: 0,
+                value: 0,
+            },
+        )),
+        group: Some((InstructionKind::Jump, PropertyCondition::Always)),
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
         kind: InstructionKind::Sleep,
         name: "SLP",
         arguments: arguments([ArgumentRequirement::ConstantOrRegister]),
-        performance: InstructionPerformance {
-            calls_per_tick_limit: None,
-            ..InstructionPerformance::DEFAULT
-        },
+        calls_per_tick_limit: None,
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
@@ -918,20 +854,14 @@ pub static INSTRUCTION_KINDS: InstructionKindMap<InstructionKindProperties> = In
         kind: InstructionKind::TryRead,
         name: "TRY",
         arguments: arguments([ArgumentRequirement::Register]),
-        performance: InstructionPerformance {
-            calls_per_tick_limit: None,
-            ..InstructionPerformance::DEFAULT
-        },
+        calls_per_tick_limit: None,
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
         kind: InstructionKind::TryWrite,
         name: "TRW",
         arguments: arguments([ArgumentRequirement::RegisterWriteOnly]),
-        performance: InstructionPerformance {
-            calls_per_tick_limit: None,
-            ..InstructionPerformance::DEFAULT
-        },
+        calls_per_tick_limit: None,
         ..InstructionKindProperties::DEFAULT
     },
     InstructionKindProperties {
