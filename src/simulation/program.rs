@@ -111,7 +111,6 @@ pub struct ProgramAssemblyError<'a> {
 pub enum ProgramAssemblyErrorKind<'a> {
     RegisterNotSupported(u32),
     NoSuchOperation(&'a str),
-    InvalidArgument(ParseArgumentError<'a>),
     UnexpectedArgument {
         got: ArgumentIntermediate<'a>,
         expected: ArgumentRequirement,
@@ -124,6 +123,7 @@ pub enum ProgramAssemblyErrorKind<'a> {
         got: usize,
         minimum: usize,
     },
+    InvalidArgument(ParseArgumentError<'a>),
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -579,35 +579,6 @@ impl Display for ProgramAssemblyErrorKind<'_> {
             ProgramAssemblyErrorKind::NoSuchOperation(operation) => {
                 write!(f, "No such operation \"{operation}\"")
             }
-            ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::IncompleteComparison) => {
-                write!(
-                    f,
-                    "A constant or register must follow a comparison operator"
-                )
-            }
-            ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::ConstantTooBig {
-                got,
-                maximum,
-            }) => integer::format_overflow_error(f, got, *maximum),
-            ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::ConstantTooSmall {
-                got,
-                minimum,
-            }) => integer::format_underflow_error(f, got, *minimum),
-            ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::OutOfTokens) => {
-                write!(f, "Ran out of tokens when parsing arguments")
-            }
-            ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::NoSuchLabel(label)) => {
-                write!(f, "No such label \"{label}\"")
-            }
-            ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::InvalidLabel(label)) => {
-                write!(
-                    f,
-                    "Invalid label \"{label}\", must contain only _, -, letters, and numbers"
-                )
-            }
-            ProgramAssemblyErrorKind::InvalidArgument(ParseArgumentError::IncorrectType) => {
-                write!(f, "(internal error) Invalid argument")
-            }
             ProgramAssemblyErrorKind::UnexpectedArgument { got, expected } => {
                 write!(f, "Got \"{got}\", expected {expected}")
             }
@@ -617,6 +588,27 @@ impl Display for ProgramAssemblyErrorKind<'_> {
             ProgramAssemblyErrorKind::TooFewArguments { got, minimum } => {
                 write!(f, "Not enough arguments (got {got}, minimum {minimum})")
             }
+            ProgramAssemblyErrorKind::InvalidArgument(error) => match error {
+                ParseArgumentError::OutOfTokens => {
+                    write!(f, "Ran out of tokens when parsing arguments")
+                }
+                ParseArgumentError::IncompleteComparison => write!(
+                    f,
+                    "A constant or register must follow a comparison operator"
+                ),
+                ParseArgumentError::ConstantTooBig { got, maximum } => {
+                    integer::format_overflow_error(f, got, *maximum)
+                }
+                ParseArgumentError::ConstantTooSmall { got, minimum } => {
+                    integer::format_underflow_error(f, got, *minimum)
+                }
+                ParseArgumentError::NoSuchLabel(label) => write!(f, "No such label \"{label}\""),
+                ParseArgumentError::InvalidLabel(label) => write!(
+                    f,
+                    "Invalid label \"{label}\", must contain only _, -, letters, and numbers"
+                ),
+                ParseArgumentError::IncorrectType => write!(f, "(internal error) Invalid argument"),
+            },
         }
     }
 }
