@@ -184,7 +184,7 @@ pub const PRIME_NUMBERS: &str = r"
     JMP CHECK_NUMBER
 
     LBL NEXT_NUMBER
-    SET I 0
+    CLK I 9999
     ADD X 2 X
 
     LBL CHECK_NUMBER
@@ -210,7 +210,7 @@ pub const PRIME_NUMBERS_FAST: &str = r"
     JMP CHECK_NUMBER
 
     LBL NEXT_NUMBER
-    SET I 0
+    CLK I 9999
     ADD X 2 X
 
     LBL CHECK_NUMBER
