@@ -47,7 +47,7 @@ impl Program {
         let mut labels = HashMap::new();
 
         for (i, line) in source_code.lines().enumerate() {
-            match InstructionIntermediate::from_line(line, i.try_into().unwrap()) {
+            match InstructionIntermediate::from_line(line, i.try_into().unwrap(), target_computer) {
                 Ok(instruction_result) => match instruction_result {
                     ParseInstructionResult::Instruction(instruction) => {
                         instructions.push(instruction);
@@ -164,6 +164,7 @@ impl<'a> InstructionIntermediate<'a> {
     fn from_line(
         source_line: &'a str,
         line_index: u32,
+        target_computer: &Computer,
     ) -> Result<ParseInstructionResult<'a>, ProgramAssemblyError<'a>> {
         let line = source_line
             .split_once(COMMENT_SEPARATOR)
@@ -220,16 +221,15 @@ impl<'a> InstructionIntermediate<'a> {
             };
         }
 
-        let instruction_kind =
-            instruction_code
-                .parse::<InstructionKind>()
-                .map_err(|_| ProgramAssemblyError {
-                    line: line_index,
-                    kind: ProgramAssemblyErrorKind::NoSuchOperation(instruction_code),
-                })?;
+        let instruction_properties = (target_computer.instruction_properties)
+            .instruction_with_name(instruction_code)
+            .ok_or(ProgramAssemblyError {
+                line: line_index,
+                kind: ProgramAssemblyErrorKind::NoSuchOperation(instruction_code),
+            })?;
 
         Ok(ParseInstructionResult::Instruction(Self {
-            kind: instruction_kind,
+            kind: instruction_properties.kind,
             line: line_index,
             arguments,
         }))
@@ -240,9 +240,7 @@ impl<'a> InstructionIntermediate<'a> {
         labels: &HashMap<&str, u32>,
         target_computer: &Computer,
     ) -> Result<Instruction, ProgramAssemblyError<'a>> {
-        let properties = target_computer
-            .instruction_properties
-            .get_properties(self.kind);
+        let properties = target_computer.instruction_properties[self.kind];
 
         let min_arguments = properties.minimum_arguments();
         let max_arguments = properties.maximum_arguments();

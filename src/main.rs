@@ -1,6 +1,6 @@
 use crate::simulation::{
     computer::{self, Computer, Register, RegisterSet, RegisterValues},
-    instruction::CustomInstructionProperties,
+    instruction,
     integer::DigitInteger,
     program::Program,
 };
@@ -53,7 +53,7 @@ fn main() {
                     write_time: 0,
                 },
             ),
-        CustomInstructionProperties::default(),
+        instruction::DEFAULT_INSTRUCTIONS,
     );
 
     let program = match Program::assemble_from("Test Program".to_owned(), PROGRAM, &computer) {

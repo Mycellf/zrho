@@ -4,7 +4,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use crate::simulation::instruction::CustomInstructionProperties;
+use crate::simulation::instruction::InstructionProperties;
 
 use super::{
     instruction::{ArgumentValues, InstructionEvaluationInterrupt, InstructionKindMap},
@@ -14,7 +14,7 @@ use super::{
 
 #[derive(Clone, Debug)]
 pub struct Computer {
-    pub instruction_properties: CustomInstructionProperties,
+    pub instruction_properties: InstructionKindMap<InstructionProperties>,
 
     pub registers: RegisterSet,
     pub maximum_digits: u8,
@@ -38,7 +38,7 @@ impl Computer {
     pub fn new(
         maximum_digits: u8,
         registers: RegisterSet,
-        instruction_properties: CustomInstructionProperties,
+        instruction_properties: InstructionKindMap<InstructionProperties>,
     ) -> Self {
         Self {
             instruction_properties,
@@ -120,7 +120,7 @@ impl Computer {
                     },
                 );
 
-                let properties = self.instruction_properties.get_properties(instruction.kind);
+                let properties = self.instruction_properties[instruction.kind];
 
                 let limit = properties.calls_per_tick_limit;
 
