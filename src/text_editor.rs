@@ -52,7 +52,7 @@ impl TextEditor {
         let removed_lines = range.end.line.checked_sub(range.start.line)?;
 
         for moved_line in &mut self.lines[range.end.line + 1..] {
-            moved_line.byte_index += text.len() - removed_bytes;
+            moved_line.byte_offset += text.len() - removed_bytes;
         }
 
         let mut new_lines = Vec::new();
@@ -106,9 +106,9 @@ impl TextEditor {
         let start = self.lines.get(index)?;
 
         if let Some(end) = self.lines.get(index + 1) {
-            Some(start.byte_index..end.byte_index - 1)
+            Some(start.byte_offset..end.byte_offset - 1)
         } else {
-            Some(start.byte_index..self.text.len())
+            Some(start.byte_offset..self.text.len())
         }
     }
 
@@ -130,7 +130,7 @@ impl TextEditor {
             return None;
         }
 
-        let line = match (self.lines).binary_search_by_key(&index, |line| line.byte_index) {
+        let line = match (self.lines).binary_search_by_key(&index, |line| line.byte_offset) {
             Ok(line) => line,
             Err(line) => line - 1,
         };
@@ -164,17 +164,15 @@ impl TextEditor {
     }
 }
 
-/// Should represent a byte index index immediately after a newline
+/// Should represent a byte offset immediately after a newline
 #[derive(Clone, Copy, Debug)]
 pub struct Line {
-    pub byte_index: usize,
+    pub byte_offset: usize,
 }
 
 impl Line {
     pub fn from_byte_offset(byte_offset: usize) -> Self {
-        Self {
-            byte_index: byte_offset,
-        }
+        Self { byte_offset }
     }
 }
 
