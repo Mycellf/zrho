@@ -71,6 +71,13 @@ fn main() {
                     values: RegisterValues::Scalar(DigitInteger::new(0, DIGITS).unwrap()),
                     ..Register::DEFAULT
                 },
+            )
+            .with_register(
+                'Z',
+                Register {
+                    values: RegisterValues::Scalar(DigitInteger::new(0, DIGITS).unwrap()),
+                    ..Register::DEFAULT
+                },
             ),
         instruction::DEFAULT_INSTRUCTIONS,
     );
