@@ -21,9 +21,9 @@ fn main() {
                         values: Box::new([DigitInteger::new(0, DIGITS).unwrap(); 100]),
                         index: 0,
                     },
-                    indexes_array: None,
                     read_time: 1,
                     write_time: 1,
+                    ..Register::DEFAULT
                 },
             )
             .with_register(
@@ -31,26 +31,21 @@ fn main() {
                 Register {
                     values: RegisterValues::Scalar(DigitInteger::new(0, DIGITS).unwrap()),
                     indexes_array: Some(computer::register_with_name('D').unwrap()),
-                    read_time: 0,
-                    write_time: 0,
+                    ..Register::DEFAULT
                 },
             )
             .with_register(
                 'X',
                 Register {
                     values: RegisterValues::Scalar(DigitInteger::new(0, DIGITS).unwrap()),
-                    indexes_array: None,
-                    read_time: 0,
-                    write_time: 0,
+                    ..Register::DEFAULT
                 },
             )
             .with_register(
                 'Y',
                 Register {
                     values: RegisterValues::Scalar(DigitInteger::new(0, DIGITS).unwrap()),
-                    indexes_array: None,
-                    read_time: 0,
-                    write_time: 0,
+                    ..Register::DEFAULT
                 },
             ),
         instruction::DEFAULT_INSTRUCTIONS,

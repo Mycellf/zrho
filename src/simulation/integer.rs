@@ -19,37 +19,50 @@ pub struct DigitInteger {
 
 impl DigitInteger {
     pub const MAXIMUM_DIGITS: usize = Integer::MAX.ilog10() as usize - 1;
+    pub const DUMMY: Self = Self {
+        value: 0,
+        digits: 0,
+    };
 
-    pub fn new(value: Integer, digits: u8) -> Result<Self, AssignIntegerError> {
+    pub const fn new(value: Integer, digits: u8) -> Result<Self, AssignIntegerError> {
         if digits <= Self::MAXIMUM_DIGITS as u8 {
-            Self::check_value(value, digits)?;
-
-            Ok(Self { value, digits })
+            match Self::check_value(value, digits) {
+                Ok(value) => Ok(Self { value, digits }),
+                Err(error) => Err(error),
+            }
         } else {
             Err(AssignIntegerError::NumDigitsNotSupported)
         }
     }
 
-    pub fn try_set(&mut self, value: Integer) -> Result<(), AssignIntegerError> {
-        self.value = Self::check_value(value, self.digits)?;
-        Ok(())
+    pub const fn try_set(&mut self, value: Integer) -> Result<(), AssignIntegerError> {
+        match Self::check_value(value, self.digits) {
+            Ok(value) => {
+                self.value = value;
+                Ok(())
+            }
+            Err(error) => Err(error),
+        }
     }
 
-    pub fn is_valid(&self, value: Integer) -> Result<(), AssignIntegerError> {
-        Self::check_value(value, self.digits).map(|_| ())
+    pub const fn is_valid(&self, value: Integer) -> Result<(), AssignIntegerError> {
+        match Self::check_value(value, self.digits) {
+            Ok(_) => Ok(()),
+            Err(error) => Err(error),
+        }
     }
 
     #[must_use]
-    pub fn get(&self) -> Integer {
+    pub const fn get(&self) -> Integer {
         self.value
     }
 
     #[must_use]
-    pub fn get_bigger(&self) -> BiggerInteger {
+    pub const fn get_bigger(&self) -> BiggerInteger {
         self.value as BiggerInteger
     }
 
-    fn check_value(value: Integer, digits: u8) -> Result<Integer, AssignIntegerError> {
+    const fn check_value(value: Integer, digits: u8) -> Result<Integer, AssignIntegerError> {
         let digit_range = Self::range_of_digits(digits);
 
         if value > digit_range {
@@ -78,7 +91,7 @@ impl DigitInteger {
     }
 
     #[must_use]
-    pub fn range_of_digits(digits: u8) -> Integer {
+    pub const fn range_of_digits(digits: u8) -> Integer {
         const DIGIT_COMBINATIONS: [Integer; DigitInteger::MAXIMUM_DIGITS + 1] = {
             let mut result = [0; DigitInteger::MAXIMUM_DIGITS + 1];
             let mut acc = 0;

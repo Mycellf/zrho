@@ -335,10 +335,26 @@ pub enum CreateRegisterError {
 #[derive(Clone, Debug)]
 pub struct Register {
     pub values: RegisterValues,
+    pub block_time: u32,
     pub indexes_array: Option<u32>,
     pub read_time: u32,
     pub write_time: u32,
-    // pub block_time: u32,
+}
+
+impl Register {
+    pub const DEFAULT: Self = Self {
+        values: RegisterValues::Scalar(DigitInteger::DUMMY),
+        block_time: 0,
+        indexes_array: None,
+        read_time: 0,
+        write_time: 0,
+    };
+}
+
+impl Default for Register {
+    fn default() -> Self {
+        Register::DEFAULT
+    }
 }
 
 impl Display for Register {
