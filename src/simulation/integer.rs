@@ -81,13 +81,18 @@ impl DigitInteger {
     }
 
     #[must_use]
-    pub fn maximum(&self) -> Integer {
+    pub const fn maximum(&self) -> Integer {
         Self::range_of_digits(self.digits)
     }
 
     #[must_use]
-    pub fn minimum(&self) -> Integer {
+    pub const fn minimum(&self) -> Integer {
         -self.maximum()
+    }
+
+    #[must_use]
+    pub const fn num_digits(&self) -> usize {
+        self.digits as usize + 1
     }
 
     #[must_use]

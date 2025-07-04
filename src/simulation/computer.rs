@@ -1,6 +1,7 @@
 use std::{
     array,
     fmt::{Debug, Display},
+    iter,
     ops::{Deref, DerefMut},
 };
 
@@ -396,18 +397,58 @@ impl Default for Register {
 
 impl Display for Register {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        const MAXIMUM_NUMBERS: usize = 19;
+
         match &self.values {
             RegisterValues::Scalar(value) => write!(f, "{value}")?,
             RegisterValues::Vector { values, index } => {
-                write!(f, "[")?;
+                let effective_index = (*index).clamp(0, values.len() as i32 - 1) as usize;
 
-                for (i, &value) in values.into_iter().enumerate() {
-                    if i != 0 {
-                        write!(f, ", ")?;
+                let (start, end, lower_hidden, upper_hidden) =
+                    if values.len() <= MAXIMUM_NUMBERS + 2 {
+                        (0, values.len(), false, false)
+                    } else if effective_index <= MAXIMUM_NUMBERS / 2 {
+                        (0, MAXIMUM_NUMBERS, false, true)
+                    } else if effective_index >= values.len() - MAXIMUM_NUMBERS.div_ceil(2) {
+                        (values.len() - MAXIMUM_NUMBERS, values.len(), true, false)
+                    } else {
+                        (
+                            effective_index - MAXIMUM_NUMBERS / 2,
+                            effective_index + MAXIMUM_NUMBERS.div_ceil(2),
+                            true,
+                            true,
+                        )
+                    };
+
+                if lower_hidden {
+                    write!(f, "[...,")?;
+                } else {
+                    write!(f, "    [")?;
+                }
+
+                let mut first = true;
+
+                for (i, &value) in values.into_iter().enumerate().skip(start).take(end - start) {
+                    if first {
+                        first = false;
+                    } else {
+                        write!(f, ",")?;
                     }
 
-                    write!(f, "{value}")?;
+                    let parsed_value = value.to_string();
+                    let padding = iter::repeat_n(' ', value.num_digits() + 1 - parsed_value.len())
+                        .collect::<String>();
+
+                    if i as i32 == *index {
+                        write!(f, "{padding}>{parsed_value}")?;
+                    } else {
+                        write!(f, "{padding} {parsed_value}")?;
+                    }
                 }
+
+                if upper_hidden {
+                    write!(f, ", ...")?;
+                };
 
                 write!(f, "][{index}]")?;
             }
@@ -420,7 +461,7 @@ impl Display for Register {
         if self.block_time > 0 {
             write!(
                 f,
-                " (blocking for {} tick{})",
+                "\n(waiting for {} tick{})",
                 self.block_time,
                 if self.block_time == 1 { "" } else { "s" }
             )?;
