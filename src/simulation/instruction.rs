@@ -5,6 +5,8 @@ use std::{
     ops::{Index, IndexMut},
 };
 
+use strum::{EnumCount, EnumIter, VariantArray};
+
 use super::{
     argument::Argument,
     computer::{RegisterAccessError, RegisterMap, RegisterSet},
@@ -383,7 +385,7 @@ impl IntoDebugResult for BiggerInteger {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, EnumIter, EnumCount, VariantArray)]
 pub enum InstructionKind {
     Set,
     Add,
@@ -412,7 +414,7 @@ impl InstructionKind {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct InstructionKindMap<T>(pub [T; 18]);
+pub struct InstructionKindMap<T>(pub [T; InstructionKind::COUNT]);
 
 impl<T> InstructionKindMap<T> {
     pub fn from_element(element: T) -> Self
@@ -663,7 +665,7 @@ const _: () = {
     let mut i = 0;
 
     while i < DEFAULT_INSTRUCTIONS.0.len() {
-        let expected_kind = unsafe { std::mem::transmute::<u8, InstructionKind>(i as u8) };
+        let expected_kind = InstructionKind::VARIANTS[i];
         let stored_kind = expected_kind.get_default_properties().kind;
 
         assert!(
