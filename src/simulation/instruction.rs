@@ -7,6 +7,8 @@ use std::{
 
 use strum::{EnumCount, EnumIter, VariantArray};
 
+use crate::simulation::computer::Register;
+
 use super::{
     argument::Argument,
     computer::{RegisterAccessError, RegisterMap, RegisterSet},
@@ -36,8 +38,6 @@ impl Instruction {
         runtime: u64,
     ) -> Result<(u32, ArgumentValues, bool), InstructionEvaluationInterrupt> {
         let properties = instruction_properties[self.kind];
-
-        let mut total_time = 0;
 
         let mut argument_values = [None; 3];
 
@@ -78,11 +78,13 @@ impl Instruction {
 
         for (register, num_reads) in registers_read.into_iter().enumerate() {
             if num_reads > 0 {
-                read_time = read_time.max(registers.get(register as u32).unwrap().read_time);
+                read_time = read_time.max({
+                    let register = registers.get(register as u32).unwrap();
+
+                    register.read_time + register.block_time
+                });
             }
         }
-
-        total_time += read_time;
 
         let (instruction_time, update_previous_instruction) = self.execution_time(
             instruction_properties,
@@ -90,46 +92,52 @@ impl Instruction {
             &argument_values,
         );
 
-        total_time += instruction_time;
-
         let mut jump = None;
+
+        let mut write_time = 0;
+        let mut write_block_time = 0;
 
         match self.kind {
             InstructionKind::Set => {
-                total_time += self.write_to_argument(registers, 0, argument_values[1].unwrap())?;
+                self.write_to_argument(registers, 0, argument_values[1].unwrap())?
+                    .set_time_to_write(&mut write_time, &mut write_block_time);
             }
             InstructionKind::Add => {
-                total_time += self.apply_operation(
+                self.apply_operation(
                     argument_values,
                     registers,
                     [0, 1, 2],
                     |a, b| a.checked_add(b),
                     |a, b| a + b,
-                )?;
+                )?
+                .set_time_to_write(&mut write_time, &mut write_block_time);
             }
             InstructionKind::Subtract => {
-                total_time += self.apply_operation(
+                self.apply_operation(
                     argument_values,
                     registers,
                     [0, 1, 2],
                     |a, b| a.checked_sub(b),
                     |a, b| a - b,
-                )?;
+                )?
+                .set_time_to_write(&mut write_time, &mut write_block_time);
             }
             InstructionKind::Negate => {
-                total_time += self.write_to_argument(registers, 0, -argument_values[0].unwrap())?;
+                self.write_to_argument(registers, 0, -argument_values[0].unwrap())?
+                    .set_time_to_write(&mut write_time, &mut write_block_time);
             }
             InstructionKind::Multiply => {
-                total_time += self.apply_operation(
+                self.apply_operation(
                     argument_values,
                     registers,
                     [0, 1, 2],
                     |a, b| a.checked_mul(b),
                     |a, b| a * b,
-                )?;
+                )?
+                .set_time_to_write(&mut write_time, &mut write_block_time);
             }
             InstructionKind::Divide => {
-                total_time += self.apply_operation(
+                self.apply_operation(
                     argument_values,
                     registers,
                     [0, 1, 2],
@@ -138,10 +146,11 @@ impl Instruction {
                         a.checked_div_euclid(b)
                             .ok_or(ArithmaticError::DivideByZero.into())
                     },
-                )?;
+                )?
+                .set_time_to_write(&mut write_time, &mut write_block_time);
             }
             InstructionKind::Modulus => {
-                total_time += self.apply_operation(
+                self.apply_operation(
                     argument_values,
                     registers,
                     [0, 1, 2],
@@ -150,23 +159,27 @@ impl Instruction {
                         a.checked_div_euclid(b)
                             .ok_or(ArithmaticError::DivideByZero.into())
                     },
-                )?;
+                )?
+                .set_time_to_write(&mut write_time, &mut write_block_time);
             }
             InstructionKind::Compare => {
-                total_time += self.write_to_argument(registers, 1, argument_values[0].unwrap())?;
+                self.write_to_argument(registers, 1, argument_values[0].unwrap())?
+                    .set_time_to_write(&mut write_time, &mut write_block_time);
             }
             InstructionKind::CompareSetIfTrue => {
                 let result = argument_values[0].unwrap();
 
                 if result == 1 {
-                    total_time += self.write_to_argument(registers, 1, result)?;
+                    self.write_to_argument(registers, 1, result)?
+                        .set_time_to_write(&mut write_time, &mut write_block_time);
                 }
             }
             InstructionKind::CompareSetIfFalse => {
                 let result = argument_values[0].unwrap();
 
                 if result == 0 {
-                    total_time += self.write_to_argument(registers, 1, result)?;
+                    self.write_to_argument(registers, 1, result)?
+                        .set_time_to_write(&mut write_time, &mut write_block_time);
                 }
             }
             InstructionKind::Jump
@@ -177,20 +190,20 @@ impl Instruction {
                 }
             }
             InstructionKind::Sleep => {
-                total_time += argument_values[0].unwrap().max(0) as u32;
+                write_time += argument_values[0].unwrap().max(0) as u32;
             }
             InstructionKind::End => return Err(InstructionEvaluationInterrupt::ProgramComplete),
             InstructionKind::TryRead => (),
             InstructionKind::TryWrite => {
                 let register = self.register_of_argument(0);
 
-                total_time += registers
+                registers
                     .get(register)
                     .ok_or(InstructionEvaluationInterrupt::RegisterError {
                         register,
                         error: RegisterAccessError::NoSuchRegister { got: register },
                     })?
-                    .write_time;
+                    .set_time_to_write(&mut write_time, &mut write_block_time);
             }
             InstructionKind::Clock => {
                 let register_index = self.register_of_argument(0);
@@ -223,9 +236,12 @@ impl Instruction {
                     }
                 };
 
-                total_time += self.write_to_argument(registers, 0, clock)?;
+                self.write_to_argument(registers, 0, clock)?
+                    .set_time_to_write(&mut write_time, &mut write_block_time);
             }
         }
+
+        let total_time = (read_time + instruction_time).max(write_block_time) + write_time;
 
         if let Some(jump) = jump {
             *next_instruction = jump;
@@ -281,19 +297,19 @@ impl Instruction {
     /// # Panics
     ///
     /// Will panic if the argument does not contain a register
-    fn write_to_argument(
+    fn write_to_argument<'a>(
         &self,
-        registers: &mut RegisterSet,
+        registers: &'a mut RegisterSet,
         destination: usize,
         value: Integer,
-    ) -> Result<u32, InstructionEvaluationInterrupt> {
+    ) -> Result<&'a Register, InstructionEvaluationInterrupt> {
         let register = self.register_of_argument(destination);
 
         registers
             .buffered_write(register, value)
             .map_err(|error| InstructionEvaluationInterrupt::RegisterError { register, error })?;
 
-        Ok(registers.get(register).unwrap().write_time)
+        Ok(registers.get(register).unwrap())
     }
 
     /// # Panics
@@ -308,14 +324,14 @@ impl Instruction {
     ///
     /// Will panic if the destination argument does not contain a register, or if the lhs or rhs
     /// arguments are not available.
-    fn apply_operation<T>(
+    fn apply_operation<'a, T>(
         &self,
         argument_values: [Option<Integer>; Instruction::NUM_ARGUMENTS],
-        registers: &mut RegisterSet,
+        registers: &'a mut RegisterSet,
         argument_sources: [usize; 3],
         fast_function: impl FnOnce(Integer, Integer) -> Option<Integer>,
         debug_function: impl FnOnce(BiggerInteger, BiggerInteger) -> T,
-    ) -> Result<u32, InstructionEvaluationInterrupt>
+    ) -> Result<&'a Register, InstructionEvaluationInterrupt>
     where
         T: IntoDebugResult,
     {

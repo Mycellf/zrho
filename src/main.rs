@@ -1,5 +1,5 @@
 use crate::simulation::{
-    computer::{self, Computer, Register, RegisterSet, RegisterValues},
+    computer::{self, BlockCondition, Computer, Register, RegisterSet, RegisterValues},
     instruction,
     integer::DigitInteger,
     program::Program,
@@ -27,10 +27,34 @@ fn main() {
                 },
             )
             .with_register(
+                'H',
+                Register {
+                    values: RegisterValues::Vector {
+                        values: Box::new([DigitInteger::new(0, DIGITS).unwrap(); 10000]),
+                        index: 0,
+                    },
+                    block_condition: Some(BlockCondition::IndexChange {
+                        minimum_change: 2,
+                        block_time: 16,
+                    }),
+                    read_time: 2,
+                    write_time: 4,
+                    ..Register::DEFAULT
+                },
+            )
+            .with_register(
                 'I',
                 Register {
                     values: RegisterValues::Scalar(DigitInteger::new(0, DIGITS).unwrap()),
                     indexes_array: Some(computer::register_with_name('D').unwrap()),
+                    ..Register::DEFAULT
+                },
+            )
+            .with_register(
+                'M',
+                Register {
+                    values: RegisterValues::Scalar(DigitInteger::new(0, DIGITS).unwrap()),
+                    indexes_array: Some(computer::register_with_name('H').unwrap()),
                     ..Register::DEFAULT
                 },
             )

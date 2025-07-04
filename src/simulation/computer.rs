@@ -184,6 +184,10 @@ impl Computer {
         } else {
             self.interrupt = Some(InstructionEvaluationInterrupt::RuntimeCounterOverflow);
         }
+
+        for register in self.registers.registers.iter_mut().flatten() {
+            register.end_of_tick();
+        }
     }
 }
 
@@ -206,6 +210,8 @@ impl RegisterSet {
         self.buffered_writes.clear();
 
         for register in self.registers.iter_mut().flatten() {
+            register.block_time = 0;
+
             match &mut register.values {
                 RegisterValues::Scalar(value) => value.try_set(0).unwrap(),
                 RegisterValues::Vector { values, index } => {
@@ -289,12 +295,22 @@ impl RegisterSet {
             .map_err(|error| RegisterAccessError::InvalidAssignment { error })?;
 
         if let Some(array_index) = register.indexes_array {
-            match &mut self
+            let indexed_register = self
                 .get_mut(array_index)
-                .ok_or(RegisterAccessError::NoSuchRegister { got: array_index })?
-                .values
-            {
+                .ok_or(RegisterAccessError::NoSuchRegister { got: array_index })?;
+
+            match &mut indexed_register.values {
                 RegisterValues::Vector { index, .. } => {
+                    if let Some(BlockCondition::IndexChange {
+                        minimum_change,
+                        block_time,
+                    }) = indexed_register.block_condition
+                    {
+                        if index.abs_diff(value) >= minimum_change {
+                            indexed_register.block_time = block_time;
+                        }
+                    }
+
                     *index = value;
                 }
                 _ => return Err(RegisterAccessError::NoSuchRegister { got: array_index }),
@@ -336,19 +352,40 @@ pub enum CreateRegisterError {
 pub struct Register {
     pub values: RegisterValues,
     pub block_time: u32,
+    pub block_condition: Option<BlockCondition>,
     pub indexes_array: Option<u32>,
     pub read_time: u32,
     pub write_time: u32,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum BlockCondition {
+    IndexChange {
+        minimum_change: u32,
+        block_time: u32,
+    },
 }
 
 impl Register {
     pub const DEFAULT: Self = Self {
         values: RegisterValues::Scalar(DigitInteger::DUMMY),
         block_time: 0,
+        block_condition: None,
         indexes_array: None,
         read_time: 0,
         write_time: 0,
     };
+
+    pub fn end_of_tick(&mut self) {
+        if self.block_time > 0 {
+            self.block_time -= 1;
+        }
+    }
+
+    pub fn set_time_to_write(&self, write_time: &mut u32, block_time: &mut u32) {
+        *write_time += self.write_time;
+        *block_time = self.block_time.max(*block_time);
+    }
 }
 
 impl Default for Register {
@@ -378,6 +415,15 @@ impl Display for Register {
 
         if let Some(array) = self.indexes_array {
             write!(f, " → {}", name_of_register(array).unwrap())?;
+        }
+
+        if self.block_time > 0 {
+            write!(
+                f,
+                " (blocking for {} tick{})",
+                self.block_time,
+                if self.block_time == 1 { "" } else { "s" }
+            )?;
         }
 
         Ok(())
