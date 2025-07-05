@@ -11,7 +11,7 @@ pub mod text_editor;
 fn main() {
     const DIGITS: u8 = 3;
 
-    let computer = Computer::new(
+    let mut computer = Computer::new(
         DIGITS,
         RegisterSet::new_empty()
             .with_register(
@@ -92,7 +92,7 @@ fn main() {
         }
     };
 
-    simulation::interactively_run(computer, program);
+    simulation::interactively_run(&mut computer, &program);
 }
 
 const PROGRAM: &str = KOLAKOSKI_SEQUENCE_LONG;

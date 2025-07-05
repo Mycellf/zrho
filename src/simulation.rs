@@ -10,7 +10,7 @@ pub mod instruction;
 pub mod integer;
 pub mod program;
 
-pub fn interactively_run(mut computer: Computer, program: Program) {
+pub fn interactively_run(computer: &mut Computer, program: &Program) {
     let mut skip_ticks = 0;
 
     loop {
