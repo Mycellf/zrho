@@ -27,10 +27,10 @@ pub fn interactively_run(mut computer: Computer, program: Program) {
         }
 
         if skip_ticks == 0 && computer.block_time == 0 {
-            print!("Instruction {:?}", instruction);
-
             if let Some(instruction) = program.instructions.get(instruction as usize) {
-                print!(" ({instruction})");
+                print!("Line {line} ({instruction})", line = instruction.line);
+            } else {
+                print!("Instruction {}", instruction);
             }
 
             println!(":");
