@@ -162,6 +162,10 @@ impl Instruction {
                 )?
                 .set_time_to_write(&mut write_time, &mut write_block_time);
             }
+            InstructionKind::IsOdd => {
+                self.write_to_argument(registers, 0, argument_values[0].unwrap().rem_euclid(2))?
+                    .set_time_to_write(&mut write_time, &mut write_block_time);
+            }
             InstructionKind::Compare => {
                 self.write_to_argument(registers, 1, argument_values[0].unwrap())?
                     .set_time_to_write(&mut write_time, &mut write_block_time);
@@ -410,6 +414,7 @@ pub enum InstructionKind {
     Multiply,
     Divide,
     Modulus,
+    IsOdd,
     Compare,
     CompareSetIfTrue,
     CompareSetIfFalse,
@@ -784,6 +789,13 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
                 allow_cascade: false,
             },
         )),
+        ..InstructionProperties::DEFAULT
+    },
+    InstructionProperties {
+        kind: InstructionKind::IsOdd,
+        name: "ODD",
+        arguments: arguments([ArgumentRequirement::Register]),
+        base_time: 0,
         ..InstructionProperties::DEFAULT
     },
     InstructionProperties {
