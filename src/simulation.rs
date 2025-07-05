@@ -19,6 +19,13 @@ pub fn interactively_run(mut computer: Computer, program: Program) {
         let modified = computer.step_cycle(&program);
 
         if let Some(interrupt) = computer.interrupt {
+            if let Some(instruction) = program.instructions.get(instruction as usize) {
+                print!(
+                    "\nHalted on line {line} ({instruction}):",
+                    line = instruction.line
+                );
+            }
+
             println!(
                 "\n{:?}\n{}\n\nRuntime: {}",
                 interrupt, computer.registers, computer.runtime,
