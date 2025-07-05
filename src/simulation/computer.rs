@@ -3,6 +3,7 @@ use std::{
     fmt::{Debug, Display},
     iter,
     ops::{Deref, DerefMut},
+    slice,
 };
 
 use crate::simulation::instruction::InstructionProperties;
@@ -530,6 +531,20 @@ impl RegisterValues {
                         maximum: length as Integer - 1,
                     })
             }
+        }
+    }
+
+    pub fn all_values(&self) -> &[DigitInteger] {
+        match self {
+            RegisterValues::Scalar(value) => slice::from_ref(value),
+            RegisterValues::Vector { values, .. } => values,
+        }
+    }
+
+    pub fn all_values_mut(&mut self) -> &mut [DigitInteger] {
+        match self {
+            RegisterValues::Scalar(value) => slice::from_mut(value),
+            RegisterValues::Vector { values, .. } => values,
         }
     }
 }
