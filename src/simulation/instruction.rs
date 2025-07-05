@@ -86,7 +86,7 @@ impl Instruction {
             }
         }
 
-        let (instruction_time, update_previous_instruction) = self.execution_time(
+        let (mut instruction_time, update_previous_instruction) = self.execution_time(
             instruction_properties,
             previous_instruction,
             &argument_values,
@@ -190,7 +190,7 @@ impl Instruction {
                 }
             }
             InstructionKind::Sleep => {
-                write_time += argument_values[0].unwrap().max(0) as u32;
+                instruction_time += argument_values[0].unwrap().max(0) as u32;
             }
             InstructionKind::End => return Err(InstructionEvaluationInterrupt::ProgramComplete),
             InstructionKind::TryRead => (),
