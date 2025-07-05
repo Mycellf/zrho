@@ -93,6 +93,47 @@ fn main() {
     };
 
     simulation::interactively_run(&mut computer, &program);
+
+    if !std::ptr::eq(PROGRAM, KOLAKOSKI_SEQUENCE_LONG) {
+        return;
+    }
+
+    let length = computer
+        .registers
+        .get(computer::register_with_name('H').unwrap())
+        .unwrap()
+        .all_values()
+        .len();
+
+    let mut sequence = vec![1, 2, 2];
+    let mut i = 2;
+
+    while sequence.len() < length {
+        for _ in 0..sequence[i] {
+            sequence.push((i % 2 + 1) as i32);
+        }
+
+        i += 1;
+    }
+
+    // There may be an excess element
+    while sequence.len() > length {
+        sequence.pop();
+    }
+
+    for (i, (computed, actual)) in computer
+        .registers
+        .get(computer::register_with_name('H').unwrap())
+        .unwrap()
+        .all_values()
+        .into_iter()
+        .zip(sequence)
+        .enumerate()
+    {
+        assert_eq!(computed.get(), actual, "Element {i} is incorrect");
+    }
+
+    println!("Verified Kolakoski Sequence stored in H");
 }
 
 const PROGRAM: &str = KOLAKOSKI_SEQUENCE_LONG;
