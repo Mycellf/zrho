@@ -27,8 +27,10 @@ pub fn interactively_run(computer: &mut Computer, program: &Program) {
             }
 
             println!(
-                "\n{:?}\n{}\n\nRuntime: {}",
-                interrupt, computer.registers, computer.runtime,
+                "\n{interrupt:?}\n{registers}\n\nRuntime: {runtime}\nEnergy used: {energy}",
+                registers = computer.registers,
+                runtime = computer.runtime,
+                energy = computer.energy_used,
             );
             break;
         }
