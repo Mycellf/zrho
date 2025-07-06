@@ -166,7 +166,7 @@ pub const KOLAKOSKI_SEQUENCE_LONG: &str = r"
     ; 750   150500
     ; 800   150833  (INCREASES)
     ; 850   150559
-    ; 900   150220  (BEST ≤ 1000)
+    ; 900   150220  (BEST)
     ; 950   150486  (INCREASES)
     ; 1000  150722  (INCREASES)
     ; 2000  149524
