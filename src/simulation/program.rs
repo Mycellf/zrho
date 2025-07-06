@@ -46,18 +46,50 @@ impl Program {
         let mut instructions = Vec::new();
         let mut labels = HashMap::new();
 
+        let mut duplicate_labels = HashMap::<&str, Vec<LabelIndex>>::new();
+
         for (i, line) in source_code.lines().enumerate() {
-            match InstructionIntermediate::from_line(line, i.try_into().unwrap(), target_computer) {
+            let i = i.try_into().unwrap();
+
+            match InstructionIntermediate::from_line(line, i, target_computer) {
                 Ok(instruction_result) => match instruction_result {
                     ParseInstructionResult::Instruction(instruction) => {
                         instructions.push(instruction);
                     }
                     ParseInstructionResult::Label(label) => {
-                        labels.insert(label, u32::try_from(instructions.len()).unwrap());
+                        let label_position = LabelIndex {
+                            index: instructions.len().try_into().unwrap(),
+                            line: i,
+                        };
+
+                        if let Some(duplicate_label) = labels.insert(label, label_position) {
+                            if let Some(indecies) = duplicate_labels.get_mut(label) {
+                                // It has already been checked
+                                indecies.push(label_position);
+                            } else {
+                                duplicate_labels
+                                    .insert(label, vec![duplicate_label, label_position]);
+                            }
+                        }
                     }
                     ParseInstructionResult::Empty => (),
                 },
                 Err(error) => errors.push(error),
+            }
+        }
+
+        if !duplicate_labels.is_empty() {
+            let mut duplicate_labels = duplicate_labels.into_iter().collect::<Vec<_>>();
+            duplicate_labels.sort_unstable_by_key(|&(label, _)| label);
+
+            for (label, indecies) in duplicate_labels {
+                errors.push(ProgramAssemblyError {
+                    lines: indecies
+                        .into_iter()
+                        .map(|LabelIndex { line, .. }| line)
+                        .collect(),
+                    kind: ProgramAssemblyErrorKind::DuplicateLabel(label),
+                });
             }
         }
 
@@ -84,7 +116,7 @@ impl Program {
                     if let Some(register) = source.as_register() {
                         if target_computer.registers.get(register).is_none() {
                             errors.push(ProgramAssemblyError {
-                                line: instruction.line,
+                                lines: vec![instruction.line],
                                 kind: ProgramAssemblyErrorKind::RegisterNotSupported(register),
                             });
                         }
@@ -103,7 +135,7 @@ impl Program {
 
 #[derive(Clone, Debug)]
 pub struct ProgramAssemblyError<'a> {
-    pub line: u32,
+    pub lines: Vec<u32>,
     pub kind: ProgramAssemblyErrorKind<'a>,
 }
 
@@ -111,6 +143,7 @@ pub struct ProgramAssemblyError<'a> {
 pub enum ProgramAssemblyErrorKind<'a> {
     RegisterNotSupported(u32),
     NoSuchOperation(&'a str),
+    DuplicateLabel(&'a str),
     UnexpectedArgument {
         got: ArgumentIntermediate<'a>,
         expected: ArgumentRequirement,
@@ -160,6 +193,12 @@ pub enum ArgumentIntermediate<'a> {
     },
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct LabelIndex {
+    index: u32,
+    line: u32,
+}
+
 impl<'a> InstructionIntermediate<'a> {
     fn from_line(
         source_line: &'a str,
@@ -186,7 +225,7 @@ impl<'a> InstructionIntermediate<'a> {
                     ParseArgumentError::OutOfTokens => break,
                     _ => {
                         return Err(ProgramAssemblyError {
-                            line: line_index,
+                            lines: vec![line_index],
                             kind: ProgramAssemblyErrorKind::InvalidArgument(error),
                         });
                     }
@@ -201,7 +240,7 @@ impl<'a> InstructionIntermediate<'a> {
 
             let ArgumentIntermediate::Token(label) = argument else {
                 return Err(ProgramAssemblyError {
-                    line: line_index,
+                    lines: vec![line_index],
                     kind: ProgramAssemblyErrorKind::UnexpectedArgument {
                         got: argument,
                         expected: ArgumentRequirement::Instruction,
@@ -213,7 +252,7 @@ impl<'a> InstructionIntermediate<'a> {
                 Ok(ParseInstructionResult::Label(label))
             } else {
                 Err(ProgramAssemblyError {
-                    line: line_index,
+                    lines: vec![line_index],
                     kind: ProgramAssemblyErrorKind::InvalidArgument(
                         ParseArgumentError::InvalidLabel(label),
                     ),
@@ -224,7 +263,7 @@ impl<'a> InstructionIntermediate<'a> {
         let instruction_properties = (target_computer.instruction_properties)
             .instruction_with_name(instruction_code)
             .ok_or(ProgramAssemblyError {
-                line: line_index,
+                lines: vec![line_index],
                 kind: ProgramAssemblyErrorKind::NoSuchOperation(instruction_code),
             })?;
 
@@ -237,7 +276,7 @@ impl<'a> InstructionIntermediate<'a> {
 
     pub fn parse(
         self,
-        labels: &HashMap<&str, u32>,
+        labels: &HashMap<&str, LabelIndex>,
         target_computer: &Computer,
     ) -> Result<Instruction, ProgramAssemblyError<'a>> {
         let properties = target_computer.instruction_properties[self.kind];
@@ -284,7 +323,7 @@ impl<'a> InstructionIntermediate<'a> {
                 Err(error) => {
                     return if let ParseArgumentError::IncorrectType = error {
                         Err(ProgramAssemblyError {
-                            line: self.line,
+                            lines: vec![self.line],
                             kind: ProgramAssemblyErrorKind::UnexpectedArgument {
                                 got: *argument_intermediate,
                                 expected: requirement,
@@ -292,7 +331,7 @@ impl<'a> InstructionIntermediate<'a> {
                         })
                     } else {
                         Err(ProgramAssemblyError {
-                            line: self.line,
+                            lines: vec![self.line],
                             kind: ProgramAssemblyErrorKind::InvalidArgument(error),
                         })
                     };
@@ -311,7 +350,7 @@ impl<'a> InstructionIntermediate<'a> {
     ) -> Result<(), ProgramAssemblyError<'a>> {
         if length < minimum {
             Err(ProgramAssemblyError {
-                line,
+                lines: vec![line],
                 kind: ProgramAssemblyErrorKind::TooFewArguments {
                     got: length,
                     minimum,
@@ -319,7 +358,7 @@ impl<'a> InstructionIntermediate<'a> {
             })
         } else if length > maximum {
             Err(ProgramAssemblyError {
-                line,
+                lines: vec![line],
                 kind: ProgramAssemblyErrorKind::TooManyArguments {
                     got: length,
                     maximum,
@@ -369,7 +408,7 @@ impl<'a> ArgumentIntermediate<'a> {
     pub fn as_requirement(
         &self,
         requirement: ArgumentRequirement,
-        labels: &HashMap<&str, u32>,
+        labels: &HashMap<&str, LabelIndex>,
         maximum_digits: u8,
     ) -> Result<Argument, ParseArgumentError<'a>> {
         Ok(match requirement {
@@ -390,9 +429,10 @@ impl<'a> ArgumentIntermediate<'a> {
                 let label = self.as_label()?;
 
                 Argument::Instruction(
-                    *labels
+                    labels
                         .get(label)
-                        .ok_or(ParseArgumentError::NoSuchLabel(label))?,
+                        .ok_or(ParseArgumentError::NoSuchLabel(label))?
+                        .index,
                 )
             }
             ArgumentRequirement::Empty => return Err(ParseArgumentError::IncorrectType),
@@ -561,12 +601,26 @@ impl Display for ArgumentIntermediate<'_> {
 
 impl Display for ProgramAssemblyError<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Line {line}: {error}",
-            line = self.line,
-            error = self.kind,
-        )
+        match self.lines.len() {
+            0 => write!(f, "Error: {error}", error = self.kind),
+            1 => write!(
+                f,
+                "Line {line}: {error}",
+                line = self.lines[0],
+                error = self.kind,
+            ),
+            2.. => {
+                write!(f, "Lines ",)?;
+                for (i, line) in self.lines.iter().enumerate() {
+                    if i != 0 {
+                        write!(f, ", ")?;
+                    }
+
+                    write!(f, "{line}")?;
+                }
+                write!(f, ": {error}", error = self.kind)
+            }
+        }
     }
 }
 
@@ -581,7 +635,10 @@ impl Display for ProgramAssemblyErrorKind<'_> {
                 )
             }
             ProgramAssemblyErrorKind::NoSuchOperation(operation) => {
-                write!(f, "No such operation \"{operation}\"")
+                write!(f, "No such operation \"{operation}\" on this machine")
+            }
+            ProgramAssemblyErrorKind::DuplicateLabel(label) => {
+                write!(f, "Duplicate label \"{label}\"")
             }
             ProgramAssemblyErrorKind::UnexpectedArgument { got, expected } => {
                 write!(f, "Got \"{got}\", expected {expected}")
