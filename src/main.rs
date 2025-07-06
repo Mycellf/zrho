@@ -92,6 +92,11 @@ fn main() {
         }
     };
 
+    println!(
+        "Program length: {} instructions",
+        program.instructions.len(),
+    );
+
     simulation::interactively_run(&mut computer, &program);
 
     if !std::ptr::eq(PROGRAM, KOLAKOSKI_SEQUENCE_LONG) {
