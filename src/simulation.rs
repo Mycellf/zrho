@@ -35,6 +35,22 @@ pub fn interactively_run(computer: &mut Computer, program: &Program) {
             break;
         }
 
+        if computer.tick_complete {
+            if skip_ticks == 0 {
+                if computer.block_time == 0 {
+                    println!("completed tick");
+                } else {
+                    println!("completed {} ticks...", computer.block_time + 1);
+
+                    for _ in 0..computer.block_time {
+                        computer.step_tick(&program);
+                    }
+                }
+            } else {
+                skip_ticks -= 1;
+            }
+        }
+
         if skip_ticks == 0 && computer.block_time == 0 {
             if let Some(instruction) = program.instructions.get(instruction as usize) {
                 print!("Line {line} ({instruction})", line = instruction.line);
@@ -46,22 +62,6 @@ pub fn interactively_run(computer: &mut Computer, program: &Program) {
 
             if modified {
                 println!("{}", computer.registers);
-            }
-        }
-
-        if computer.tick_complete {
-            if skip_ticks == 0 {
-                if computer.block_time == 0 {
-                    println!("completed tick");
-                } else {
-                    println!(
-                        "waiting {} tick{}...",
-                        computer.block_time,
-                        if computer.block_time == 1 { "" } else { "s" },
-                    );
-                }
-            } else {
-                skip_ticks -= 1;
             }
         }
 
