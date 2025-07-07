@@ -35,7 +35,7 @@ impl Program {
         name: String,
         source_code: &'a str,
         target_computer: &Computer,
-    ) -> Result<Self, Vec<ProgramAssemblyError<'a>>> {
+    ) -> Result<Self, Vec<ProgramAssemblyError>> {
         let mut errors = Vec::new();
 
         let mut instructions = Vec::new();
@@ -83,7 +83,7 @@ impl Program {
                         .into_iter()
                         .map(|LabelIndex { line, .. }| line)
                         .collect(),
-                    kind: ProgramAssemblyErrorKind::DuplicateLabel(label),
+                    kind: ProgramAssemblyErrorKind::DuplicateLabel(label.to_owned()),
                 });
             }
         }
@@ -129,18 +129,18 @@ impl Program {
 }
 
 #[derive(Clone, Debug)]
-pub struct ProgramAssemblyError<'a> {
+pub struct ProgramAssemblyError {
     pub lines: Vec<u32>,
-    pub kind: ProgramAssemblyErrorKind<'a>,
+    pub kind: ProgramAssemblyErrorKind,
 }
 
 #[derive(Clone, Debug)]
-pub enum ProgramAssemblyErrorKind<'a> {
+pub enum ProgramAssemblyErrorKind {
     RegisterNotSupported(u32),
-    NoSuchOperation(&'a str),
-    DuplicateLabel(&'a str),
+    NoSuchOperation(String),
+    DuplicateLabel(String),
     UnexpectedArgument {
-        got: ArgumentIntermediate<'a>,
+        got: OwnedArgumentIntermediate,
         expected: ArgumentRequirement,
     },
     TooManyArguments {
@@ -151,17 +151,17 @@ pub enum ProgramAssemblyErrorKind<'a> {
         got: usize,
         minimum: usize,
     },
-    InvalidArgument(ParseArgumentError<'a>),
+    InvalidArgument(ParseArgumentError),
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum ParseArgumentError<'a> {
+#[derive(Clone, Debug)]
+pub enum ParseArgumentError {
     OutOfTokens,
     IncompleteComparison,
-    ConstantTooBig { got: &'a str, maximum: Integer },
-    ConstantTooSmall { got: &'a str, minimum: Integer },
-    NoSuchLabel(&'a str),
-    InvalidLabel(&'a str),
+    ConstantTooBig { got: String, maximum: Integer },
+    ConstantTooSmall { got: String, minimum: Integer },
+    NoSuchLabel(String),
+    InvalidLabel(String),
     IncorrectType,
 }
 
@@ -188,6 +188,35 @@ pub enum ArgumentIntermediate<'a> {
     },
 }
 
+impl<'a> ArgumentIntermediate<'a> {
+    pub fn to_owned(&self) -> OwnedArgumentIntermediate {
+        match *self {
+            ArgumentIntermediate::Token(slice) => {
+                OwnedArgumentIntermediate::Token(slice.to_owned())
+            }
+            ArgumentIntermediate::Comparison {
+                ordering,
+                invert,
+                values,
+            } => OwnedArgumentIntermediate::Comparison {
+                ordering,
+                invert,
+                values: values.map(|slice| slice.to_owned()),
+            },
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum OwnedArgumentIntermediate {
+    Token(String),
+    Comparison {
+        ordering: Ordering,
+        invert: bool,
+        values: [String; 2],
+    },
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct LabelIndex {
     index: u32,
@@ -199,7 +228,7 @@ impl<'a> InstructionIntermediate<'a> {
         source_line: &'a str,
         line_index: u32,
         target_computer: &Computer,
-    ) -> Result<ParseInstructionResult<'a>, ProgramAssemblyError<'a>> {
+    ) -> Result<ParseInstructionResult<'a>, ProgramAssemblyError> {
         let line = source_line
             .split_once(COMMENT_SEPARATOR)
             .map(|(line, _)| line)
@@ -237,7 +266,7 @@ impl<'a> InstructionIntermediate<'a> {
                 return Err(ProgramAssemblyError {
                     lines: vec![line_index],
                     kind: ProgramAssemblyErrorKind::UnexpectedArgument {
-                        got: argument,
+                        got: argument.to_owned(),
                         expected: ArgumentRequirement::Instruction,
                     },
                 });
@@ -249,7 +278,7 @@ impl<'a> InstructionIntermediate<'a> {
                 Err(ProgramAssemblyError {
                     lines: vec![line_index],
                     kind: ProgramAssemblyErrorKind::InvalidArgument(
-                        ParseArgumentError::InvalidLabel(label),
+                        ParseArgumentError::InvalidLabel(label.to_owned()),
                     ),
                 })
             };
@@ -259,7 +288,7 @@ impl<'a> InstructionIntermediate<'a> {
             .instruction_with_name(instruction_code)
             .ok_or(ProgramAssemblyError {
                 lines: vec![line_index],
-                kind: ProgramAssemblyErrorKind::NoSuchOperation(instruction_code),
+                kind: ProgramAssemblyErrorKind::NoSuchOperation(instruction_code.to_owned()),
             })?;
 
         Ok(ParseInstructionResult::Instruction(Self {
@@ -273,7 +302,7 @@ impl<'a> InstructionIntermediate<'a> {
         self,
         labels: &HashMap<&str, LabelIndex>,
         target_computer: &Computer,
-    ) -> Result<Instruction, ProgramAssemblyError<'a>> {
+    ) -> Result<Instruction, ProgramAssemblyError> {
         let properties = target_computer.instruction_properties[self.kind];
 
         let min_arguments = properties.minimum_arguments();
@@ -320,7 +349,7 @@ impl<'a> InstructionIntermediate<'a> {
                         Err(ProgramAssemblyError {
                             lines: vec![self.line],
                             kind: ProgramAssemblyErrorKind::UnexpectedArgument {
-                                got: *argument_intermediate,
+                                got: argument_intermediate.to_owned(),
                                 expected: requirement,
                             },
                         })
@@ -342,7 +371,7 @@ impl<'a> InstructionIntermediate<'a> {
         minimum: usize,
         maximum: usize,
         line: u32,
-    ) -> Result<(), ProgramAssemblyError<'a>> {
+    ) -> Result<(), ProgramAssemblyError> {
         if length < minimum {
             Err(ProgramAssemblyError {
                 lines: vec![line],
@@ -368,7 +397,7 @@ impl<'a> InstructionIntermediate<'a> {
 impl<'a> ArgumentIntermediate<'a> {
     pub fn pop_from_tokens(
         tokens: &mut Peekable<impl Iterator<Item = &'a str>>,
-    ) -> Result<Self, ParseArgumentError<'a>> {
+    ) -> Result<Self, ParseArgumentError> {
         let Some(first_value) = tokens.next() else {
             return Err(ParseArgumentError::OutOfTokens);
         };
@@ -405,7 +434,7 @@ impl<'a> ArgumentIntermediate<'a> {
         requirement: ArgumentRequirement,
         labels: &HashMap<&str, LabelIndex>,
         maximum_digits: u8,
-    ) -> Result<Argument, ParseArgumentError<'a>> {
+    ) -> Result<Argument, ParseArgumentError> {
         Ok(match requirement {
             ArgumentRequirement::Constant | ArgumentRequirement::ConstantOrEmpty => {
                 self.as_constant(maximum_digits)?.into()
@@ -426,7 +455,7 @@ impl<'a> ArgumentIntermediate<'a> {
                 Argument::Instruction(
                     labels
                         .get(label)
-                        .ok_or(ParseArgumentError::NoSuchLabel(label))?
+                        .ok_or(ParseArgumentError::NoSuchLabel(label.to_owned()))?
                         .index,
                 )
             }
@@ -434,32 +463,32 @@ impl<'a> ArgumentIntermediate<'a> {
         })
     }
 
-    pub fn as_label(&self) -> Result<&'a str, ParseArgumentError<'a>> {
-        match self {
+    pub fn as_label(&self) -> Result<&'a str, ParseArgumentError> {
+        match *self {
             ArgumentIntermediate::Token(label) => {
                 if is_label_valid(label) {
                     Ok(label)
                 } else {
-                    Err(ParseArgumentError::InvalidLabel(label))
+                    Err(ParseArgumentError::InvalidLabel(label.to_owned()))
                 }
             }
             ArgumentIntermediate::Comparison { .. } => Err(ParseArgumentError::IncorrectType),
         }
     }
 
-    pub fn as_constant(&self, maximum_digits: u8) -> Result<Integer, ParseArgumentError<'a>> {
-        match self {
+    pub fn as_constant(&self, maximum_digits: u8) -> Result<Integer, ParseArgumentError> {
+        match *self {
             ArgumentIntermediate::Token(token) => {
                 let value = token
                     .parse()
                     .map_err(|error: ParseIntError| match error.kind() {
                         std::num::IntErrorKind::PosOverflow => ParseArgumentError::ConstantTooBig {
-                            got: token,
+                            got: token.to_owned(),
                             maximum: DigitInteger::range_of_digits(maximum_digits),
                         },
                         std::num::IntErrorKind::NegOverflow => {
                             ParseArgumentError::ConstantTooSmall {
-                                got: token,
+                                got: token.to_owned(),
                                 minimum: -DigitInteger::range_of_digits(maximum_digits),
                             }
                         }
@@ -471,14 +500,14 @@ impl<'a> ArgumentIntermediate<'a> {
                         AssignIntegerError::ValueTooBig { maximum, .. }
                         | AssignIntegerError::ValueMuchTooBig { maximum, .. } => {
                             ParseArgumentError::ConstantTooBig {
-                                got: token,
+                                got: token.to_owned(),
                                 maximum,
                             }
                         }
                         AssignIntegerError::ValueTooSmall { minimum, .. }
                         | AssignIntegerError::ValueMuchTooSmall { minimum, .. } => {
                             ParseArgumentError::ConstantTooSmall {
-                                got: token,
+                                got: token.to_owned(),
                                 minimum,
                             }
                         }
@@ -494,7 +523,7 @@ impl<'a> ArgumentIntermediate<'a> {
         }
     }
 
-    pub fn as_register(&self) -> Result<u32, ParseArgumentError<'a>> {
+    pub fn as_register(&self) -> Result<u32, ParseArgumentError> {
         match self {
             ArgumentIntermediate::Token(value) => {
                 if value.len() == 1 {
@@ -508,10 +537,7 @@ impl<'a> ArgumentIntermediate<'a> {
         }
     }
 
-    pub fn as_number_source(
-        &self,
-        maximum_digits: u8,
-    ) -> Result<NumberSource, ParseArgumentError<'a>> {
+    pub fn as_number_source(&self, maximum_digits: u8) -> Result<NumberSource, ParseArgumentError> {
         let as_constant_error = match self.as_constant(maximum_digits) {
             Ok(constant) => return Ok(NumberSource::Constant(constant)),
             Err(error) => error,
@@ -531,7 +557,7 @@ impl<'a> ArgumentIntermediate<'a> {
         )
     }
 
-    pub fn as_comparison(&self, maximum_digits: u8) -> Result<Comparison, ParseArgumentError<'a>> {
+    pub fn as_comparison(&self, maximum_digits: u8) -> Result<Comparison, ParseArgumentError> {
         match self {
             ArgumentIntermediate::Token(_) => Err(ParseArgumentError::IncorrectType),
             ArgumentIntermediate::Comparison {
@@ -549,7 +575,7 @@ impl<'a> ArgumentIntermediate<'a> {
         }
     }
 
-    pub fn as_value(&self, maximum_digits: u8) -> Result<Argument, ParseArgumentError<'a>> {
+    pub fn as_value(&self, maximum_digits: u8) -> Result<Argument, ParseArgumentError> {
         let as_source_error = match self.as_number_source(maximum_digits) {
             Ok(source) => return Ok(source.into()),
             Err(error) => error,
@@ -594,7 +620,31 @@ impl Display for ArgumentIntermediate<'_> {
     }
 }
 
-impl Display for ProgramAssemblyError<'_> {
+impl Display for OwnedArgumentIntermediate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OwnedArgumentIntermediate::Token(token) => write!(f, "{token}"),
+            OwnedArgumentIntermediate::Comparison {
+                ordering,
+                invert,
+                values,
+            } => {
+                const SYMBOLS: [char; 6] = ['<', '=', '>', '≥', '≠', '≤'];
+                let index = (*ordering as isize + 1) as usize + *invert as usize * 3;
+
+                write!(
+                    f,
+                    "{lhs} {comparison} {rhs}",
+                    lhs = values[0],
+                    rhs = values[1],
+                    comparison = SYMBOLS[index],
+                )
+            }
+        }
+    }
+}
+
+impl Display for ProgramAssemblyError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.lines.len() {
             0 => write!(f, "Error: {error}", error = self.kind),
@@ -619,7 +669,7 @@ impl Display for ProgramAssemblyError<'_> {
     }
 }
 
-impl Display for ProgramAssemblyErrorKind<'_> {
+impl Display for ProgramAssemblyErrorKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ProgramAssemblyErrorKind::RegisterNotSupported(register) => {
