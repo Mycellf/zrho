@@ -1,7 +1,7 @@
 use crate::simulation::{
     computer::{self, BlockCondition, Computer, Register, RegisterSet, RegisterValues},
     instruction,
-    integer::DigitInteger,
+    integer::{DigitInteger, Integer},
     program::Program,
 };
 
@@ -128,16 +128,18 @@ fn main() {
         sequence.pop();
     }
 
-    for (i, (computed, actual)) in computer
+    let register = computer
         .registers
         .get(computer::register_with_name('H').unwrap())
-        .unwrap()
-        .all_values()
-        .into_iter()
-        .zip(sequence)
-        .enumerate()
-    {
-        assert_eq!(computed.get(), actual, "Element {i} is incorrect");
+        .unwrap();
+
+    for (i, (computed, actual)) in register.all_values().into_iter().zip(sequence).enumerate() {
+        assert_eq!(
+            computed.get(),
+            actual,
+            "Element {} is incorrect",
+            i as Integer + register.offset()
+        );
     }
 
     println!("Verified Kolakoski Sequence stored in H");

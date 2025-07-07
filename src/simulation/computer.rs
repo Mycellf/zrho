@@ -574,6 +574,20 @@ impl RegisterValues {
             RegisterValues::Vector { values, .. } => values,
         }
     }
+
+    pub fn index(&self) -> i32 {
+        match self {
+            RegisterValues::Scalar(_) => 0,
+            RegisterValues::Vector { index, .. } => *index,
+        }
+    }
+
+    pub fn offset(&self) -> i32 {
+        match self {
+            RegisterValues::Scalar(_) => 0,
+            RegisterValues::Vector { offset, .. } => *offset,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
