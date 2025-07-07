@@ -1,12 +1,13 @@
+use std::time::{Duration, Instant};
+
 use macroquad::{
-    color::colors,
     input::{self, KeyCode},
-    text::{self, TextDimensions, TextParams},
+    math::Vec2,
     window::{self, Conf},
 };
 
 use crate::{
-    interface::window::FONT,
+    interface::text_editor::TextEditor,
     simulation::{
         computer::{self, BlockCondition, Computer, Register, RegisterSet, RegisterValues},
         instruction,
@@ -30,91 +31,38 @@ fn config() -> Conf {
 
 #[macroquad::main(config)]
 async fn main() {
+    const MINIMUM_TIME_BETWEEN_UPDATES: Duration = Duration::from_millis(100);
+
     let mut fullscreen = START_IN_FULLSCREEN;
 
-    loop {
-        const SIZE: f32 = 15.0;
-        const START: f32 = 25.0 + SIZE;
+    let text_editor = TextEditor::new(KOLAKOSKI_SEQUENCE_LONG.to_owned());
 
+    let mut text_size = get_screen_text_size(50.0, text_editor.lines.len());
+    let mut last_size_update = Instant::now();
+
+    loop {
         if input::is_key_pressed(KeyCode::F11) {
             fullscreen ^= true;
             window::set_fullscreen(fullscreen);
         }
 
-        let (font_size, font_scale, font_scale_aspect) = text::camera_font_scale(SIZE);
+        let correct_text_size = get_screen_text_size(50.0, text_editor.lines.len());
 
-        text::draw_text_ex(
-            "Test::test()",
-            25.0,
-            START,
-            TextParams {
-                font: Some(&FONT),
-                font_size,
-                font_scale,
-                font_scale_aspect,
-                rotation: 0.0,
-                color: colors::WHITE,
-            },
-        );
+        if correct_text_size != text_size
+            && last_size_update.elapsed() > MINIMUM_TIME_BETWEEN_UPDATES
+        {
+            text_size = correct_text_size;
+            last_size_update = Instant::now();
+        }
 
-        text::draw_text_ex(
-            "azerty",
-            25.0,
-            START + SIZE,
-            TextParams {
-                font: Some(&FONT),
-                font_size,
-                font_scale,
-                font_scale_aspect,
-                rotation: 0.0,
-                color: colors::WHITE,
-            },
-        );
-
-        let TextDimensions { width, .. } = text::draw_text_ex(
-            "ADD H D X ",
-            25.0,
-            START + SIZE * 2.0,
-            TextParams {
-                font: Some(&FONT),
-                font_size,
-                font_scale,
-                font_scale_aspect,
-                rotation: 0.0,
-                color: colors::WHITE,
-            },
-        );
-
-        text::draw_text_ex(
-            "; COMMENT",
-            25.0 + width,
-            START + SIZE * 2.0,
-            TextParams {
-                font: Some(&FONT),
-                font_size,
-                font_scale,
-                font_scale_aspect,
-                rotation: 0.0,
-                color: colors::GRAY,
-            },
-        );
-
-        text::draw_text_ex(
-            "ADD H D X ; COMMENT",
-            25.0,
-            START + SIZE * 3.0,
-            TextParams {
-                font: Some(&FONT),
-                font_size,
-                font_scale,
-                font_scale_aspect,
-                rotation: 0.0,
-                color: colors::WHITE,
-            },
-        );
+        text_editor.draw_all(Vec2::new(15.0, 25.0), text_size, 1.0);
 
         window::next_frame().await;
     }
+}
+
+fn get_screen_text_size(padding: f32, lines: usize) -> f32 {
+    (window::screen_height() - padding) / lines as f32
 }
 
 pub fn run_test_computer() {

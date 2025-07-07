@@ -1,5 +1,11 @@
 use std::ops::Range;
 
+use macroquad::{
+    color::{Color, colors},
+    math::Vec2,
+    text::{self, TextDimensions, TextParams},
+};
+
 #[derive(Clone, Debug)]
 pub struct TextEditor {
     pub text: String,
@@ -12,11 +18,15 @@ impl TextEditor {
         let lines = Self::line_indecies_from(&text);
         let cursors = vec![Cursor::new()];
 
-        Self {
+        let mut result = Self {
             text,
             lines,
             cursors,
-        }
+        };
+
+        result.update_colors_of_all_lines();
+
+        result
     }
 
     pub fn line_indecies_from(text: &str) -> Vec<Line> {
@@ -31,6 +41,55 @@ impl TextEditor {
         }
 
         lines
+    }
+
+    pub fn update_colors_of_all_lines(&mut self) {
+        for i in 0..self.lines.len() {
+            self.update_colors_of_line(i).unwrap();
+        }
+    }
+
+    #[must_use]
+    pub fn update_colors_of_line(&mut self, index: usize) -> Option<()> {
+        let range = self.byte_range_of_line(index)?;
+
+        self.lines[index].update_colors_from(&self.text[range]);
+
+        Some(())
+    }
+
+    pub fn draw_all(&self, mut position: Vec2, text_size: f32, line_height: f32) {
+        let (font_size, font_scale, font_scale_aspect) = text::camera_font_scale(text_size);
+
+        let line_height = line_height * text_size;
+
+        for i in 0..self.lines.len() {
+            let segments = self.color_segments_of_line(i).unwrap();
+
+            position.y += line_height;
+            let mut line_position = position;
+
+            for (range, color_choice) in segments {
+                let segment_text = &self.text[range];
+                let segment_color = Color::from(color_choice);
+
+                let TextDimensions { width, .. } = text::draw_text_ex(
+                    segment_text,
+                    line_position.x,
+                    line_position.y,
+                    TextParams {
+                        font: Some(&super::window::FONT),
+                        font_size,
+                        font_scale,
+                        font_scale_aspect,
+                        rotation: 0.0,
+                        color: segment_color,
+                    },
+                );
+
+                line_position.x += width;
+            }
+        }
     }
 
     #[must_use]
@@ -113,6 +172,35 @@ impl TextEditor {
     }
 
     #[must_use]
+    pub fn color_segments_of_line(&self, index: usize) -> Option<Vec<(Range<usize>, ColorChoice)>> {
+        let line = self.lines.get(index)?;
+
+        let full_range = self.byte_range_of_line(index)?;
+
+        let mut start = full_range.start;
+        let mut color_choice = ColorChoice::default();
+
+        let mut colors = Vec::new();
+
+        for &LineSegmentColor {
+            relative_offset,
+            color_choice: next_color_choice,
+        } in &line.colors
+        {
+            let end = full_range.start + relative_offset;
+
+            colors.push((start..end, color_choice));
+
+            color_choice = next_color_choice;
+            start = end;
+        }
+
+        colors.push((start..full_range.end, color_choice));
+
+        Some(colors)
+    }
+
+    #[must_use]
     pub fn index_of_position(&self, position: CharacterPosition) -> Option<usize> {
         let range = self.byte_range_of_line(position.line)?;
         let column_byte_offset = &self.text[range.clone()]
@@ -165,14 +253,64 @@ impl TextEditor {
 }
 
 /// Should represent a byte offset immediately after a newline
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct Line {
     pub byte_offset: usize,
+    pub colors: Vec<LineSegmentColor>,
 }
 
 impl Line {
     pub fn from_byte_offset(byte_offset: usize) -> Self {
-        Self { byte_offset }
+        Self {
+            byte_offset,
+            colors: Vec::new(),
+        }
+    }
+
+    pub fn update_colors_from(&mut self, line_contents: &str) {
+        self.colors.clear();
+
+        let offset_of_comment = line_contents
+            .chars()
+            .take_while(|&character| character != ';')
+            .map(char::len_utf8)
+            .sum();
+
+        if offset_of_comment < line_contents.len() {
+            self.colors.push(LineSegmentColor {
+                relative_offset: offset_of_comment,
+                color_choice: ColorChoice::Comment,
+            });
+        }
+    }
+}
+
+/// Represents that characters on and after `relative_offset` (relative to the start
+/// of the line) should be colored with `color_choice`
+#[derive(Clone, Copy, Debug)]
+pub struct LineSegmentColor {
+    pub relative_offset: usize,
+    pub color_choice: ColorChoice,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum ColorChoice {
+    Default,
+    Comment,
+}
+
+impl Default for ColorChoice {
+    fn default() -> Self {
+        Self::Default
+    }
+}
+
+impl From<ColorChoice> for Color {
+    fn from(value: ColorChoice) -> Self {
+        match value {
+            ColorChoice::Default => colors::WHITE,
+            ColorChoice::Comment => colors::GRAY,
+        }
     }
 }
 
