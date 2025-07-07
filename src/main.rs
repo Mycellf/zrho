@@ -5,8 +5,8 @@ use crate::simulation::{
     program::Program,
 };
 
+pub mod interface;
 pub mod simulation;
-pub mod text_editor;
 
 fn main() {
     const DIGITS: u8 = 3;
