@@ -33,17 +33,20 @@ async fn main() {
     let mut fullscreen = START_IN_FULLSCREEN;
 
     loop {
+        const SIZE: f32 = 15.0;
+        const START: f32 = 25.0 + SIZE;
+
         if input::is_key_pressed(KeyCode::F11) {
             fullscreen ^= true;
             window::set_fullscreen(fullscreen);
         }
 
-        let (font_size, font_scale, font_scale_aspect) = text::camera_font_scale(50.0);
+        let (font_size, font_scale, font_scale_aspect) = text::camera_font_scale(SIZE);
 
         text::draw_text_ex(
             "Test::test()",
             25.0,
-            100.0,
+            START,
             TextParams {
                 font: Some(&FONT),
                 font_size,
@@ -57,7 +60,7 @@ async fn main() {
         text::draw_text_ex(
             "azerty",
             25.0,
-            150.0,
+            START + SIZE,
             TextParams {
                 font: Some(&FONT),
                 font_size,
@@ -71,7 +74,7 @@ async fn main() {
         let TextDimensions { width, .. } = text::draw_text_ex(
             "ADD H D X ",
             25.0,
-            200.0,
+            START + SIZE * 2.0,
             TextParams {
                 font: Some(&FONT),
                 font_size,
@@ -85,7 +88,7 @@ async fn main() {
         text::draw_text_ex(
             "; COMMENT",
             25.0 + width,
-            200.0,
+            START + SIZE * 2.0,
             TextParams {
                 font: Some(&FONT),
                 font_size,
@@ -99,7 +102,7 @@ async fn main() {
         text::draw_text_ex(
             "ADD H D X ; COMMENT",
             25.0,
-            250.0,
+            START + SIZE * 3.0,
             TextParams {
                 font: Some(&FONT),
                 font_size,
