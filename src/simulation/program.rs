@@ -2,16 +2,11 @@ use std::{
     array, cmp::Ordering, collections::HashMap, fmt::Display, iter::Peekable, num::ParseIntError,
 };
 
-use crate::simulation::{
-    computer::Computer,
-    integer::{self, AssignIntegerError, DigitInteger},
-};
-
 use super::{
     argument::{Argument, Comparison, NumberSource},
-    computer,
+    computer::{self, Computer},
     instruction::{ArgumentRequirement, Instruction, InstructionKind},
-    integer::Integer,
+    integer::{self, AssignIntegerError, DigitInteger, Integer},
 };
 
 pub const COMMENT_SEPARATOR: char = ';';

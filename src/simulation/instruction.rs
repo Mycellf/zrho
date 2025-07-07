@@ -7,11 +7,9 @@ use std::{
 
 use strum::{EnumCount, EnumIter, VariantArray};
 
-use crate::simulation::computer::Register;
-
 use super::{
     argument::Argument,
-    computer::{RegisterAccessError, RegisterMap, RegisterSet},
+    computer::{Register, RegisterAccessError, RegisterMap, RegisterSet},
     integer::{AssignIntegerError, BiggerInteger, Integer},
 };
 

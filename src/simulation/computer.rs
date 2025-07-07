@@ -6,10 +6,10 @@ use std::{
     slice,
 };
 
-use crate::simulation::instruction::InstructionProperties;
-
 use super::{
-    instruction::{ArgumentValues, InstructionEvaluationInterrupt, InstructionKindMap},
+    instruction::{
+        ArgumentValues, InstructionEvaluationInterrupt, InstructionKindMap, InstructionProperties,
+    },
     integer::{AssignIntegerError, DigitInteger, Integer},
     program::Program,
 };
