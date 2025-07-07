@@ -1,14 +1,60 @@
-use crate::simulation::{
-    computer::{self, BlockCondition, Computer, Register, RegisterSet, RegisterValues},
-    instruction,
-    integer::{DigitInteger, Integer},
-    program::Program,
+use macroquad::{
+    color::colors,
+    text::{self, TextParams},
+    window,
+};
+
+use crate::{
+    interface::window::FONT,
+    simulation::{
+        computer::{self, BlockCondition, Computer, Register, RegisterSet, RegisterValues},
+        instruction,
+        integer::{DigitInteger, Integer},
+        program::Program,
+    },
 };
 
 pub mod interface;
 pub mod simulation;
 
-fn main() {
+#[macroquad::main("zρ")]
+async fn main() {
+    loop {
+        let (font_size, font_scale, font_scale_aspect) = text::camera_font_scale(50.0);
+
+        text::draw_text_ex(
+            "Test::test()",
+            25.0,
+            100.0,
+            TextParams {
+                font: Some(&FONT),
+                font_size,
+                font_scale,
+                font_scale_aspect,
+                rotation: 0.0,
+                color: colors::WHITE,
+            },
+        );
+
+        text::draw_text_ex(
+            "azerty",
+            25.0,
+            150.0,
+            TextParams {
+                font: Some(&FONT),
+                font_size,
+                font_scale,
+                font_scale_aspect,
+                rotation: 0.0,
+                color: colors::WHITE,
+            },
+        );
+
+        window::next_frame().await;
+    }
+}
+
+pub fn run_test_computer() {
     const DIGITS: u8 = 3;
 
     let mut computer = Computer::new(

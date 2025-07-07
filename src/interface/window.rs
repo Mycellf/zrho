@@ -1,4 +1,11 @@
-use macroquad::{color::Color, math::Vec2, shapes};
+use std::{fs, sync::LazyLock};
+
+use macroquad::{
+    color::Color,
+    math::Vec2,
+    shapes,
+    text::{self, Font},
+};
 
 use crate::simulation::{
     computer::Computer,
@@ -6,6 +13,11 @@ use crate::simulation::{
 };
 
 use super::text_editor::TextEditor;
+
+pub static FONT: LazyLock<Font> = LazyLock::new(|| {
+    text::load_ttf_font_from_bytes(&fs::read("assets/CommitMonoNerdFontMono-Regular.otf").unwrap())
+        .unwrap()
+});
 
 pub struct EditorWindow {
     pub position: Vec2,
