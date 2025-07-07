@@ -1,4 +1,7 @@
-use std::{io::BufRead, time::Duration};
+use std::{
+    io::BufRead,
+    time::{Duration, Instant},
+};
 
 use computer::Computer;
 
@@ -14,6 +17,7 @@ pub fn interactively_run(computer: &mut Computer, program: &Program) {
     let mut skip_ticks = 0;
     let mut repeat_ns = None;
     let mut print_execution = true;
+    let mut timer_start: Option<Instant> = None;
 
     loop {
         let instruction = computer.instruction;
@@ -33,12 +37,17 @@ pub fn interactively_run(computer: &mut Computer, program: &Program) {
                 );
             }
 
+            if let Some(start) = timer_start {
+                print!("\n(took {:?})", start.elapsed());
+            }
+
             println!(
                 "\n{interrupt:?}\n{registers}\n\nRuntime: {runtime}\nEnergy used: {energy}",
                 registers = computer.registers,
                 runtime = computer.runtime,
                 energy = computer.energy_used,
             );
+
             break;
         }
 
@@ -56,6 +65,12 @@ pub fn interactively_run(computer: &mut Computer, program: &Program) {
 
                 if skip_ticks == 0 {
                     print_execution = true;
+
+                    if let Some(start) = timer_start {
+                        println!("(took {:?})", start.elapsed());
+
+                        timer_start = None;
+                    }
                 }
             }
         }
@@ -115,8 +130,12 @@ pub fn interactively_run(computer: &mut Computer, program: &Program) {
                     }
                 }
 
-                if skip_ticks > 0 && repeat_ns.is_none() {
-                    print_execution = false;
+                if repeat_ns.is_none() {
+                    timer_start = Some(Instant::now());
+
+                    if skip_ticks > 0 {
+                        print_execution = false;
+                    }
                 }
             }
         }
