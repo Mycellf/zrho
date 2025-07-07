@@ -227,7 +227,7 @@ impl RegisterSet {
 
             match &mut register.values {
                 RegisterValues::Scalar(value) => value.try_set(0).unwrap(),
-                RegisterValues::Vector { values, index } => {
+                RegisterValues::Vector { values, index, .. } => {
                     for value in values {
                         value.try_set(0).unwrap();
                     }
@@ -413,8 +413,15 @@ impl Display for Register {
 
         match &self.values {
             RegisterValues::Scalar(value) => write!(f, "{value}")?,
-            RegisterValues::Vector { values, index } => {
-                let effective_index = (*index).clamp(0, values.len() as i32 - 1) as usize;
+            RegisterValues::Vector {
+                values,
+                index,
+                offset,
+            } => {
+                let effective_index = index
+                    .saturating_sub(*offset)
+                    .clamp(0, values.len() as Integer - 1)
+                    as usize;
 
                 let (start, end, lower_hidden, upper_hidden) =
                     if values.len() <= MAXIMUM_NUMBERS + 2 {
@@ -451,7 +458,7 @@ impl Display for Register {
                     let padding = iter::repeat_n(' ', value.num_digits() + 1 - parsed_value.len())
                         .collect::<String>();
 
-                    if i as i32 == *index {
+                    if i as Integer == index.saturating_sub(*offset) {
                         write!(f, "{padding}>{parsed_value}")?;
                     } else {
                         write!(f, "{padding} {parsed_value}")?;
@@ -503,6 +510,7 @@ pub enum RegisterValues {
     Vector {
         values: Box<[DigitInteger]>,
         index: Integer,
+        offset: Integer,
     },
 }
 
@@ -510,16 +518,20 @@ impl RegisterValues {
     pub fn value(&self) -> Result<&DigitInteger, RegisterAccessError> {
         match self {
             RegisterValues::Scalar(value) => Ok(value),
-            RegisterValues::Vector { values, index } => values
-                .get(
-                    usize::try_from(*index).map_err(|_| RegisterAccessError::IndexTooSmall {
+            RegisterValues::Vector {
+                values,
+                index,
+                offset,
+            } => values
+                .get(usize::try_from(index.saturating_sub(*offset)).map_err(|_| {
+                    RegisterAccessError::IndexTooSmall {
                         got: *index,
-                        minimum: 0,
-                    })?,
-                )
+                        minimum: *offset,
+                    }
+                })?)
                 .ok_or_else(|| RegisterAccessError::IndexTooBig {
                     got: *index,
-                    maximum: values.len() as Integer - 1,
+                    maximum: values.len() as Integer - 1 - offset,
                 }),
         }
     }
@@ -527,19 +539,23 @@ impl RegisterValues {
     pub fn value_mut(&mut self) -> Result<&mut DigitInteger, RegisterAccessError> {
         match self {
             RegisterValues::Scalar(value) => Ok(value),
-            RegisterValues::Vector { values, index } => {
+            RegisterValues::Vector {
+                values,
+                index,
+                offset,
+            } => {
                 let length = values.len();
 
                 values
-                    .get_mut(usize::try_from(*index).map_err(|_| {
+                    .get_mut(usize::try_from(index.saturating_sub(*offset)).map_err(|_| {
                         RegisterAccessError::IndexTooSmall {
                             got: *index,
-                            minimum: 0,
+                            minimum: *offset,
                         }
                     })?)
                     .ok_or_else(|| RegisterAccessError::IndexTooBig {
                         got: *index,
-                        maximum: length as Integer - 1,
+                        maximum: length as Integer - 1 - *offset,
                     })
             }
         }

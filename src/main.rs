@@ -20,6 +20,7 @@ fn main() {
                     values: RegisterValues::Vector {
                         values: Box::new([DigitInteger::new(0, DIGITS).unwrap(); 100]),
                         index: 0,
+                        offset: 0,
                     },
                     read_time: 1,
                     write_time: 1,
@@ -32,6 +33,7 @@ fn main() {
                     values: RegisterValues::Vector {
                         values: Box::new([DigitInteger::new(0, DIGITS).unwrap(); 10000]),
                         index: 0,
+                        offset: 0,
                     },
                     block_condition: Some(BlockCondition::IndexChange {
                         minimum_change: 2,
