@@ -1,7 +1,7 @@
 use macroquad::{
     color::colors,
     input::{self, KeyCode},
-    text::{self, TextParams},
+    text::{self, TextDimensions, TextParams},
     window::{self, Conf},
 };
 
@@ -58,6 +58,48 @@ async fn main() {
             "azerty",
             25.0,
             150.0,
+            TextParams {
+                font: Some(&FONT),
+                font_size,
+                font_scale,
+                font_scale_aspect,
+                rotation: 0.0,
+                color: colors::WHITE,
+            },
+        );
+
+        let TextDimensions { width, .. } = text::draw_text_ex(
+            "ADD H D X ",
+            25.0,
+            200.0,
+            TextParams {
+                font: Some(&FONT),
+                font_size,
+                font_scale,
+                font_scale_aspect,
+                rotation: 0.0,
+                color: colors::WHITE,
+            },
+        );
+
+        text::draw_text_ex(
+            "; COMMENT",
+            25.0 + width,
+            200.0,
+            TextParams {
+                font: Some(&FONT),
+                font_size,
+                font_scale,
+                font_scale_aspect,
+                rotation: 0.0,
+                color: colors::GRAY,
+            },
+        );
+
+        text::draw_text_ex(
+            "ADD H D X ; COMMENT",
+            25.0,
+            250.0,
             TextParams {
                 font: Some(&FONT),
                 font_size,
