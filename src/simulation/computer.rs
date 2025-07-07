@@ -85,7 +85,7 @@ impl Computer {
         }
     }
 
-    /// Returns the amount of ticks taken by the instruction
+    /// Returns the amount of ticks taken during the step
     pub fn step_instruction(&mut self, program: &Program) -> u64 {
         let mut ticks = 0;
 
