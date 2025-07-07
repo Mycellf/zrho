@@ -1,7 +1,8 @@
 use macroquad::{
     color::colors,
+    input::{self, KeyCode},
     text::{self, TextParams},
-    window,
+    window::{self, Conf},
 };
 
 use crate::{
@@ -17,9 +18,26 @@ use crate::{
 pub mod interface;
 pub mod simulation;
 
-#[macroquad::main("zρ")]
+const START_IN_FULLSCREEN: bool = false;
+
+fn config() -> Conf {
+    Conf {
+        window_title: "zρ".to_owned(),
+        fullscreen: START_IN_FULLSCREEN,
+        ..Default::default()
+    }
+}
+
+#[macroquad::main(config)]
 async fn main() {
+    let mut fullscreen = START_IN_FULLSCREEN;
+
     loop {
+        if input::is_key_pressed(KeyCode::F11) {
+            fullscreen ^= true;
+            window::set_fullscreen(fullscreen);
+        }
+
         let (font_size, font_scale, font_scale_aspect) = text::camera_font_scale(50.0);
 
         text::draw_text_ex(
