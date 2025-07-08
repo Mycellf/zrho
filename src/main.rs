@@ -55,7 +55,7 @@ async fn main() {
             last_size_update = Instant::now();
         }
 
-        text_editor.draw_all(Vec2::new(15.0, 25.0), text_size, 1.0);
+        text_editor.draw_all(Vec2::new(25.0, 25.0), text_size, 1.0);
 
         window::next_frame().await;
     }
