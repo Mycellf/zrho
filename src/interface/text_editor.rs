@@ -58,12 +58,22 @@ impl TextEditor {
         Some(())
     }
 
-    pub fn draw_all(&self, mut position: Vec2, text_size: f32, line_height: f32) {
+    pub fn draw_all(&self, position: Vec2, text_size: f32, line_height: f32) {
+        self.draw_range(0..self.lines.len(), position, text_size, line_height);
+    }
+
+    pub fn draw_range(
+        &self,
+        lines: Range<usize>,
+        mut position: Vec2,
+        text_size: f32,
+        line_height: f32,
+    ) {
         let (font_size, font_scale, font_scale_aspect) = text::camera_font_scale(text_size);
 
         let line_height = line_height * text_size;
 
-        for i in 0..self.lines.len() {
+        for i in lines {
             let segments = self.color_segments_of_line(i).unwrap();
 
             position.y += line_height;
