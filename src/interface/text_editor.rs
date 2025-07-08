@@ -3,11 +3,8 @@ use std::ops::Range;
 use macroquad::{
     color::{Color, colors},
     math::Vec2,
-    shapes,
     text::{self, TextDimensions, TextParams},
 };
-
-use crate::interface::window::EditorWindow;
 
 #[derive(Clone, Debug)]
 pub struct TextEditor {
@@ -65,28 +62,6 @@ impl TextEditor {
         let (font_size, font_scale, font_scale_aspect) = text::camera_font_scale(text_size);
 
         let line_height = line_height * text_size;
-
-        let mut maximum_width = 0.0;
-
-        for i in 0..self.lines.len() {
-            maximum_width = (text::measure_text(
-                self.get_line(i).unwrap(),
-                Some(&super::window::FONT),
-                font_size,
-                font_scale,
-            )
-            .width
-                * font_scale_aspect)
-                .max(maximum_width);
-        }
-
-        shapes::draw_rectangle(
-            position.x,
-            position.y,
-            maximum_width,
-            self.lines.len() as f32 * line_height,
-            EditorWindow::BACKGROUND_COLOR,
-        );
 
         for i in 0..self.lines.len() {
             let segments = self.color_segments_of_line(i).unwrap();
