@@ -67,7 +67,7 @@ impl TextEditor {
             let segments = self.color_segments_of_line(i).unwrap();
 
             position.y += line_height;
-            let mut line_position = position;
+            let mut line_position = position - Vec2::Y * line_height * 0.125;
 
             for (range, color_choice) in segments {
                 let segment_text = &self.text[range];
