@@ -29,7 +29,7 @@ pub struct EditorWindow {
 }
 
 impl EditorWindow {
-    pub const BACKGROUND: Color = Color::from_hex(0x202030);
+    pub const BACKGROUND_COLOR: Color = Color::from_hex(0x202030);
 
     pub fn assemble_program(&mut self, target_computer: &Computer) {
         self.program =
@@ -42,7 +42,7 @@ impl EditorWindow {
             self.position.y,
             self.size.x,
             self.size.y,
-            Self::BACKGROUND,
+            Self::BACKGROUND_COLOR,
         );
     }
 }
