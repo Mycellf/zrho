@@ -20,6 +20,7 @@ pub static FONT: LazyLock<Font> = LazyLock::new(|| {
         .unwrap()
 });
 
+#[derive(Clone, Debug)]
 pub struct EditorWindow {
     pub position: Vec2,
     pub size: Vec2,
