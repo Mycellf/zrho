@@ -58,8 +58,14 @@ impl TextEditor {
         Some(())
     }
 
-    pub fn draw_all(&self, position: Vec2, text_size: f32, line_height: f32) {
-        self.draw_range(0..self.lines.len(), position, text_size, line_height);
+    pub fn draw_all(&self, position: Vec2, text_size: f32, line_height: f32, character_width: f32) {
+        self.draw_range(
+            0..self.lines.len(),
+            position,
+            text_size,
+            line_height,
+            character_width,
+        );
     }
 
     pub fn draw_range(
@@ -68,6 +74,7 @@ impl TextEditor {
         mut position: Vec2,
         text_size: f32,
         line_height: f32,
+        character_width: f32,
     ) {
         let (font_size, font_scale, font_scale_aspect) = text::camera_font_scale(text_size);
 
@@ -91,7 +98,7 @@ impl TextEditor {
                         font: Some(&super::window::FONT),
                         font_size,
                         font_scale,
-                        font_scale_aspect,
+                        font_scale_aspect: font_scale_aspect * character_width,
                         rotation: 0.0,
                         color: segment_color,
                     },
