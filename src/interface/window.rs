@@ -3,6 +3,7 @@ use std::{fs, sync::LazyLock};
 use macroquad::{
     camera::{self, Camera2D},
     color::{Color, colors},
+    input::{self, MouseButton},
     math::Vec2,
     shapes,
     text::{self, Font, TextParams},
@@ -29,6 +30,8 @@ pub struct EditorWindow {
     pub size: Vec2,
     pub name: String,
 
+    pub grab_position: Option<Vec2>,
+
     pub text_editor: TextEditor,
     pub program: Result<Program, Vec<ProgramAssemblyError>>,
 
@@ -49,6 +52,8 @@ impl EditorWindow {
         text_editor: TextEditor,
         target_computer: &Computer,
     ) -> EditorWindow {
+        let grab_position = None;
+
         let program = Program::assemble_from(name.clone(), &text_editor.text, target_computer);
         let scale = window::screen_dpi_scale() as u32 * 2;
         let camera = Camera2D {
@@ -67,8 +72,12 @@ impl EditorWindow {
             position,
             size,
             name,
+
+            grab_position,
+
             text_editor,
             program,
+
             camera,
         }
     }
@@ -79,6 +88,20 @@ impl EditorWindow {
     }
 
     pub fn update(&mut self) {
+        let mouse_position = Vec2::from(input::mouse_position());
+
+        if let Some(grab_position) = self.grab_position {
+            self.position = mouse_position - grab_position;
+
+            if !input::is_mouse_button_down(MouseButton::Left) {
+                self.grab_position = None;
+            }
+        } else if input::is_mouse_button_down(MouseButton::Left)
+            && self.is_point_within_bounds(mouse_position)
+        {
+            self.grab_position = Some(mouse_position - self.position);
+        }
+
         self.clamp_within_window_boundary();
     }
 
@@ -98,6 +121,14 @@ impl EditorWindow {
         if self.position.y < 0.0 {
             self.position.y = 0.0;
         }
+    }
+
+    #[must_use]
+    pub fn is_point_within_bounds(&self, point: Vec2) -> bool {
+        point.x >= self.position.x
+            && point.y >= self.position.y
+            && point.x <= self.position.x + self.size.x
+            && point.y <= self.position.y + self.size.y
     }
 
     pub fn draw(&self) {
