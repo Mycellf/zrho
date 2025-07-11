@@ -1,5 +1,3 @@
-use std::time::{Duration, Instant};
-
 use macroquad::{
     input::{self, KeyCode},
     math::Vec2,
@@ -7,7 +5,7 @@ use macroquad::{
 };
 
 use crate::{
-    interface::text_editor::TextEditor,
+    interface::{text_editor::TextEditor, window::EditorWindow},
     simulation::{
         computer::{self, BlockCondition, Computer, Register, RegisterSet, RegisterValues},
         instruction,
@@ -31,14 +29,17 @@ fn config() -> Conf {
 
 #[macroquad::main(config)]
 async fn main() {
-    const MINIMUM_TIME_BETWEEN_UPDATES: Duration = Duration::from_millis(100);
-
     let mut fullscreen = START_IN_FULLSCREEN;
 
     let text_editor = TextEditor::new(KOLAKOSKI_SEQUENCE_LONG.to_owned());
 
-    let mut text_size = get_screen_text_size(50.0, text_editor.lines.len());
-    let mut last_size_update = Instant::now();
+    let mut window = EditorWindow::new(
+        Vec2::new(10.0, 10.0),
+        Vec2::new(100.0, 200.0),
+        "KOLAKOSKI SEQUENCE".to_owned(),
+        text_editor,
+        &default_computer(),
+    );
 
     loop {
         if input::is_key_pressed(KeyCode::F11) {
@@ -46,29 +47,82 @@ async fn main() {
             window::set_fullscreen(fullscreen);
         }
 
-        let correct_text_size = get_screen_text_size(50.0, text_editor.lines.len());
+        window.update();
 
-        if correct_text_size != text_size
-            && last_size_update.elapsed() > MINIMUM_TIME_BETWEEN_UPDATES
-        {
-            text_size = correct_text_size;
-            last_size_update = Instant::now();
-        }
-
-        text_editor.draw_all(Vec2::new(25.0, 25.0), text_size, 1.0);
+        window.draw();
 
         window::next_frame().await;
     }
 }
 
-fn get_screen_text_size(padding: f32, lines: usize) -> f32 {
-    (window::screen_height() - padding) / lines as f32
+pub fn run_test_computer() {
+    let mut computer = default_computer();
+
+    let program = match Program::assemble_from("Test Program".to_owned(), PROGRAM, &computer) {
+        Ok(program) => program,
+        Err(errors) => {
+            for error in errors {
+                println!("{error}");
+            }
+            return;
+        }
+    };
+
+    println!(
+        "Program length: {} instructions",
+        program.instructions.len(),
+    );
+
+    simulation::interactively_run(&mut computer, &program);
+
+    if !std::ptr::eq(PROGRAM, KOLAKOSKI_SEQUENCE_LONG) {
+        return;
+    }
+
+    let length = computer
+        .registers
+        .get(computer::register_with_name('H').unwrap())
+        .unwrap()
+        .all_values()
+        .len();
+
+    let mut sequence = vec![1, 2, 2];
+    let mut i = 2;
+
+    while sequence.len() < length {
+        for _ in 0..sequence[i] {
+            sequence.push((i % 2 + 1) as i32);
+        }
+
+        i += 1;
+    }
+
+    // There may be an excess element
+    while sequence.len() > length {
+        sequence.pop();
+    }
+
+    let register = computer
+        .registers
+        .get(computer::register_with_name('H').unwrap())
+        .unwrap();
+
+    for (i, (computed, actual)) in register.all_values().into_iter().zip(sequence).enumerate() {
+        assert_eq!(
+            computed.get(),
+            actual,
+            "Element {} is incorrect",
+            i as Integer + register.offset()
+        );
+    }
+
+    println!("Verified Kolakoski Sequence stored in H");
 }
 
-pub fn run_test_computer() {
+pub fn default_computer() -> Computer {
     const DIGITS: u8 = 3;
 
-    let mut computer = Computer::new(
+    Computer::new(
         DIGITS,
         RegisterSet::new_empty()
             .with_register(
@@ -139,67 +193,7 @@ pub fn run_test_computer() {
                 },
             ),
         instruction::DEFAULT_INSTRUCTIONS,
-    );
-
-    let program = match Program::assemble_from("Test Program".to_owned(), PROGRAM, &computer) {
-        Ok(program) => program,
-        Err(errors) => {
-            for error in errors {
-                println!("{error}");
-            }
-            return;
-        }
-    };
-
-    println!(
-        "Program length: {} instructions",
-        program.instructions.len(),
-    );
-
-    simulation::interactively_run(&mut computer, &program);
-
-    if !std::ptr::eq(PROGRAM, KOLAKOSKI_SEQUENCE_LONG) {
-        return;
-    }
-
-    let length = computer
-        .registers
-        .get(computer::register_with_name('H').unwrap())
-        .unwrap()
-        .all_values()
-        .len();
-
-    let mut sequence = vec![1, 2, 2];
-    let mut i = 2;
-
-    while sequence.len() < length {
-        for _ in 0..sequence[i] {
-            sequence.push((i % 2 + 1) as i32);
-        }
-
-        i += 1;
-    }
-
-    // There may be an excess element
-    while sequence.len() > length {
-        sequence.pop();
-    }
-
-    let register = computer
-        .registers
-        .get(computer::register_with_name('H').unwrap())
-        .unwrap();
-
-    for (i, (computed, actual)) in register.all_values().into_iter().zip(sequence).enumerate() {
-        assert_eq!(
-            computed.get(),
-            actual,
-            "Element {} is incorrect",
-            i as Integer + register.offset()
-        );
-    }
-
-    println!("Verified Kolakoski Sequence stored in H");
+    )
 }
 
 const PROGRAM: &str = KOLAKOSKI_SEQUENCE_LONG;
