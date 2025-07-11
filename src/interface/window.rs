@@ -57,13 +57,11 @@ impl EditorWindow {
 
         let program = Program::assemble_from(name.clone(), &text_editor.text, target_computer);
 
-        let scale = window::screen_dpi_scale() as u32 * 2;
         let camera = Camera2D {
             zoom: -2.0 / size,
             offset: Vec2::new(1.0, 1.0),
             render_target: Some({
-                let render_target =
-                    texture::render_target(size.x as u32 * scale, size.y as u32 * scale);
+                let render_target = texture::render_target(size.x as u32 * 4, size.y as u32 * 4);
                 render_target.texture.set_filter(FilterMode::Linear);
                 render_target
             }),
