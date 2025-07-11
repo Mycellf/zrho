@@ -35,7 +35,7 @@ async fn main() {
 
     let mut window = EditorWindow::new(
         Vec2::new(10.0, 10.0),
-        Vec2::new(100.0, 200.0),
+        Vec2::new(200.0, 400.0),
         "KOLAKOSKI SEQUENCE".to_owned(),
         text_editor,
         &default_computer(),
