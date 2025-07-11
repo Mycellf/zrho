@@ -47,7 +47,7 @@ async fn main() {
             window::set_fullscreen(fullscreen);
         }
 
-        window.update();
+        window.update(window.grab_position.is_some());
 
         window.draw();
 

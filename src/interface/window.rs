@@ -87,7 +87,7 @@ impl EditorWindow {
             Program::assemble_from(self.name.clone(), &self.text_editor.text, target_computer);
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, any_window_grabbed: bool) {
         let mouse_position = Vec2::from(input::mouse_position());
 
         if let Some(grab_position) = self.grab_position {
@@ -96,7 +96,8 @@ impl EditorWindow {
             if !input::is_mouse_button_down(MouseButton::Left) {
                 self.grab_position = None;
             }
-        } else if input::is_mouse_button_down(MouseButton::Left)
+        } else if !any_window_grabbed
+            && input::is_mouse_button_down(MouseButton::Left)
             && self.is_point_within_bounds(mouse_position)
         {
             self.grab_position = Some(mouse_position - self.position);
