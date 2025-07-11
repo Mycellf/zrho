@@ -36,6 +36,7 @@ pub struct EditorWindow {
     pub program: Result<Program, Vec<ProgramAssemblyError>>,
 
     pub camera: Camera2D,
+    pub window_updated: bool,
 }
 
 impl EditorWindow {
@@ -55,6 +56,7 @@ impl EditorWindow {
         let grab_position = None;
 
         let program = Program::assemble_from(name.clone(), &text_editor.text, target_computer);
+
         let scale = window::screen_dpi_scale() as u32 * 2;
         let camera = Camera2D {
             zoom: -2.0 / size,
@@ -67,6 +69,7 @@ impl EditorWindow {
             }),
             ..Default::default()
         };
+        let window_updated = true;
 
         Self {
             position,
@@ -79,6 +82,7 @@ impl EditorWindow {
             program,
 
             camera,
+            window_updated,
         }
     }
 
@@ -132,7 +136,28 @@ impl EditorWindow {
             && point.y <= self.position.y + self.size.y
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&mut self) {
+        if self.window_updated {
+            self.window_updated = false;
+
+            self.update_texture();
+        }
+
+        texture::draw_texture_ex(
+            &self.camera.render_target.as_ref().unwrap().texture,
+            self.position.x,
+            self.position.y,
+            colors::WHITE,
+            DrawTextureParams {
+                dest_size: Some(self.size),
+                flip_x: true,
+                flip_y: true,
+                ..Default::default()
+            },
+        );
+    }
+
+    pub fn update_texture(&self) {
         camera::push_camera_state();
         camera::set_camera(&self.camera);
 
@@ -162,18 +187,5 @@ impl EditorWindow {
         );
 
         camera::pop_camera_state();
-
-        texture::draw_texture_ex(
-            &self.camera.render_target.as_ref().unwrap().texture,
-            self.position.x,
-            self.position.y,
-            colors::WHITE,
-            DrawTextureParams {
-                dest_size: Some(self.size),
-                flip_x: true,
-                flip_y: true,
-                ..Default::default()
-            },
-        );
     }
 }
