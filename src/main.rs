@@ -31,16 +31,42 @@ fn config() -> Conf {
 async fn main() {
     let mut fullscreen = START_IN_FULLSCREEN;
 
-    let text_editor = TextEditor::new(KOLAKOSKI_SEQUENCE_LONG.to_owned());
+    let mut last_height = window::screen_height();
 
-    let mut window = EditorWindow::new(
+    let mut windows = Vec::new();
+
+    windows.push(EditorWindow::new(
         Vec2::new(10.0, 10.0),
         Vec2::new(400.0, 600.0),
         "KOLAKOSKI SEQUENCE".to_owned(),
         EditorWindow::BLUE,
-        text_editor,
+        TextEditor::new(KOLAKOSKI_SEQUENCE_LONG.to_owned()),
         &default_computer(),
-    );
+        1,
+        4.0,
+    ));
+
+    windows.push(EditorWindow::new(
+        Vec2::new(160.0, 60.0),
+        Vec2::new(400.0, 400.0),
+        "PRIME NUMBERS".to_owned(),
+        EditorWindow::ORANGE,
+        TextEditor::new(PRIME_NUMBERS_FAST.to_owned()),
+        &default_computer(),
+        1,
+        4.0,
+    ));
+
+    windows.push(EditorWindow::new(
+        Vec2::new(310.0, 110.0),
+        Vec2::new(400.0, 300.0),
+        "FIBONACCI SEQUENCE".to_owned(),
+        EditorWindow::RED,
+        TextEditor::new(FIBONACCI_SEQUENCE.to_owned()),
+        &default_computer(),
+        1,
+        4.0,
+    ));
 
     loop {
         if input::is_key_pressed(KeyCode::F11) {
@@ -48,11 +74,44 @@ async fn main() {
             window::set_fullscreen(fullscreen);
         }
 
-        window.update(window.grab_position.is_some());
+        let mut window_grabbed = false;
+
+        let height = window::screen_height();
+        let height_changed = last_height != height;
+
+        if height_changed {
+            last_height = height;
+        }
+
+        let mut i = 0;
+        while i < windows.len() {
+            let window = &mut windows[i];
+
+            if height_changed {
+                window.contents_updated = true;
+            }
+
+            window_grabbed |= window.grab_position.is_some();
+
+            let is_clicked = window.update(window_grabbed, i) && !window_grabbed;
+
+            if !is_clicked {
+                i += 1;
+            } else {
+                window_grabbed = true;
+
+                if i > 0 {
+                    let window = windows.remove(i);
+                    windows.insert(0, window);
+                }
+            }
+        }
 
         window::clear_background(EditorWindow::BACKGROUND_COLOR);
 
-        window.draw();
+        for window in windows.iter_mut().rev() {
+            window.draw();
+        }
 
         window::next_frame().await;
     }
