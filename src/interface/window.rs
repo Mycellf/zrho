@@ -46,7 +46,9 @@ pub struct EditorWindow {
 }
 
 impl EditorWindow {
-    pub const BACKGROUND_COLOR: Color = Color::from_hex(0x101018);
+    pub const BACKGROUND_COLOR: Color = Color::from_hex(0x08080b);
+
+    pub const EDITOR_BACKGROUND_COLOR: Color = Color::from_hex(0x101018);
     pub const WINDOW_COLOR: Color = Color::from_hex(0x181824);
     pub const HEADER_COLOR: Color = Color::from_hex(0x202030);
 
@@ -198,7 +200,7 @@ impl EditorWindow {
             self.position.y,
             size.x,
             size.y,
-            Self::BACKGROUND_COLOR,
+            Self::EDITOR_BACKGROUND_COLOR,
         );
 
         texture::draw_texture_ex(
@@ -219,7 +221,13 @@ impl EditorWindow {
         camera::push_camera_state();
         camera::set_camera(&self.camera);
 
-        shapes::draw_rectangle(0.0, 0.0, self.size.x, self.size.y, Self::BACKGROUND_COLOR);
+        shapes::draw_rectangle(
+            0.0,
+            0.0,
+            self.size.x,
+            self.size.y,
+            Self::EDITOR_BACKGROUND_COLOR,
+        );
 
         // Text
         self.text_editor.draw_all(
@@ -231,7 +239,7 @@ impl EditorWindow {
 
         // Header
         let (text_color, background_color) = if self.is_focused {
-            (Self::BACKGROUND_COLOR, self.title_color)
+            (Self::EDITOR_BACKGROUND_COLOR, self.title_color)
         } else {
             (self.title_color, Self::WINDOW_COLOR)
         };
