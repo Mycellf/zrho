@@ -34,7 +34,7 @@ async fn main() {
     let mut windows = Vec::new();
 
     windows.push(EditorWindow::new(
-        Vec2::new(10.0, 10.0),
+        Vec2::new(0.1, 0.1),
         Vec2::new(400.0, 600.0),
         "KOLAKOSKI SEQUENCE".to_owned(),
         EditorWindow::BLUE,
@@ -43,7 +43,7 @@ async fn main() {
     ));
 
     windows.push(EditorWindow::new(
-        Vec2::new(160.0, 60.0),
+        Vec2::new(0.5, 0.5),
         Vec2::new(400.0, 400.0),
         "PRIME NUMBERS".to_owned(),
         EditorWindow::ORANGE,
@@ -52,7 +52,7 @@ async fn main() {
     ));
 
     windows.push(EditorWindow::new(
-        Vec2::new(310.0, 110.0),
+        Vec2::new(0.9, 0.9),
         Vec2::new(400.0, 300.0),
         "FIBONACCI SEQUENCE".to_owned(),
         EditorWindow::RED,

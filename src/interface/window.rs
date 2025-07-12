@@ -31,6 +31,8 @@ pub fn scaling_factor() -> f32 {
 #[derive(Debug)]
 pub struct EditorWindow {
     pub position: Vec2,
+    pub proportional_position: Vec2,
+
     pub size: Vec2,
     pub title: String,
     pub title_color: Color,
@@ -66,13 +68,15 @@ impl EditorWindow {
     pub const RESOLUTION_UPSCALING: u16 = 4;
 
     pub fn new(
-        position: Vec2,
+        proportional_position: Vec2,
         size: Vec2,
         title: String,
         title_color: Color,
         text_editor: TextEditor,
         target_computer: &Computer,
     ) -> EditorWindow {
+        let position = Self::position_from_proportionally(proportional_position, size);
+
         let grab_position = None;
         let is_focused = false;
 
@@ -93,6 +97,8 @@ impl EditorWindow {
 
         Self {
             position,
+            proportional_position,
+
             size,
             title,
             title_color,
@@ -120,9 +126,13 @@ impl EditorWindow {
             && input::is_mouse_button_pressed(MouseButton::Left);
 
         if let Some(grab_position) = self.grab_position {
-            self.position = mouse_position - grab_position;
+            if input::is_mouse_button_down(MouseButton::Left) {
+                self.position = mouse_position - grab_position;
+                self.clamp_within_window_boundary();
 
-            if !input::is_mouse_button_down(MouseButton::Left) {
+                self.proportional_position =
+                    Self::proportional_position_from(self.position, self.size);
+            } else {
                 self.grab_position = None;
             }
         } else if is_clicked
@@ -131,9 +141,10 @@ impl EditorWindow {
             && self.is_point_within_title_bar(mouse_position)
         {
             self.grab_position = Some(mouse_position - self.position);
+        } else {
+            self.position =
+                Self::position_from_proportionally(self.proportional_position, self.size);
         }
-
-        self.clamp_within_window_boundary();
 
         is_clicked
     }
@@ -268,5 +279,35 @@ impl EditorWindow {
             rotation: 0.0,
             color: colors::WHITE,
         }
+    }
+
+    pub fn proportional_position_from(position: Vec2, size: Vec2) -> Vec2 {
+        let size = size * scaling_factor();
+
+        let maximum_position = Vec2::new(window::screen_width(), window::screen_height()) - size;
+
+        fn safe_divide(position: f32, maximum_position: f32) -> f32 {
+            if maximum_position > 0.0 {
+                position / maximum_position
+            } else {
+                0.0
+            }
+        }
+
+        Vec2::new(
+            safe_divide(position.x, maximum_position.x),
+            safe_divide(position.y, maximum_position.y),
+        )
+    }
+
+    pub fn position_from_proportionally(proportional_position: Vec2, size: Vec2) -> Vec2 {
+        let size = size * scaling_factor();
+
+        let position = proportional_position
+            * (Vec2::new(window::screen_width(), window::screen_height()) - size);
+
+        let dpi_scale = window::miniquad::window::dpi_scale();
+
+        (position.max(Vec2::ZERO) * dpi_scale).round() / dpi_scale
     }
 }
