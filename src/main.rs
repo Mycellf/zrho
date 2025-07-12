@@ -17,7 +17,7 @@ use crate::{
 pub mod interface;
 pub mod simulation;
 
-const START_IN_FULLSCREEN: bool = false;
+const START_IN_FULLSCREEN: bool = true;
 
 fn config() -> Conf {
     Conf {
