@@ -57,6 +57,8 @@ impl EditorWindow {
     pub const BORDER_WIDTH: f32 = 2.5;
 
     pub const TEXT_SIZE: f32 = 15.0;
+    pub const TEXT_UPSCALING: u16 = 1;
+
     pub const TITLE_PADDING: f32 = 20.0;
     pub const TITLE_HEIGHT: f32 = Self::TEXT_SIZE + Self::TITLE_PADDING;
 
@@ -213,13 +215,9 @@ impl EditorWindow {
         );
     }
 
-    /// BUG: Black boxes can appear over text if the window has been resized.
-    ///      The width of the text also changes slightly.
     pub fn update_texture(&self) {
         camera::push_camera_state();
         camera::set_camera(&self.camera);
-
-        let (font_size, font_scale, _) = text::camera_font_scale(Self::TEXT_SIZE);
 
         shapes::draw_rectangle(0.0, 0.0, self.size.x, self.size.y, Self::BACKGROUND_COLOR);
 
@@ -254,15 +252,22 @@ impl EditorWindow {
             5.0,
             Self::TEXT_SIZE * 0.875 + Self::TITLE_PADDING / 2.0,
             TextParams {
-                font: Some(&FONT),
-                font_size,
-                font_scale,
-                font_scale_aspect: 1.0,
-                rotation: 0.0,
                 color: text_color,
+                ..Self::text_params_with_size(Self::TEXT_SIZE)
             },
         );
 
         camera::pop_camera_state();
+    }
+
+    pub fn text_params_with_size(text_size: f32) -> TextParams<'static> {
+        TextParams {
+            font: Some(&FONT),
+            font_size: (text_size * Self::TEXT_UPSCALING as f32) as u16,
+            font_scale: 1.0 / Self::TEXT_UPSCALING as f32,
+            font_scale_aspect: 1.0,
+            rotation: 0.0,
+            color: colors::WHITE,
+        }
     }
 }

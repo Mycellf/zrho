@@ -6,7 +6,7 @@ use macroquad::{
     text::{self, TextDimensions, TextParams},
 };
 
-use crate::interface::FONT;
+use crate::interface::window::EditorWindow;
 
 #[derive(Clone, Debug)]
 pub struct TextEditor {
@@ -78,8 +78,6 @@ impl TextEditor {
         line_height: f32,
         character_width: f32,
     ) {
-        let (font_size, font_scale, _) = text::camera_font_scale(text_size);
-
         let line_height = line_height * text_size;
 
         for i in lines {
@@ -97,12 +95,9 @@ impl TextEditor {
                     line_position.x,
                     line_position.y,
                     TextParams {
-                        font: Some(&FONT),
-                        font_size,
-                        font_scale,
                         font_scale_aspect: character_width,
-                        rotation: 0.0,
                         color: segment_color,
+                        ..EditorWindow::text_params_with_size(text_size)
                     },
                 );
 
