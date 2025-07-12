@@ -31,8 +31,6 @@ fn config() -> Conf {
 async fn main() {
     let mut fullscreen = START_IN_FULLSCREEN;
 
-    let mut last_height = window::screen_height();
-
     let mut windows = Vec::new();
 
     windows.push(EditorWindow::new(
@@ -76,20 +74,9 @@ async fn main() {
 
         let mut window_grabbed = false;
 
-        let height = window::screen_height();
-        let height_changed = last_height != height;
-
-        if height_changed {
-            last_height = height;
-        }
-
         let mut i = 0;
         while i < windows.len() {
             let window = &mut windows[i];
-
-            if height_changed {
-                window.contents_updated = true;
-            }
 
             window_grabbed |= window.grab_position.is_some();
 
