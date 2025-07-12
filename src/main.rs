@@ -40,8 +40,6 @@ async fn main() {
         EditorWindow::BLUE,
         TextEditor::new(KOLAKOSKI_SEQUENCE_LONG.to_owned()),
         &default_computer(),
-        1,
-        4.0,
     ));
 
     windows.push(EditorWindow::new(
@@ -51,8 +49,6 @@ async fn main() {
         EditorWindow::ORANGE,
         TextEditor::new(PRIME_NUMBERS_FAST.to_owned()),
         &default_computer(),
-        1,
-        4.0,
     ));
 
     windows.push(EditorWindow::new(
@@ -62,8 +58,6 @@ async fn main() {
         EditorWindow::RED,
         TextEditor::new(FIBONACCI_SEQUENCE.to_owned()),
         &default_computer(),
-        1,
-        4.0,
     ));
 
     windows[0].is_focused = true;

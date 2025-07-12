@@ -5,7 +5,7 @@ use macroquad::{
     math::Vec2,
     shapes,
     text::{self, TextParams},
-    texture::{self, DrawTextureParams, FilterMode, RenderTargetParams},
+    texture::{self, DrawTextureParams},
     window,
 };
 
@@ -59,10 +59,11 @@ impl EditorWindow {
     pub const BORDER_WIDTH: f32 = 2.5;
 
     pub const TEXT_SIZE: f32 = 15.0;
-    pub const TEXT_UPSCALING: u16 = 1;
-
     pub const TITLE_PADDING: f32 = 20.0;
     pub const TITLE_HEIGHT: f32 = Self::TEXT_SIZE + Self::TITLE_PADDING;
+
+    pub const TEXT_UPSCALING: u16 = 1;
+    pub const RESOLUTION_UPSCALING: u16 = 4;
 
     pub fn new(
         position: Vec2,
@@ -71,31 +72,21 @@ impl EditorWindow {
         title_color: Color,
         text_editor: TextEditor,
         target_computer: &Computer,
-        sample_count: i32,
-        scale: f32,
     ) -> EditorWindow {
         let grab_position = None;
         let is_focused = false;
 
         let program = Program::assemble_from(title.clone(), &text_editor.text, target_computer);
 
-        let target_size = size * scale;
+        let target_size = size * Self::RESOLUTION_UPSCALING as f32;
 
         let camera = Camera2D {
             zoom: -2.0 / size,
             offset: Vec2::new(1.0, 1.0),
-            render_target: Some({
-                let render_target = texture::render_target_ex(
-                    target_size.x as u32,
-                    target_size.y as u32,
-                    RenderTargetParams {
-                        sample_count,
-                        depth: false,
-                    },
-                );
-                render_target.texture.set_filter(FilterMode::Linear);
-                render_target
-            }),
+            render_target: Some(texture::render_target(
+                target_size.x as u32,
+                target_size.y as u32,
+            )),
             ..Default::default()
         };
         let window_updated = true;
