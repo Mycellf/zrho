@@ -35,8 +35,9 @@ async fn main() {
 
     let mut window = EditorWindow::new(
         Vec2::new(10.0, 10.0),
-        Vec2::new(200.0, 400.0),
+        Vec2::new(400.0, 600.0),
         "KOLAKOSKI SEQUENCE".to_owned(),
+        EditorWindow::BLUE,
         text_editor,
         &default_computer(),
     );
@@ -48,6 +49,8 @@ async fn main() {
         }
 
         window.update(window.grab_position.is_some());
+
+        window::clear_background(EditorWindow::BACKGROUND_COLOR);
 
         window.draw();
 
