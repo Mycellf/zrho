@@ -6,6 +6,8 @@ use macroquad::{
     text::{self, TextDimensions, TextParams},
 };
 
+use crate::interface::FONT;
+
 #[derive(Clone, Debug)]
 pub struct TextEditor {
     pub text: String,
@@ -95,7 +97,7 @@ impl TextEditor {
                     line_position.x,
                     line_position.y,
                     TextParams {
-                        font: Some(&super::window::FONT),
+                        font: Some(&FONT),
                         font_size,
                         font_scale,
                         font_scale_aspect: character_width,

@@ -1,19 +1,20 @@
-use std::{fs, sync::LazyLock};
-
 use macroquad::{
     camera::{self, Camera2D},
     color::{Color, colors},
     input::{self, MouseButton},
     math::Vec2,
     shapes,
-    text::{self, Font, TextParams},
+    text::{self, TextParams},
     texture::{self, DrawTextureParams, FilterMode, RenderTargetParams},
     window,
 };
 
-use crate::simulation::{
-    computer::Computer,
-    program::{Program, ProgramAssemblyError},
+use crate::{
+    interface::FONT,
+    simulation::{
+        computer::Computer,
+        program::{Program, ProgramAssemblyError},
+    },
 };
 
 use super::text_editor::TextEditor;
@@ -26,12 +27,6 @@ pub fn total_screen_width() -> f32 {
 pub fn scaling_factor() -> f32 {
     window::screen_height() / SCREEN_HEIGHT
 }
-
-/// The width of each character should be 0.6 times the font size
-pub static FONT: LazyLock<Font> = LazyLock::new(|| {
-    text::load_ttf_font_from_bytes(&fs::read("assets/CommitMonoNerdFontMono-Regular.otf").unwrap())
-        .unwrap()
-});
 
 #[derive(Debug)]
 pub struct EditorWindow {
