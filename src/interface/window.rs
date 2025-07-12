@@ -74,13 +74,14 @@ impl EditorWindow {
         let program = Program::assemble_from(title.clone(), &text_editor.text, target_computer);
 
         let content_size = size - Self::BORDER_WIDTH * 2.0;
+        let target_size = content_size * 4.0;
 
         let camera = Camera2D {
             zoom: -2.0 / content_size,
             offset: Vec2::new(1.0, 1.0),
             render_target: Some({
                 let render_target =
-                    texture::render_target(content_size.x as u32 * 4, content_size.y as u32 * 4);
+                    texture::render_target(target_size.x as u32, target_size.y as u32);
                 render_target.texture.set_filter(FilterMode::Linear);
                 render_target
             }),
