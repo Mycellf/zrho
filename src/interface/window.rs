@@ -223,6 +223,7 @@ impl EditorWindow {
         );
     }
 
+    /// BUG: Black boxes can appear over text if a new scaling factor has just been selected
     pub fn update_texture(&self) {
         camera::push_camera_state();
         camera::set_camera(&self.camera);
