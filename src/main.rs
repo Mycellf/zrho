@@ -66,6 +66,8 @@ async fn main() {
         4.0,
     ));
 
+    windows[0].is_focused = true;
+
     loop {
         if input::is_key_pressed(KeyCode::F11) {
             fullscreen ^= true;
@@ -80,7 +82,7 @@ async fn main() {
 
             window_grabbed |= window.grab_position.is_some();
 
-            let is_clicked = window.update(window_grabbed, i) && !window_grabbed;
+            let is_clicked = window.update(window_grabbed) && !window_grabbed;
 
             if !is_clicked {
                 i += 1;
@@ -88,7 +90,13 @@ async fn main() {
                 window_grabbed = true;
 
                 if i > 0 {
-                    let window = windows.remove(i);
+                    let front_window = &mut windows[0];
+                    front_window.is_focused = false;
+                    front_window.contents_updated = true;
+
+                    let mut window = windows.remove(i);
+                    window.is_focused = true;
+                    window.contents_updated = true;
                     windows.insert(0, window);
                 }
             }

@@ -123,12 +123,7 @@ impl EditorWindow {
             Program::assemble_from(self.title.clone(), &self.text_editor.text, target_computer);
     }
 
-    pub fn update(&mut self, any_window_grabbed: bool, ordering: usize) -> bool {
-        let is_focused = ordering == 0;
-        self.contents_updated |= is_focused ^ self.is_focused;
-
-        self.is_focused = is_focused;
-
+    pub fn update(&mut self, any_window_grabbed: bool) -> bool {
         let mouse_position = Vec2::from(input::mouse_position());
 
         let is_clicked = self.is_point_within_bounds(mouse_position)
@@ -206,7 +201,7 @@ impl EditorWindow {
             self.position.y,
             size.x,
             size.y,
-            Self::WINDOW_COLOR,
+            Self::BACKGROUND_COLOR,
         );
 
         texture::draw_texture_ex(
@@ -230,7 +225,7 @@ impl EditorWindow {
 
         let (font_size, font_scale, _) = text::camera_font_scale(Self::TEXT_SIZE);
 
-        shapes::draw_rectangle(0.0, 0.0, self.size.x, self.size.y, Self::WINDOW_COLOR);
+        shapes::draw_rectangle(0.0, 0.0, self.size.x, self.size.y, Self::BACKGROUND_COLOR);
 
         // Text
         self.text_editor.draw_all(
