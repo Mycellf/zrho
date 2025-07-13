@@ -45,8 +45,6 @@ pub struct EditorWindow {
     pub text_editor: TextEditor,
     pub scroll: f32,
     pub scroll_bar: Option<ScrollBar>,
-    /// TODO: debug
-    pub debug_scroll_speed: f32,
     pub text_offset: f32,
     pub program: Result<Program, Vec<ProgramAssemblyError>>,
 
@@ -88,7 +86,6 @@ impl EditorWindow {
 
         let scroll = 0.0;
         let scroll_bar = None;
-        let debug_scroll_speed = (text_editor.num_lines() - 1) as f32 / 10.0;
         let text_offset = 0.0;
         let program = Program::assemble_from(title.clone(), &text_editor.text, target_computer);
 
@@ -119,7 +116,6 @@ impl EditorWindow {
             text_editor,
             scroll,
             scroll_bar,
-            debug_scroll_speed,
             text_offset,
             program,
 
@@ -161,25 +157,6 @@ impl EditorWindow {
                 Self::position_from_proportionally(self.proportional_position, self.size);
         }
 
-        // Update debug scrolling
-        self.scroll += macroquad::time::get_frame_time() * self.debug_scroll_speed;
-        match self.debug_scroll_speed {
-            ..0.0 => {
-                if self.scroll <= 0.0 {
-                    self.debug_scroll_speed *= -1.0;
-                    self.scroll = 0.0;
-                }
-            }
-            0.0.. => {
-                if self.scroll >= self.maximum_scroll() {
-                    self.debug_scroll_speed *= -1.0;
-                    self.scroll = self.maximum_scroll();
-                }
-            }
-            _ => unreachable!(),
-        }
-        self.contents_updated = true;
-
         self.text_offset = (self.scroll.floor() - self.scroll) * Self::TEXT_SIZE;
 
         self.update_scroll_bar();
@@ -188,7 +165,28 @@ impl EditorWindow {
     }
 
     pub fn update_scroll_bar(&mut self) {
-        let scroll_bar_width = Self::BORDER_WIDTH;
+        let mouse_position = Vec2::from(input::mouse_position());
+
+        let (scroll_bar_width, is_selected) = if let Some(scroll_bar) = self.scroll_bar {
+            let is_selected = self.is_point_within_scroll_bar_region(mouse_position);
+
+            let target_width = if is_selected {
+                ScrollBar::SELECTED_WIDTH
+            } else {
+                ScrollBar::UNSELECTED_WIDTH
+            };
+
+            self.contents_updated |= target_width != scroll_bar.size.x;
+
+            let frame_time = macroquad::time::get_frame_time();
+
+            (
+                exp_decay(scroll_bar.size.x, target_width, 25.0, frame_time),
+                is_selected,
+            )
+        } else {
+            (ScrollBar::UNSELECTED_WIDTH, false)
+        };
         let scroll_bar_height = self.height_of_editor()
             / (self.text_editor.num_lines() as f32 * Self::TEXT_SIZE + self.height_of_editor()
                 - Self::TEXT_SIZE);
@@ -202,6 +200,7 @@ impl EditorWindow {
             ScrollBar {
                 size: Vec2::new(scroll_bar_width, scroll_bar_height),
                 vertical_offset,
+                is_selected,
             }
         });
     }
@@ -247,6 +246,30 @@ impl EditorWindow {
     #[must_use]
     pub fn is_point_within_editor(&self, point: Vec2) -> bool {
         point.x >= self.position.x
+            && point.y >= self.position.y + Self::TITLE_HEIGHT * scaling_factor()
+            && point.x <= self.position.x + self.size.x * scaling_factor()
+            && point.y <= self.position.y + self.size.y * scaling_factor()
+    }
+
+    #[must_use]
+    pub fn is_point_within_scroll_bar(&self, point: Vec2) -> bool {
+        self.scroll_bar.is_some_and(|scroll_bar| {
+            point.x >= self.position.x + (self.size.x - ScrollBar::MAX_WIDTH) * scaling_factor()
+                && point.y
+                    >= self.position.y
+                        + (Self::TITLE_HEIGHT + scroll_bar.vertical_offset) * scaling_factor()
+                && point.x <= self.position.x + self.size.x * scaling_factor()
+                && point.y
+                    <= self.position.y
+                        + (Self::TITLE_HEIGHT + scroll_bar.vertical_offset + scroll_bar.size.y)
+                            * scaling_factor()
+        })
+    }
+
+    #[must_use]
+    pub fn is_point_within_scroll_bar_region(&self, point: Vec2) -> bool {
+        self.scroll_bar.is_some()
+            && point.x >= self.position.x + (self.size.x - ScrollBar::MAX_WIDTH) * scaling_factor()
             && point.y >= self.position.y + Self::TITLE_HEIGHT * scaling_factor()
             && point.x <= self.position.x + self.size.x * scaling_factor()
             && point.y <= self.position.y + self.size.y * scaling_factor()
@@ -353,6 +376,14 @@ impl EditorWindow {
         if let Some(scroll_bar) = self.scroll_bar {
             shapes::draw_rectangle(
                 self.size.x - scroll_bar.size.x,
+                Self::TITLE_HEIGHT,
+                scroll_bar.size.x - Self::BORDER_WIDTH,
+                self.height_of_editor(),
+                background_color,
+            );
+
+            shapes::draw_rectangle(
+                self.size.x - scroll_bar.size.x,
                 Self::TITLE_HEIGHT + scroll_bar.vertical_offset,
                 scroll_bar.size.x,
                 scroll_bar.size.y,
@@ -411,8 +442,19 @@ impl EditorWindow {
 pub struct ScrollBar {
     pub size: Vec2,
     pub vertical_offset: f32,
+    pub is_selected: bool,
 }
 
 impl ScrollBar {
     pub const COLOR: Color = colors::WHITE;
+
+    pub const SELECTED_WIDTH: f32 = 7.5;
+    pub const UNSELECTED_WIDTH: f32 = EditorWindow::BORDER_WIDTH;
+    pub const MAX_WIDTH: f32 = Self::SELECTED_WIDTH.max(Self::UNSELECTED_WIDTH);
+    pub const MIN_WIDTH: f32 = Self::SELECTED_WIDTH.min(Self::UNSELECTED_WIDTH);
+}
+
+/// CREDIT: Freya Holmér: https://www.youtube.com/watch?v=LSNQuFEDOyQ
+pub fn exp_decay(a: f32, b: f32, decay: f32, dt: f32) -> f32 {
+    b + (a - b) * (-decay * dt).exp()
 }
