@@ -20,10 +20,12 @@ use crate::{
 use super::text_editor::TextEditor;
 
 pub const SCREEN_HEIGHT: f32 = 1000.0;
+#[must_use]
 pub fn total_screen_width() -> f32 {
     window::screen_width() / scaling_factor()
 }
 
+#[must_use]
 pub fn scaling_factor() -> f32 {
     window::screen_height() / SCREEN_HEIGHT
 }
@@ -281,6 +283,7 @@ impl EditorWindow {
         }
     }
 
+    #[must_use]
     pub fn proportional_position_from(position: Vec2, size: Vec2) -> Vec2 {
         let size = size * scaling_factor();
 
@@ -300,6 +303,7 @@ impl EditorWindow {
         )
     }
 
+    #[must_use]
     pub fn position_from_proportionally(proportional_position: Vec2, size: Vec2) -> Vec2 {
         let size = size * scaling_factor();
 
