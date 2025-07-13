@@ -1,4 +1,4 @@
-### zρ (zee-rho, aka zero)
+# zρ (zee-rho, aka zero)
 
 A programming language for video game hacking. 
 Inspired by the EXA VM from Exapunks. 
