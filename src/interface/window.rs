@@ -406,7 +406,15 @@ impl EditorWindow {
     pub fn is_point_within_editor(&self, point: Vec2) -> bool {
         point.x >= self.position.x - Self::WINDOW_PADDING * scaling_factor()
             && point.y >= self.position.y + Self::TITLE_HEIGHT * scaling_factor()
-            && point.x <= self.position.x + (self.size.x + Self::WINDOW_PADDING) * scaling_factor()
+            && point.x
+                <= self.position.x
+                    + (self.size.x
+                        + if self.scroll_bar.is_some() {
+                            -(ScrollBar::MAX_WIDTH + Self::ELEMENT_PADDING)
+                        } else {
+                            Self::WINDOW_PADDING
+                        })
+                        * scaling_factor()
             && point.y <= self.position.y + (self.size.y + Self::WINDOW_PADDING) * scaling_factor()
     }
 
@@ -438,7 +446,7 @@ impl EditorWindow {
                         * scaling_factor()
             && point.y >= self.position.y + Self::TITLE_HEIGHT * scaling_factor()
             && point.x <= self.position.x + (self.size.x + Self::WINDOW_PADDING) * scaling_factor()
-            && point.y <= self.position.y + self.size.y * scaling_factor()
+            && point.y <= self.position.y + (self.size.y - Self::BORDER_WIDTH) * scaling_factor()
     }
 }
 
