@@ -93,7 +93,7 @@ impl EditorWindow {
             )),
             ..Default::default()
         };
-        let window_updated = true;
+        let contents_updated = true;
 
         Self {
             position,
@@ -110,7 +110,7 @@ impl EditorWindow {
             program,
 
             camera,
-            contents_updated: window_updated,
+            contents_updated,
         }
     }
 
