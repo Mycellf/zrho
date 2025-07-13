@@ -43,6 +43,10 @@ pub struct EditorWindow {
     pub is_focused: bool,
 
     pub text_editor: TextEditor,
+    pub scroll: f32,
+    /// TODO: debug
+    pub scroll_speed: f32,
+    pub text_offset: f32,
     pub program: Result<Program, Vec<ProgramAssemblyError>>,
 
     pub camera: Camera2D,
@@ -82,6 +86,8 @@ impl EditorWindow {
         let grab_position = None;
         let is_focused = false;
 
+        let scroll = 0.0;
+        let text_offset = 0.0;
         let program = Program::assemble_from(title.clone(), &text_editor.text, target_computer);
 
         let target_size = size * Self::RESOLUTION_UPSCALING as f32;
@@ -109,6 +115,9 @@ impl EditorWindow {
             is_focused,
 
             text_editor,
+            scroll,
+            scroll_speed: 5.0,
+            text_offset,
             program,
 
             camera,
@@ -147,6 +156,28 @@ impl EditorWindow {
             self.position =
                 Self::position_from_proportionally(self.proportional_position, self.size);
         }
+
+        self.scroll += macroquad::time::get_frame_time() * self.scroll_speed;
+        match self.scroll_speed {
+            ..0.0 => {
+                if self.scroll <= 0.0 {
+                    self.scroll_speed *= -1.0;
+                    self.scroll = 0.0;
+                }
+            }
+            0.0.. => {
+                let maximum_scroll = (self.text_editor.num_lines() - 1) as f32;
+
+                if self.scroll >= maximum_scroll {
+                    self.scroll_speed *= -1.0;
+                    self.scroll = maximum_scroll
+                }
+            }
+            _ => unreachable!(),
+        }
+        self.contents_updated = true;
+
+        self.text_offset = (self.scroll.floor() - self.scroll) * Self::TEXT_SIZE;
 
         is_clicked
     }
@@ -187,6 +218,19 @@ impl EditorWindow {
             && point.y >= self.position.y
             && point.x <= self.position.x + self.size.x * scaling_factor()
             && point.y <= self.position.y + Self::TITLE_HEIGHT * scaling_factor()
+    }
+
+    #[must_use]
+    pub fn is_point_within_editor(&self, point: Vec2) -> bool {
+        point.x >= self.position.x
+            && point.y >= self.position.y + Self::TITLE_HEIGHT * scaling_factor()
+            && point.x <= self.position.x + self.size.x * scaling_factor()
+            && point.y <= self.position.y + self.size.y * scaling_factor()
+    }
+
+    #[must_use]
+    pub fn height_of_editor(&self) -> f32 {
+        self.size.y - Self::TITLE_HEIGHT - Self::BORDER_WIDTH
     }
 
     pub fn draw(&mut self) {
@@ -234,14 +278,21 @@ impl EditorWindow {
         );
 
         // Text
-        self.text_editor.draw_all(
-            Vec2::new(Self::BORDER_WIDTH + 5.0, Self::TITLE_HEIGHT),
+        let start_line = self.scroll.floor() as usize;
+        let end_line = (self.scroll + self.height_of_editor() / Self::TEXT_SIZE).ceil() as usize;
+
+        self.text_editor.draw_range(
+            start_line..end_line,
+            Vec2::new(
+                Self::BORDER_WIDTH + 5.0,
+                Self::TITLE_HEIGHT + self.text_offset,
+            ),
             Self::TEXT_SIZE,
             1.0,
             1.0,
         );
 
-        // Header
+        // Header and outline
         let (text_color, background_color) = if self.is_focused {
             (Self::EDITOR_BACKGROUND_COLOR, self.title_color)
         } else {
@@ -268,6 +319,27 @@ impl EditorWindow {
                 ..Self::text_params_with_size(Self::TEXT_SIZE)
             },
         );
+
+        // Scroll bar
+        let scroll_bar_width = 5.0;
+        let scroll_bar_height = self.height_of_editor()
+            / (self.text_editor.num_lines() as f32 * Self::TEXT_SIZE + self.height_of_editor()
+                - Self::TEXT_SIZE);
+
+        if scroll_bar_height < 1.0 {
+            let scroll_bar_height = (scroll_bar_height * self.height_of_editor()).max(20.0);
+
+            let scroll_bar_position = (self.height_of_editor() - scroll_bar_height)
+                * (self.scroll / (self.text_editor.num_lines() - 1) as f32);
+
+            shapes::draw_rectangle(
+                self.size.x - scroll_bar_width,
+                Self::TITLE_HEIGHT + scroll_bar_position,
+                scroll_bar_width,
+                scroll_bar_height,
+                colors::LIGHTGRAY,
+            );
+        }
 
         camera::pop_camera_state();
     }

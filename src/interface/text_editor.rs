@@ -45,6 +45,10 @@ impl TextEditor {
         lines
     }
 
+    pub fn num_lines(&self) -> usize {
+        self.lines.len() - 1
+    }
+
     pub fn update_colors_of_all_lines(&mut self) {
         for i in 0..self.lines.len() {
             self.update_colors_of_line(i).unwrap();
@@ -81,7 +85,9 @@ impl TextEditor {
         let line_height = line_height * text_size;
 
         for i in lines {
-            let segments = self.color_segments_of_line(i).unwrap();
+            let Some(segments) = self.color_segments_of_line(i) else {
+                continue;
+            };
 
             position.y += line_height;
             let mut line_position = position - Vec2::Y * line_height * 0.125;
