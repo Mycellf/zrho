@@ -429,7 +429,7 @@ impl EditorWindow {
                     >= self.position.y
                         + (Self::TITLE_HEIGHT + scroll_bar.vertical_offset) * scaling_factor()
                 && point.x
-                    <= self.position.x + (self.size.x + Self::WINDOW_PADDING) * scaling_factor()
+                    <= self.position.x + (self.size.x + Self::ELEMENT_PADDING) * scaling_factor()
                 && point.y
                     <= self.position.y
                         + (Self::TITLE_HEIGHT + scroll_bar.vertical_offset + scroll_bar.size.y)
@@ -445,7 +445,7 @@ impl EditorWindow {
                     + (self.size.x - ScrollBar::MAX_WIDTH - Self::ELEMENT_PADDING)
                         * scaling_factor()
             && point.y >= self.position.y + Self::TITLE_HEIGHT * scaling_factor()
-            && point.x <= self.position.x + (self.size.x + Self::WINDOW_PADDING) * scaling_factor()
+            && point.x <= self.position.x + (self.size.x + Self::ELEMENT_PADDING) * scaling_factor()
             && point.y <= self.position.y + (self.size.y - Self::BORDER_WIDTH) * scaling_factor()
     }
 }
