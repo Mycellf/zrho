@@ -8,7 +8,7 @@ Inspired by the EXA VM from Exapunks.
 * Each instruction is 3 characters long
 * Semicolons start comments
 
-Acceptable file extensions: .zρ, .zrho
+Acceptable file extensions: `.zρ`, `.zrho`
 
 ```zρ
 ; Store the numbers from 0 to 10, inclusive
