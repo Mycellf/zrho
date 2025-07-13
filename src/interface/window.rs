@@ -70,7 +70,6 @@ impl EditorWindow {
     pub const TITLE_PADDING: f32 = 20.0;
     pub const TITLE_HEIGHT: f32 = Self::TEXT_SIZE + Self::TITLE_PADDING;
 
-    pub const TEXT_UPSCALING: u16 = 1;
     pub const RESOLUTION_UPSCALING: u16 = 4;
 
     pub fn new(
@@ -351,8 +350,8 @@ impl EditorWindow {
     pub fn text_params_with_size(text_size: f32) -> TextParams<'static> {
         TextParams {
             font: Some(&FONT),
-            font_size: (text_size * Self::TEXT_UPSCALING as f32) as u16,
-            font_scale: 1.0 / Self::TEXT_UPSCALING as f32,
+            font_size: (text_size * Self::RESOLUTION_UPSCALING as f32) as u16,
+            font_scale: 1.0 / Self::RESOLUTION_UPSCALING as f32,
             font_scale_aspect: 1.0,
             rotation: 0.0,
             color: colors::WHITE,
