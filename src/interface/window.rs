@@ -127,7 +127,7 @@ impl EditorWindow {
         }
     }
 
-    pub fn update(&mut self, any_window_grabbed: bool) -> bool {
+    pub fn update(&mut self, focus: WindowFocus, index: usize) -> bool {
         let mouse_position = Vec2::from(input::mouse_position());
 
         let is_clicked = self.is_point_within_bounds(mouse_position)
@@ -145,7 +145,7 @@ impl EditorWindow {
                 self.grab_position = None;
             }
         } else if is_clicked
-            && !any_window_grabbed
+            && focus.grab.is_none()
             && input::is_mouse_button_down(MouseButton::Left)
             && self.is_point_within_title_bar(mouse_position)
         {
@@ -157,16 +157,17 @@ impl EditorWindow {
 
         self.text_offset = (self.scroll.floor() - self.scroll) * Self::TEXT_SIZE;
 
-        self.update_scroll_bar();
+        self.update_scroll_bar(focus, index);
 
         is_clicked
     }
 
-    pub fn update_scroll_bar(&mut self) {
+    pub fn update_scroll_bar(&mut self, focus: WindowFocus, index: usize) {
         let mouse_position = Vec2::from(input::mouse_position());
 
         let (scroll_bar_width, is_selected) = if let Some(scroll_bar) = self.scroll_bar {
-            let is_selected = self.is_point_within_scroll_bar_region(mouse_position);
+            let is_selected = focus.mouse == Some(index)
+                && self.is_point_within_scroll_bar_region(mouse_position);
 
             let target_width = if is_selected {
                 ScrollBar::SELECTED_WIDTH
@@ -455,6 +456,12 @@ impl ScrollBar {
     pub const UNSELECTED_WIDTH: f32 = EditorWindow::BORDER_WIDTH;
     pub const MAX_WIDTH: f32 = Self::SELECTED_WIDTH.max(Self::UNSELECTED_WIDTH);
     pub const MIN_WIDTH: f32 = Self::SELECTED_WIDTH.min(Self::UNSELECTED_WIDTH);
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct WindowFocus {
+    pub grab: Option<usize>,
+    pub mouse: Option<usize>,
 }
 
 /// CREDIT: Freya Holmér: https://www.youtube.com/watch?v=LSNQuFEDOyQ

@@ -5,7 +5,10 @@ use macroquad::{
 };
 
 use crate::{
-    interface::{text_editor::TextEditor, window::EditorWindow},
+    interface::{
+        text_editor::TextEditor,
+        window::{EditorWindow, WindowFocus},
+    },
     simulation::{
         computer::{self, BlockCondition, Computer, Register, RegisterSet, RegisterValues},
         instruction,
@@ -68,20 +71,32 @@ async fn main() {
             window::set_fullscreen(fullscreen);
         }
 
-        let mut window_grabbed = false;
+        let mut focus = WindowFocus::default();
 
         let mut i = 0;
         while i < windows.len() {
             let window = &mut windows[i];
 
-            window_grabbed |= window.grab_position.is_some();
+            if focus.grab.is_none() {
+                if window.grab_position.is_some() {
+                    focus.grab = Some(i);
+                    focus.mouse = None;
+                }
 
-            let is_clicked = window.update(window_grabbed) && !window_grabbed;
+                if focus.mouse.is_none()
+                    && window.is_point_within_bounds(input::mouse_position().into())
+                {
+                    focus.mouse = Some(i);
+                }
+            }
+
+            let is_clicked = window.update(focus, i) && focus.grab.is_none();
 
             if !is_clicked {
                 i += 1;
             } else {
-                window_grabbed = true;
+                focus.grab = Some(i);
+                focus.mouse = None;
 
                 if i > 0 {
                     let front_window = &mut windows[0];
