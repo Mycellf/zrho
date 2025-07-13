@@ -361,7 +361,7 @@ impl EditorWindow {
             self.size.x,
             self.size.y,
             Self::BORDER_WIDTH * 2.0,
-            background_color,
+            Self::WINDOW_COLOR,
         );
 
         shapes::draw_rectangle(0.0, 0.0, self.size.x, Self::TITLE_HEIGHT, background_color);
@@ -383,7 +383,7 @@ impl EditorWindow {
                 Self::TITLE_HEIGHT,
                 scroll_bar.size.x - Self::BORDER_WIDTH,
                 self.height_of_editor(),
-                background_color,
+                Self::WINDOW_COLOR,
             );
 
             shapes::draw_rectangle(
@@ -391,7 +391,7 @@ impl EditorWindow {
                 Self::TITLE_HEIGHT + scroll_bar.vertical_offset,
                 scroll_bar.size.x,
                 scroll_bar.size.y,
-                colors::WHITE,
+                ScrollBar::COLOR,
             );
         }
 
