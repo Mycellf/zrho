@@ -45,7 +45,7 @@ pub struct EditorWindow {
     pub text_editor: TextEditor,
     pub scroll: f32,
     /// TODO: debug
-    pub scroll_speed: f32,
+    pub debug_scroll_speed: f32,
     pub text_offset: f32,
     pub program: Result<Program, Vec<ProgramAssemblyError>>,
 
@@ -87,6 +87,7 @@ impl EditorWindow {
         let is_focused = false;
 
         let scroll = 0.0;
+        let debug_scroll_speed = (text_editor.num_lines() - 1) as f32 / 10.0;
         let text_offset = 0.0;
         let program = Program::assemble_from(title.clone(), &text_editor.text, target_computer);
 
@@ -116,7 +117,7 @@ impl EditorWindow {
 
             text_editor,
             scroll,
-            scroll_speed: 5.0,
+            debug_scroll_speed,
             text_offset,
             program,
 
@@ -157,17 +158,17 @@ impl EditorWindow {
                 Self::position_from_proportionally(self.proportional_position, self.size);
         }
 
-        self.scroll += macroquad::time::get_frame_time() * self.scroll_speed;
-        match self.scroll_speed {
+        self.scroll += macroquad::time::get_frame_time() * self.debug_scroll_speed;
+        match self.debug_scroll_speed {
             ..0.0 => {
                 if self.scroll <= 0.0 {
-                    self.scroll_speed *= -1.0;
+                    self.debug_scroll_speed *= -1.0;
                     self.scroll = 0.0;
                 }
             }
             0.0.. => {
                 if self.scroll >= self.maximum_scroll() {
-                    self.scroll_speed *= -1.0;
+                    self.debug_scroll_speed *= -1.0;
                     self.scroll = self.maximum_scroll();
                 }
             }
