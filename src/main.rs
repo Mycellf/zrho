@@ -96,7 +96,6 @@ async fn main() {
                 i += 1;
             } else {
                 focus.grab = Some(i);
-                focus.mouse = None;
 
                 if i > 0 {
                     let front_window = &mut windows[0];
