@@ -182,9 +182,8 @@ impl EditorWindow {
                         scroll_bar.grab_position = None;
                     }
                 } else if input::is_mouse_button_pressed(MouseButton::Left) {
-                    if !(scroll_bar.vertical_offset
-                        ..=scroll_bar.vertical_offset + scroll_bar.size.y)
-                        .contains(&mouse_offset)
+                    if mouse_offset < scroll_bar.vertical_offset
+                        || mouse_offset > scroll_bar.vertical_offset + scroll_bar.size.y
                     {
                         scroll_bar.vertical_offset = (mouse_offset - scroll_bar.size.y / 2.0)
                             .clamp(0.0, self.height_of_editor() - scroll_bar.size.y);
