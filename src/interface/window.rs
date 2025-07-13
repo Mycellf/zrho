@@ -127,11 +127,6 @@ impl EditorWindow {
         }
     }
 
-    pub fn assemble_program(&mut self, target_computer: &Computer) {
-        self.program =
-            Program::assemble_from(self.title.clone(), &self.text_editor.text, target_computer);
-    }
-
     pub fn update(&mut self, any_window_grabbed: bool) -> bool {
         let mouse_position = Vec2::from(input::mouse_position());
 
