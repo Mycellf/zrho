@@ -166,11 +166,9 @@ impl EditorWindow {
                 }
             }
             0.0.. => {
-                let maximum_scroll = (self.text_editor.num_lines() - 1) as f32;
-
-                if self.scroll >= maximum_scroll {
+                if self.scroll >= self.maximum_scroll() {
                     self.scroll_speed *= -1.0;
-                    self.scroll = maximum_scroll
+                    self.scroll = self.maximum_scroll();
                 }
             }
             _ => unreachable!(),
@@ -231,6 +229,11 @@ impl EditorWindow {
     #[must_use]
     pub fn height_of_editor(&self) -> f32 {
         self.size.y - Self::TITLE_HEIGHT - Self::BORDER_WIDTH
+    }
+
+    #[must_use]
+    pub fn maximum_scroll(&self) -> f32 {
+        (self.text_editor.num_lines() - 1) as f32
     }
 
     pub fn draw(&mut self) {
@@ -321,23 +324,23 @@ impl EditorWindow {
         );
 
         // Scroll bar
-        let scroll_bar_width = 5.0;
+        let scroll_bar_width = Self::BORDER_WIDTH;
         let scroll_bar_height = self.height_of_editor()
             / (self.text_editor.num_lines() as f32 * Self::TEXT_SIZE + self.height_of_editor()
                 - Self::TEXT_SIZE);
 
         if scroll_bar_height < 1.0 {
-            let scroll_bar_height = (scroll_bar_height * self.height_of_editor()).max(20.0);
+            let scroll_bar_height = (scroll_bar_height * self.height_of_editor()).max(40.0);
 
             let scroll_bar_position = (self.height_of_editor() - scroll_bar_height)
-                * (self.scroll / (self.text_editor.num_lines() - 1) as f32);
+                * (self.scroll / self.maximum_scroll());
 
             shapes::draw_rectangle(
                 self.size.x - scroll_bar_width,
                 Self::TITLE_HEIGHT + scroll_bar_position,
                 scroll_bar_width,
                 scroll_bar_height,
-                colors::LIGHTGRAY,
+                colors::WHITE,
             );
         }
 
