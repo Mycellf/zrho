@@ -78,7 +78,7 @@ async fn main() {
             let window = &mut windows[i];
 
             if focus.grab.is_none() {
-                if window.grab_position.is_some() {
+                if window.is_grabbed() {
                     focus.grab = Some(i);
                     focus.mouse = None;
                 }

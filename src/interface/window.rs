@@ -155,9 +155,9 @@ impl EditorWindow {
                 Self::position_from_proportionally(self.proportional_position, self.size);
         }
 
-        self.text_offset = (self.scroll.floor() - self.scroll) * Self::TEXT_SIZE;
-
         self.update_scroll_bar(focus, index);
+
+        self.text_offset = (self.scroll.floor() - self.scroll) * Self::TEXT_SIZE;
 
         is_clicked
     }
@@ -165,27 +165,69 @@ impl EditorWindow {
     pub fn update_scroll_bar(&mut self, focus: WindowFocus, index: usize) {
         let mouse_position = Vec2::from(input::mouse_position());
 
-        let (scroll_bar_width, is_selected) = if let Some(scroll_bar) = self.scroll_bar {
-            let is_selected = focus.mouse == Some(index)
-                && self.is_point_within_scroll_bar_region(mouse_position);
+        if let Some(mut scroll_bar) = self.scroll_bar {
+            let mut scrolled = false;
 
-            let target_width = if is_selected {
-                ScrollBar::SELECTED_WIDTH
+            if scroll_bar.is_selected {
+                let mouse_offset =
+                    (mouse_position.y - self.position.y - Self::TITLE_HEIGHT) / scaling_factor();
+
+                if let Some(grab_position) = scroll_bar.grab_position {
+                    if input::is_mouse_button_down(MouseButton::Left) {
+                        scroll_bar.vertical_offset = (mouse_offset - grab_position)
+                            .clamp(0.0, self.height_of_editor() - scroll_bar.size.y);
+
+                        scrolled = true;
+                    } else {
+                        scroll_bar.grab_position = None;
+                    }
+                } else if input::is_mouse_button_pressed(MouseButton::Left) {
+                    if (scroll_bar.vertical_offset..=scroll_bar.vertical_offset + scroll_bar.size.y)
+                        .contains(&mouse_offset)
+                    {
+                        scroll_bar.grab_position = Some(mouse_offset - scroll_bar.vertical_offset);
+                    } else {
+                        scroll_bar.vertical_offset = (mouse_offset - scroll_bar.size.y / 2.0)
+                            .clamp(0.0, self.height_of_editor() - scroll_bar.size.y);
+
+                        scrolled = true;
+                    }
+                }
+            }
+
+            self.scroll_bar = Some(scroll_bar);
+
+            if scrolled {
+                self.scroll = scroll_bar.vertical_offset
+                    / (self.height_of_editor() - scroll_bar.size.y)
+                    * self.maximum_scroll();
+            }
+        }
+
+        let (scroll_bar_width, is_selected, grab_position) =
+            if let Some(scroll_bar) = self.scroll_bar {
+                let is_selected = scroll_bar.grab_position.is_some()
+                    || focus.mouse == Some(index)
+                        && self.is_point_within_scroll_bar_region(mouse_position);
+
+                let target_width = if is_selected {
+                    ScrollBar::SELECTED_WIDTH
+                } else {
+                    ScrollBar::UNSELECTED_WIDTH
+                };
+
+                self.contents_updated |= target_width != scroll_bar.size.x;
+
+                let frame_time = macroquad::time::get_frame_time();
+
+                (
+                    exp_decay(scroll_bar.size.x, target_width, 25.0, frame_time),
+                    is_selected,
+                    scroll_bar.grab_position,
+                )
             } else {
-                ScrollBar::UNSELECTED_WIDTH
+                (ScrollBar::UNSELECTED_WIDTH, false, None)
             };
-
-            self.contents_updated |= target_width != scroll_bar.size.x;
-
-            let frame_time = macroquad::time::get_frame_time();
-
-            (
-                exp_decay(scroll_bar.size.x, target_width, 25.0, frame_time),
-                is_selected,
-            )
-        } else {
-            (ScrollBar::UNSELECTED_WIDTH, false)
-        };
         let scroll_bar_height = self.height_of_editor()
             / (self.text_editor.num_lines() as f32 * Self::TEXT_SIZE + self.height_of_editor()
                 - Self::TEXT_SIZE);
@@ -200,6 +242,7 @@ impl EditorWindow {
                 size: Vec2::new(scroll_bar_width, scroll_bar_height),
                 vertical_offset,
                 is_selected,
+                grab_position,
             }
         });
     }
@@ -232,6 +275,18 @@ impl EditorWindow {
     #[must_use]
     pub fn maximum_scroll(&self) -> f32 {
         (self.text_editor.num_lines() - 1) as f32
+    }
+
+    #[must_use]
+    pub fn is_grabbed(&self) -> bool {
+        self.grab_position.is_some()
+            || matches!(
+                self.scroll_bar,
+                Some(ScrollBar {
+                    grab_position: Some(_),
+                    ..
+                })
+            )
     }
 
     pub fn draw(&mut self) {
@@ -455,6 +510,7 @@ pub struct ScrollBar {
     pub size: Vec2,
     pub vertical_offset: f32,
     pub is_selected: bool,
+    pub grab_position: Option<f32>,
 }
 
 impl ScrollBar {
