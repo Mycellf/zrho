@@ -71,6 +71,9 @@ impl EditorWindow {
 
     pub const RESOLUTION_UPSCALING: u16 = 4;
 
+    pub const WINDOW_PADDING: f32 = 10.0;
+    pub const ELEMENT_PADDING: f32 = 5.0;
+
     pub fn new(
         proportional_position: Vec2,
         size: Vec2,
@@ -223,56 +226,6 @@ impl EditorWindow {
         if self.position.y < 0.0 {
             self.position.y = 0.0;
         }
-    }
-
-    #[must_use]
-    pub fn is_point_within_bounds(&self, point: Vec2) -> bool {
-        let size = self.size * scaling_factor();
-
-        point.x >= self.position.x
-            && point.y >= self.position.y
-            && point.x <= self.position.x + size.x
-            && point.y <= self.position.y + size.y
-    }
-
-    #[must_use]
-    pub fn is_point_within_title_bar(&self, point: Vec2) -> bool {
-        point.x >= self.position.x
-            && point.y >= self.position.y
-            && point.x <= self.position.x + self.size.x * scaling_factor()
-            && point.y <= self.position.y + Self::TITLE_HEIGHT * scaling_factor()
-    }
-
-    #[must_use]
-    pub fn is_point_within_editor(&self, point: Vec2) -> bool {
-        point.x >= self.position.x
-            && point.y >= self.position.y + Self::TITLE_HEIGHT * scaling_factor()
-            && point.x <= self.position.x + self.size.x * scaling_factor()
-            && point.y <= self.position.y + self.size.y * scaling_factor()
-    }
-
-    #[must_use]
-    pub fn is_point_within_scroll_bar(&self, point: Vec2) -> bool {
-        self.scroll_bar.is_some_and(|scroll_bar| {
-            point.x >= self.position.x + (self.size.x - ScrollBar::MAX_WIDTH) * scaling_factor()
-                && point.y
-                    >= self.position.y
-                        + (Self::TITLE_HEIGHT + scroll_bar.vertical_offset) * scaling_factor()
-                && point.x <= self.position.x + self.size.x * scaling_factor()
-                && point.y
-                    <= self.position.y
-                        + (Self::TITLE_HEIGHT + scroll_bar.vertical_offset + scroll_bar.size.y)
-                            * scaling_factor()
-        })
-    }
-
-    #[must_use]
-    pub fn is_point_within_scroll_bar_region(&self, point: Vec2) -> bool {
-        self.scroll_bar.is_some()
-            && point.x >= self.position.x + (self.size.x - ScrollBar::MAX_WIDTH) * scaling_factor()
-            && point.y >= self.position.y + Self::TITLE_HEIGHT * scaling_factor()
-            && point.x <= self.position.x + self.size.x * scaling_factor()
-            && point.y <= self.position.y + self.size.y * scaling_factor()
     }
 
     #[must_use]
@@ -435,6 +388,61 @@ impl EditorWindow {
         let dpi_scale = window::miniquad::window::dpi_scale();
 
         (position.max(Vec2::ZERO) * dpi_scale).round() / dpi_scale
+    }
+
+    #[must_use]
+    pub fn is_point_within_bounds(&self, point: Vec2) -> bool {
+        point.x >= self.position.x - Self::WINDOW_PADDING * scaling_factor()
+            && point.y >= self.position.y - Self::WINDOW_PADDING * scaling_factor()
+            && point.x <= self.position.x + (self.size.x + Self::WINDOW_PADDING) * scaling_factor()
+            && point.y <= self.position.y + (self.size.y + Self::WINDOW_PADDING) * scaling_factor()
+    }
+
+    #[must_use]
+    pub fn is_point_within_title_bar(&self, point: Vec2) -> bool {
+        point.x >= self.position.x - Self::WINDOW_PADDING * scaling_factor()
+            && point.y >= self.position.y - Self::WINDOW_PADDING * scaling_factor()
+            && point.x <= self.position.x + (self.size.x + Self::WINDOW_PADDING) * scaling_factor()
+            && point.y <= self.position.y + Self::TITLE_HEIGHT * scaling_factor()
+    }
+
+    #[must_use]
+    pub fn is_point_within_editor(&self, point: Vec2) -> bool {
+        point.x >= self.position.x - Self::WINDOW_PADDING * scaling_factor()
+            && point.y >= self.position.y + Self::TITLE_HEIGHT * scaling_factor()
+            && point.x <= self.position.x + (self.size.x + Self::WINDOW_PADDING) * scaling_factor()
+            && point.y <= self.position.y + (self.size.y + Self::WINDOW_PADDING) * scaling_factor()
+    }
+
+    #[must_use]
+    pub fn is_point_within_scroll_bar(&self, point: Vec2) -> bool {
+        self.scroll_bar.is_some_and(|scroll_bar| {
+            point.x
+                >= self.position.x
+                    + (self.size.x - ScrollBar::MAX_WIDTH - Self::ELEMENT_PADDING)
+                        * scaling_factor()
+                && point.y
+                    >= self.position.y
+                        + (Self::TITLE_HEIGHT + scroll_bar.vertical_offset) * scaling_factor()
+                && point.x
+                    <= self.position.x + (self.size.x + Self::WINDOW_PADDING) * scaling_factor()
+                && point.y
+                    <= self.position.y
+                        + (Self::TITLE_HEIGHT + scroll_bar.vertical_offset + scroll_bar.size.y)
+                            * scaling_factor()
+        })
+    }
+
+    #[must_use]
+    pub fn is_point_within_scroll_bar_region(&self, point: Vec2) -> bool {
+        self.scroll_bar.is_some()
+            && point.x
+                >= self.position.x
+                    + (self.size.x - ScrollBar::MAX_WIDTH - Self::ELEMENT_PADDING)
+                        * scaling_factor()
+            && point.y >= self.position.y + Self::TITLE_HEIGHT * scaling_factor()
+            && point.x <= self.position.x + (self.size.x + Self::WINDOW_PADDING) * scaling_factor()
+            && point.y <= self.position.y + self.size.y * scaling_factor()
     }
 }
 
