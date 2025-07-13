@@ -44,6 +44,7 @@ pub struct EditorWindow {
 
     pub text_editor: TextEditor,
     pub scroll: f32,
+    pub scroll_bar: Option<ScrollBar>,
     /// TODO: debug
     pub debug_scroll_speed: f32,
     pub text_offset: f32,
@@ -86,6 +87,7 @@ impl EditorWindow {
         let is_focused = false;
 
         let scroll = 0.0;
+        let scroll_bar = None;
         let debug_scroll_speed = (text_editor.num_lines() - 1) as f32 / 10.0;
         let text_offset = 0.0;
         let program = Program::assemble_from(title.clone(), &text_editor.text, target_computer);
@@ -116,6 +118,7 @@ impl EditorWindow {
 
             text_editor,
             scroll,
+            scroll_bar,
             debug_scroll_speed,
             text_offset,
             program,
@@ -136,6 +139,7 @@ impl EditorWindow {
         let is_clicked = self.is_point_within_bounds(mouse_position)
             && input::is_mouse_button_pressed(MouseButton::Left);
 
+        // Update grabbing
         if let Some(grab_position) = self.grab_position {
             if input::is_mouse_button_down(MouseButton::Left) {
                 self.position = mouse_position - grab_position;
@@ -157,6 +161,7 @@ impl EditorWindow {
                 Self::position_from_proportionally(self.proportional_position, self.size);
         }
 
+        // Update debug scrolling
         self.scroll += macroquad::time::get_frame_time() * self.debug_scroll_speed;
         match self.debug_scroll_speed {
             ..0.0 => {
@@ -177,7 +182,28 @@ impl EditorWindow {
 
         self.text_offset = (self.scroll.floor() - self.scroll) * Self::TEXT_SIZE;
 
+        self.update_scroll_bar();
+
         is_clicked
+    }
+
+    pub fn update_scroll_bar(&mut self) {
+        let scroll_bar_width = Self::BORDER_WIDTH;
+        let scroll_bar_height = self.height_of_editor()
+            / (self.text_editor.num_lines() as f32 * Self::TEXT_SIZE + self.height_of_editor()
+                - Self::TEXT_SIZE);
+
+        self.scroll_bar = (scroll_bar_height < 1.0).then(|| {
+            let scroll_bar_height = (scroll_bar_height * self.height_of_editor()).max(40.0);
+
+            let vertical_offset = (self.height_of_editor() - scroll_bar_height)
+                * (self.scroll / self.maximum_scroll());
+
+            ScrollBar {
+                size: Vec2::new(scroll_bar_width, scroll_bar_height),
+                vertical_offset,
+            }
+        });
     }
 
     pub fn clamp_within_window_boundary(&mut self) {
@@ -324,22 +350,12 @@ impl EditorWindow {
         );
 
         // Scroll bar
-        let scroll_bar_width = Self::BORDER_WIDTH;
-        let scroll_bar_height = self.height_of_editor()
-            / (self.text_editor.num_lines() as f32 * Self::TEXT_SIZE + self.height_of_editor()
-                - Self::TEXT_SIZE);
-
-        if scroll_bar_height < 1.0 {
-            let scroll_bar_height = (scroll_bar_height * self.height_of_editor()).max(40.0);
-
-            let scroll_bar_position = (self.height_of_editor() - scroll_bar_height)
-                * (self.scroll / self.maximum_scroll());
-
+        if let Some(scroll_bar) = self.scroll_bar {
             shapes::draw_rectangle(
-                self.size.x - scroll_bar_width,
-                Self::TITLE_HEIGHT + scroll_bar_position,
-                scroll_bar_width,
-                scroll_bar_height,
+                self.size.x - scroll_bar.size.x,
+                Self::TITLE_HEIGHT + scroll_bar.vertical_offset,
+                scroll_bar.size.x,
+                scroll_bar.size.y,
                 colors::WHITE,
             );
         }
@@ -389,4 +405,14 @@ impl EditorWindow {
 
         (position.max(Vec2::ZERO) * dpi_scale).round() / dpi_scale
     }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ScrollBar {
+    pub size: Vec2,
+    pub vertical_offset: f32,
+}
+
+impl ScrollBar {
+    pub const COLOR: Color = colors::WHITE;
 }
