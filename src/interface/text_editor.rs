@@ -174,8 +174,7 @@ impl TextEditor {
         }
 
         for line in range.start.line..range.end.line + num_new_lines + 1 {
-            let range = self.byte_range_of_line(line).unwrap();
-            self.lines[line].update_colors_from(&self.text[range]);
+            self.update_colors_of_line(line).unwrap();
         }
 
         Some(())
