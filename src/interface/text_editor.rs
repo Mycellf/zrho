@@ -166,7 +166,6 @@ impl TextEditor {
                     let index = cursor.index;
                     self.cursors[i].position = self.position_of_index(index).unwrap();
                 } else {
-                    println!("a");
                     cursor.position.line += num_new_lines;
                     cursor.position.line -= removed_lines;
                 }
