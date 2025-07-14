@@ -194,6 +194,7 @@ impl EditorWindow {
         is_clicked
     }
 
+    /// BUG: This function doesn't check for multi codepoint characters correctly
     pub fn update_editor(&mut self) {
         if self.is_grabbed() || !self.is_focused {
             return;
