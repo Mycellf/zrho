@@ -194,99 +194,77 @@ impl EditorWindow {
         is_clicked
     }
 
-    /// BUG: This function doesn't check for multi codepoint characters correctly
     pub fn update_editor(&mut self) {
         if self.is_grabbed() || !self.is_focused {
             return;
         }
 
-        let mut moved = false;
+        let mut moved_any_cursor = false;
 
         for i in 0..self.text_editor.cursors.len() {
-            // Horizontal
-            let mut index = self.text_editor.cursors[i].index;
-            let line = self.text_editor.cursors[i].position.line;
+            let mut cursor = self.text_editor.cursors[i];
 
-            let mut moved_horizontally = false;
+            let mut moved = false;
 
-            if input::is_key_pressed(KeyCode::Left) && index > 0 {
-                index -= 1;
-                moved_horizontally = true;
+            if input::is_key_pressed(KeyCode::Left) {
+                cursor.position = self
+                    .text_editor
+                    .move_position_left(cursor.position, 1, true);
+                moved = true;
             }
 
-            if input::is_key_pressed(KeyCode::Right) && index < self.text_editor.text.len() - 1 {
-                index += 1;
-                moved_horizontally = true;
+            if input::is_key_pressed(KeyCode::Right) {
+                cursor.position = self
+                    .text_editor
+                    .move_position_right(cursor.position, 1, true);
+                moved = true;
             }
 
-            if input::is_key_pressed(KeyCode::Up) && line == 0 {
-                index = 0;
-                moved_horizontally = true;
-            }
-
-            if input::is_key_pressed(KeyCode::Down) && line == self.text_editor.num_lines() - 1 {
-                index = self.text_editor.text.len() - 1;
-                moved_horizontally = true;
-            }
-
-            if moved_horizontally {
-                let position = self.text_editor.position_of_index(index).unwrap();
-
-                let cursor = &mut self.text_editor.cursors[i];
-
-                cursor.index = index;
-                cursor.position = position;
-            }
-
-            // Vertical
-            let mut position = self.text_editor.cursors[i].position;
-
-            let mut moved_vertically = false;
-
-            if input::is_key_pressed(KeyCode::Up) && position.line > 0 {
-                position.line -= 1;
-                moved_vertically = true;
+            if input::is_key_pressed(KeyCode::Up) && cursor.position.line > 0 {
+                cursor.position.line -= 1;
+                moved = true;
             }
 
             if input::is_key_pressed(KeyCode::Down)
-                && position.line < self.text_editor.num_lines() - 1
+                && cursor.position.line < self.text_editor.num_lines() - 1
             {
-                position.line += 1;
-                moved_vertically = true;
+                cursor.position.line += 1;
+                moved = true;
             }
 
             if input::is_key_pressed(KeyCode::Home) {
-                position.column = 0;
-                moved_vertically = true;
+                cursor.position.column = 0;
+                moved = true;
             }
 
             if input::is_key_pressed(KeyCode::End) {
-                position.column = usize::MAX;
-                moved_vertically = true;
+                cursor.position.column = self
+                    .text_editor
+                    .length_of_line(cursor.position.line)
+                    .unwrap();
+                moved = true;
             }
 
             if input::is_key_pressed(KeyCode::PageUp) {
-                position.line =
-                    (position.line).saturating_sub(self.height_of_editor_lines().saturating_sub(1));
-                moved_vertically = true;
+                cursor.position.line = (cursor.position.line)
+                    .saturating_sub(self.height_of_editor_lines().saturating_sub(1));
+                moved = true;
             }
 
             if input::is_key_pressed(KeyCode::PageDown) {
-                position.line = (position.line + self.height_of_editor_lines().saturating_sub(1))
-                    .min(self.text_editor.num_lines() - 1);
-                moved_vertically = true;
+                cursor.position.line = (cursor.position.line
+                    + self.height_of_editor_lines().saturating_sub(1))
+                .min(self.text_editor.num_lines() - 1);
+                moved = true;
             }
 
-            if moved_vertically {
-                let index = self.text_editor.index_of_position(position).unwrap();
+            if moved {
+                cursor.index = self.text_editor.index_of_position(cursor.position).unwrap();
 
-                let cursor = &mut self.text_editor.cursors[i];
-
-                cursor.index = index;
-                cursor.position = position;
+                self.text_editor.cursors[i] = cursor;
             }
 
-            moved |= moved_horizontally || moved_vertically;
+            moved_any_cursor |= moved;
         }
 
         let mut typed = false;
@@ -304,21 +282,20 @@ impl EditorWindow {
                         // Backspace
                         let range = self
                             .text_editor
-                            .position_of_index(cursor.index - 1)
-                            .unwrap()..cursor.position;
+                            .move_position_left(cursor.position, 1, true)
+                            ..cursor.position;
 
                         self.text_editor.remove(range).unwrap();
 
                         typed = true;
                     }
-                    // NOTE: 1 because the last character is always a newline
+                    // NOTE: The last character is always a newline, which has a length of 1
                     '\u{7f}' if cursor.index < self.text_editor.text.len() - 1 => {
                         // Delete
                         let range = cursor.position
                             ..self
                                 .text_editor
-                                .position_of_index(cursor.index + 1)
-                                .unwrap();
+                                .move_position_right(cursor.position, 1, true);
 
                         self.text_editor.remove(range).unwrap();
 
@@ -337,7 +314,7 @@ impl EditorWindow {
             }
         }
 
-        if moved || typed {
+        if moved_any_cursor || typed {
             for cursor in &self.text_editor.cursors {
                 let position = cursor.position.line as f32;
 

@@ -180,6 +180,55 @@ impl TextEditor {
     }
 
     #[must_use]
+    pub fn move_position_left(
+        &self,
+        mut position: CharacterPosition,
+        mut offset: usize,
+        wrap: bool,
+    ) -> CharacterPosition {
+        while offset > 0 {
+            if offset <= position.column || !wrap || position.line == 0 {
+                position.column = position.column.saturating_sub(offset);
+                break;
+            } else {
+                offset -= position.column + 1;
+                position.line -= 1;
+                position.column = self.length_of_line(position.line).unwrap();
+            }
+        }
+
+        position
+    }
+
+    #[must_use]
+    pub fn move_position_right(
+        &self,
+        mut position: CharacterPosition,
+        mut offset: usize,
+        wrap: bool,
+    ) -> CharacterPosition {
+        while offset > 0 {
+            let length = self.length_of_line(position.line).unwrap();
+
+            if offset <= length - position.column || !wrap || position.line >= self.num_lines() - 1
+            {
+                position.column = (position.column + offset).min(length);
+                break;
+            } else {
+                offset -= length - position.column + 1;
+                position.line += 1;
+                position.column = 0;
+            }
+        }
+
+        position
+    }
+
+    pub fn length_of_line(&self, line: usize) -> Option<usize> {
+        Some(self.get_line(line)?.chars().count())
+    }
+
+    #[must_use]
     pub fn columns_in_line(&self, index: usize) -> Option<usize> {
         Some(self.get_line(index)?.chars().count())
     }
