@@ -158,6 +158,8 @@ impl EditorWindow {
                 Self::position_from_proportionally(self.proportional_position, self.size);
         }
 
+        self.update_editor();
+
         // Update scrolling
         let previous_scroll = self.scroll;
 
@@ -188,6 +190,57 @@ impl EditorWindow {
         self.text_offset = (self.scroll.floor() - self.scroll) * Self::TEXT_SIZE;
 
         is_clicked
+    }
+
+    pub fn update_editor(&mut self) {
+        if self.is_grabbed() || !self.is_focused {
+            return;
+        }
+
+        while let Some(mut character) = input::get_char_pressed() {
+            if character == '\r' {
+                character = '\n';
+            }
+
+            for i in 0..self.text_editor.cursors.len() {
+                let cursor = self.text_editor.cursors[i];
+
+                match character {
+                    '\u{8}' if cursor.index > 0 => {
+                        // Backspace
+                        let range = self
+                            .text_editor
+                            .position_of_index(cursor.index - 1)
+                            .unwrap()..cursor.position;
+
+                        self.text_editor.remove(range).unwrap();
+
+                        self.contents_updated = true;
+                    }
+                    '\u{7f}' if cursor.index < self.text_editor.text.len() => {
+                        // Delete
+                        let range = cursor.position
+                            ..self
+                                .text_editor
+                                .position_of_index(cursor.index + 1)
+                                .unwrap();
+
+                        self.text_editor.remove(range).unwrap();
+
+                        self.contents_updated = true;
+                    }
+                    _ if !character.is_control() || character == '\n' => {
+                        // Typed character
+                        self.text_editor
+                            .insert(cursor.position, &character.to_string())
+                            .unwrap();
+
+                        self.contents_updated = true;
+                    }
+                    _ => (),
+                }
+            }
+        }
     }
 
     pub fn update_scroll_bar(&mut self, focus: WindowFocus, index: usize) {
