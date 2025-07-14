@@ -262,6 +262,18 @@ impl EditorWindow {
                 moved_vertically = true;
             }
 
+            if input::is_key_pressed(KeyCode::PageUp) {
+                position.line =
+                    (position.line).saturating_sub(self.height_of_editor_lines().saturating_sub(1));
+                moved_vertically = true;
+            }
+
+            if input::is_key_pressed(KeyCode::PageDown) {
+                position.line = (position.line + self.height_of_editor_lines().saturating_sub(1))
+                    .min(self.text_editor.num_lines() - 1);
+                moved_vertically = true;
+            }
+
             if moved_vertically {
                 let index = self.text_editor.index_of_position(position).unwrap();
 
@@ -444,6 +456,11 @@ impl EditorWindow {
     #[must_use]
     pub fn height_of_editor(&self) -> f32 {
         self.size.y - Self::TITLE_HEIGHT - Self::BORDER_WIDTH
+    }
+
+    #[must_use]
+    pub fn height_of_editor_lines(&self) -> usize {
+        (self.height_of_editor() / Self::TEXT_SIZE).floor() as usize
     }
 
     #[must_use]
