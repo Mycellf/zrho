@@ -162,8 +162,16 @@ impl EditorWindow {
         let previous_scroll = self.scroll;
 
         if focus.mouse == Some(index) && !self.is_grabbed() {
-            self.target_scroll -= input::mouse_wheel().1;
-            self.target_scroll = self.target_scroll.clamp(0.0, self.maximum_scroll());
+            let scroll_input = input::mouse_wheel().1;
+
+            if scroll_input != 0.0 {
+                self.target_scroll -= scroll_input;
+
+                if scroll_input.abs() >= 1.0 {
+                    self.target_scroll = self.target_scroll.round();
+                }
+                self.target_scroll = self.target_scroll.clamp(0.0, self.maximum_scroll());
+            }
         }
 
         if self.target_scroll != self.scroll {
