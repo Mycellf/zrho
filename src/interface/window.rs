@@ -41,12 +41,14 @@ pub struct EditorWindow {
 
     pub grab_position: Option<Vec2>,
     pub is_focused: bool,
+    pub key_repeats: KeyRepeats,
 
-    pub text_editor: TextEditor,
     pub scroll: f32,
     pub target_scroll: f32,
     pub scroll_bar: Option<ScrollBar>,
     pub text_offset: f32,
+
+    pub text_editor: TextEditor,
     pub program: Result<Program, Vec<ProgramAssemblyError>>,
     pub target_computer: Computer,
 
@@ -88,15 +90,16 @@ impl EditorWindow {
 
         let grab_position = None;
         let is_focused = false;
+        let key_repeats = KeyRepeats::default();
 
         let scroll = 0.0;
         let target_scroll = 0.0;
         let scroll_bar = None;
         let text_offset = 0.0;
+
         let program = Program::assemble_from(title.clone(), &text_editor.text, &target_computer);
 
         let target_size = size * Self::RESOLUTION_UPSCALING as f32;
-
         let camera = Camera2D {
             zoom: -2.0 / size,
             offset: Vec2::new(1.0, 1.0),
@@ -118,12 +121,14 @@ impl EditorWindow {
 
             grab_position,
             is_focused,
+            key_repeats,
 
-            text_editor,
             scroll,
             target_scroll,
             scroll_bar,
             text_offset,
+
+            text_editor,
             program,
             target_computer,
 
@@ -193,6 +198,8 @@ impl EditorWindow {
     }
 
     pub fn update_editor(&mut self) {
+        self.key_repeats.update();
+
         if self.is_grabbed() || !self.is_focused {
             return;
         }
@@ -204,56 +211,72 @@ impl EditorWindow {
 
             let mut moved = false;
 
-            if input::is_key_pressed(KeyCode::Left) {
+            if self.is_key_pressed(KeyCode::Left) {
                 cursor.position = self
                     .text_editor
                     .move_position_left(cursor.position, 1, true);
                 moved = true;
+
+                self.key_repeats.set_key(KeyCode::Left);
             }
 
-            if input::is_key_pressed(KeyCode::Right) {
+            if self.is_key_pressed(KeyCode::Right) {
                 cursor.position = self
                     .text_editor
                     .move_position_right(cursor.position, 1, true);
                 moved = true;
+
+                self.key_repeats.set_key(KeyCode::Right);
             }
 
-            if input::is_key_pressed(KeyCode::Up) && cursor.position.line > 0 {
+            if self.is_key_pressed(KeyCode::Up) && cursor.position.line > 0 {
                 cursor.position.line -= 1;
                 moved = true;
+
+                self.key_repeats.set_key(KeyCode::Up);
             }
 
-            if input::is_key_pressed(KeyCode::Down)
+            if self.is_key_pressed(KeyCode::Down)
                 && cursor.position.line < self.text_editor.num_lines() - 1
             {
                 cursor.position.line += 1;
                 moved = true;
+
+                self.key_repeats.set_key(KeyCode::Down);
             }
 
-            if input::is_key_pressed(KeyCode::Home) {
+            if self.is_key_pressed(KeyCode::Home) {
                 cursor.position.column = 0;
                 moved = true;
+
+                self.key_repeats.set_key(KeyCode::Home);
             }
 
-            if input::is_key_pressed(KeyCode::End) {
+            if self.is_key_pressed(KeyCode::End) {
                 cursor.position.column = self
                     .text_editor
                     .length_of_line(cursor.position.line)
                     .unwrap();
                 moved = true;
+
+                self.key_repeats.set_key(KeyCode::End);
             }
 
-            if input::is_key_pressed(KeyCode::PageUp) {
+            if self.is_key_pressed(KeyCode::PageUp) {
                 cursor.position.line = (cursor.position.line)
                     .saturating_sub(self.height_of_editor_lines().saturating_sub(1));
                 moved = true;
+
+                self.key_repeats.set_key(KeyCode::PageUp);
             }
 
-            if input::is_key_pressed(KeyCode::PageDown) {
+            if self.is_key_pressed(KeyCode::PageDown) {
                 cursor.position.line = (cursor.position.line
                     + self.height_of_editor_lines().saturating_sub(1))
                 .min(self.text_editor.num_lines() - 1);
                 moved = true;
+
+                self.key_repeats.set_key(KeyCode::PageDown);
             }
 
             if moved {
@@ -431,6 +454,10 @@ impl EditorWindow {
                 color,
             }
         });
+    }
+
+    pub fn is_key_pressed(&mut self, key_code: KeyCode) -> bool {
+        self.key_repeats.key == Some(key_code) || input::is_key_pressed(key_code)
     }
 
     pub fn clamp_within_window_boundary(&mut self) {
@@ -745,6 +772,58 @@ impl ScrollBar {
 
     pub fn color(&self) -> Color {
         color_lerp(Self::BASE_COLOR, Self::ALTERNATE_COLOR, self.color)
+    }
+}
+
+/// HACK: This exists because macroquad won't give key repeats for the navigation keys
+#[derive(Clone, Copy, Debug)]
+pub struct KeyRepeats {
+    pub delay: f32,
+    pub interval: f32,
+    pub state: Option<(KeyCode, f32)>,
+    pub key: Option<KeyCode>,
+}
+
+impl KeyRepeats {
+    pub fn update(&mut self) {
+        self.key = if let &mut Some((key_code, ref mut time)) = &mut self.state {
+            if input::is_key_down(key_code) {
+                *time -= macroquad::time::get_frame_time();
+
+                (*time <= 0.0).then(|| {
+                    *time = self.interval;
+
+                    key_code
+                })
+            } else {
+                self.state = None;
+
+                None
+            }
+        } else {
+            None
+        };
+    }
+
+    pub fn set_key(&mut self, key_code: KeyCode) {
+        if let Some((previous_key_code, _)) = self.state {
+            if key_code == previous_key_code {
+                return;
+            }
+        }
+
+        self.state = Some((key_code, self.delay));
+    }
+}
+
+impl Default for KeyRepeats {
+    fn default() -> Self {
+        Self {
+            delay: 0.5,
+            interval: 0.03,
+            state: None,
+            key: None,
+        }
     }
 }
 
