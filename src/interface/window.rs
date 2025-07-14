@@ -175,13 +175,10 @@ impl EditorWindow {
         }
 
         if self.target_scroll != self.scroll {
-            if (self.target_scroll - self.scroll).abs() < 0.01 {
-                self.scroll = self.target_scroll;
-            } else {
-                let frame_time = macroquad::time::get_frame_time();
+            let frame_time = macroquad::time::get_frame_time();
 
-                self.scroll = exp_decay(self.scroll, self.target_scroll, 10.0, frame_time);
-            }
+            self.scroll =
+                exp_decay_cutoff(self.scroll, self.target_scroll, 10.0, frame_time, 0.01).0;
         }
 
         self.contents_updated |= self.scroll != previous_scroll;
@@ -247,13 +244,10 @@ impl EditorWindow {
                     ScrollBar::UNSELECTED_WIDTH
                 };
 
-                let next_width = if (target_width - scroll_bar.size.x).abs() < 0.05 {
-                    target_width
-                } else {
-                    let frame_time = macroquad::time::get_frame_time();
+                let frame_time = macroquad::time::get_frame_time();
 
-                    exp_decay(scroll_bar.size.x, target_width, 25.0, frame_time)
-                };
+                let next_width =
+                    exp_decay_cutoff(scroll_bar.size.x, target_width, 25.0, frame_time, 0.05).0;
 
                 self.contents_updated |= next_width != scroll_bar.size.x;
 
@@ -577,6 +571,14 @@ impl ScrollBar {
 pub struct WindowFocus {
     pub grab: Option<usize>,
     pub mouse: Option<usize>,
+}
+
+pub fn exp_decay_cutoff(a: f32, b: f32, decay: f32, dt: f32, cutoff: f32) -> (f32, bool) {
+    if (a - b).abs() < cutoff {
+        (b, true)
+    } else {
+        (exp_decay(a, b, decay, dt), false)
+    }
 }
 
 /// CREDIT: Freya Holmér: https://www.youtube.com/watch?v=LSNQuFEDOyQ
