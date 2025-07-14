@@ -44,6 +44,7 @@ pub struct EditorWindow {
 
     pub text_editor: TextEditor,
     pub scroll: f32,
+    pub target_scroll: f32,
     pub scroll_bar: Option<ScrollBar>,
     pub text_offset: f32,
     pub program: Result<Program, Vec<ProgramAssemblyError>>,
@@ -88,6 +89,7 @@ impl EditorWindow {
         let is_focused = false;
 
         let scroll = 0.0;
+        let target_scroll = 0.0;
         let scroll_bar = None;
         let text_offset = 0.0;
         let program = Program::assemble_from(title.clone(), &text_editor.text, target_computer);
@@ -118,6 +120,7 @@ impl EditorWindow {
 
             text_editor,
             scroll,
+            target_scroll,
             scroll_bar,
             text_offset,
             program,
@@ -154,6 +157,26 @@ impl EditorWindow {
             self.position =
                 Self::position_from_proportionally(self.proportional_position, self.size);
         }
+
+        // Update scrolling
+        let previous_scroll = self.scroll;
+
+        if focus.mouse == Some(index) && !self.is_grabbed() {
+            self.target_scroll -= input::mouse_wheel().1;
+            self.target_scroll = self.target_scroll.clamp(0.0, self.maximum_scroll());
+        }
+
+        if self.target_scroll != self.scroll {
+            if (self.target_scroll - self.scroll).abs() < 0.01 {
+                self.scroll = self.target_scroll;
+            } else {
+                let frame_time = macroquad::time::get_frame_time();
+
+                self.scroll = exp_decay(self.scroll, self.target_scroll, 10.0, frame_time);
+            }
+        }
+
+        self.contents_updated |= self.scroll != previous_scroll;
 
         self.update_scroll_bar(focus, index);
 
@@ -195,6 +218,8 @@ impl EditorWindow {
                 self.scroll = scroll_bar.vertical_offset
                     / (self.height_of_editor() - scroll_bar.size.y)
                     * self.maximum_scroll();
+
+                self.target_scroll = self.scroll;
 
                 self.contents_updated = true;
             }
@@ -278,15 +303,29 @@ impl EditorWindow {
     }
 
     #[must_use]
+    pub fn should_hold_mouse_focus(&self) -> bool {
+        self.is_grabbed()
+    }
+
+    #[must_use]
     pub fn is_grabbed(&self) -> bool {
+        self.is_being_dragged() || self.is_scroll_bar_grabbed()
+    }
+
+    #[must_use]
+    pub fn is_being_dragged(&self) -> bool {
         self.grab_position.is_some()
-            || matches!(
-                self.scroll_bar,
-                Some(ScrollBar {
-                    grab_position: Some(_),
-                    ..
-                })
-            )
+    }
+
+    #[must_use]
+    pub fn is_scroll_bar_grabbed(&self) -> bool {
+        matches!(
+            self.scroll_bar,
+            Some(ScrollBar {
+                grab_position: Some(_),
+                ..
+            })
+        )
     }
 
     pub fn draw(&mut self) {
