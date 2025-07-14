@@ -166,7 +166,7 @@ impl EditorWindow {
         let mouse_position = Vec2::from(input::mouse_position());
 
         if let Some(mut scroll_bar) = self.scroll_bar {
-            let mut scrolled = false;
+            let previous_vertical_offset = scroll_bar.vertical_offset;
 
             if scroll_bar.is_selected {
                 let mouse_offset =
@@ -176,8 +176,6 @@ impl EditorWindow {
                     if input::is_mouse_button_down(MouseButton::Left) {
                         scroll_bar.vertical_offset = (mouse_offset - grab_position)
                             .clamp(0.0, self.height_of_editor() - scroll_bar.size.y);
-
-                        scrolled = true;
                     } else {
                         scroll_bar.grab_position = None;
                     }
@@ -187,21 +185,21 @@ impl EditorWindow {
                     {
                         scroll_bar.vertical_offset = (mouse_offset - scroll_bar.size.y / 2.0)
                             .clamp(0.0, self.height_of_editor() - scroll_bar.size.y);
-
-                        scrolled = true;
                     }
 
                     scroll_bar.grab_position = Some(mouse_offset - scroll_bar.vertical_offset);
                 }
             }
 
-            self.scroll_bar = Some(scroll_bar);
-
-            if scrolled {
+            if scroll_bar.vertical_offset != previous_vertical_offset {
                 self.scroll = scroll_bar.vertical_offset
                     / (self.height_of_editor() - scroll_bar.size.y)
                     * self.maximum_scroll();
+
+                self.contents_updated = true;
             }
+
+            self.scroll_bar = Some(scroll_bar);
         }
 
         let (scroll_bar_width, is_selected, grab_position) =
