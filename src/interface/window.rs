@@ -381,15 +381,19 @@ impl EditorWindow {
         );
 
         // Text
-        let start_line = self.scroll.floor() as usize;
+        let mut start_line = self.scroll.floor() as usize;
         let end_line = (self.scroll + self.height_of_editor() / Self::TEXT_SIZE).ceil() as usize;
+
+        let mut text_offset = self.text_offset;
+
+        if start_line > 0 {
+            start_line -= 1;
+            text_offset -= Self::TEXT_SIZE;
+        }
 
         self.text_editor.draw_range(
             start_line..end_line,
-            Vec2::new(
-                Self::BORDER_WIDTH + 5.0,
-                Self::TITLE_HEIGHT + self.text_offset,
-            ),
+            Vec2::new(Self::BORDER_WIDTH + 5.0, Self::TITLE_HEIGHT + text_offset),
             Self::TEXT_SIZE,
             1.0,
             1.0,
