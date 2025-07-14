@@ -217,7 +217,8 @@ impl EditorWindow {
 
                         self.contents_updated = true;
                     }
-                    '\u{7f}' if cursor.index < self.text_editor.text.len() => {
+                    // NOTE: 1 because the last character is always a newline
+                    '\u{7f}' if cursor.index < self.text_editor.text.len() - 1 => {
                         // Delete
                         let range = cursor.position
                             ..self
