@@ -377,44 +377,58 @@ impl EditorWindow {
             self.scroll_bar = Some(scroll_bar);
         }
 
-        let (scroll_bar_width, is_selected, grab_position) =
-            if let Some(scroll_bar) = self.scroll_bar {
-                let is_selected = scroll_bar.grab_position.is_some()
-                    || focus.mouse == Some(index)
-                        && self.is_point_within_scroll_bar_region(mouse_position);
+        let (width, color, is_selected, grab_position) = if let Some(scroll_bar) = self.scroll_bar {
+            let is_area_hovered = focus.mouse == Some(index)
+                && self.is_point_within_scroll_bar_region(mouse_position);
 
-                let target_width = if is_selected {
-                    ScrollBar::SELECTED_WIDTH
-                } else {
-                    ScrollBar::UNSELECTED_WIDTH
-                };
+            let is_hovered = is_area_hovered && self.is_point_within_scroll_bar(mouse_position);
 
-                let frame_time = macroquad::time::get_frame_time();
+            let is_grabbed = scroll_bar.grab_position.is_some();
 
-                let next_width =
-                    exp_decay_cutoff(scroll_bar.size.x, target_width, 25.0, frame_time, 0.05).0;
+            let frame_time = macroquad::time::get_frame_time();
 
-                self.contents_updated |= next_width != scroll_bar.size.x;
-
-                (next_width, is_selected, scroll_bar.grab_position)
+            let target_width = if is_grabbed || is_area_hovered {
+                ScrollBar::SELECTED_WIDTH
             } else {
-                (ScrollBar::UNSELECTED_WIDTH, false, None)
+                ScrollBar::UNSELECTED_WIDTH
             };
-        let scroll_bar_height = self.height_of_editor()
+
+            let next_width =
+                exp_decay_cutoff(scroll_bar.size.x, target_width, 25.0, frame_time, 0.05).0;
+
+            let target_color = (is_area_hovered && !is_hovered && !is_grabbed) as isize as f32;
+
+            let next_color =
+                exp_decay_cutoff(scroll_bar.color, target_color, 50.0, frame_time, 0.05).0;
+
+            self.contents_updated |=
+                next_width != scroll_bar.size.x || next_color != scroll_bar.color;
+
+            (
+                next_width,
+                next_color,
+                is_grabbed || is_area_hovered,
+                scroll_bar.grab_position,
+            )
+        } else {
+            (ScrollBar::UNSELECTED_WIDTH, 0.0, false, None)
+        };
+        let height = self.height_of_editor()
             / (self.text_editor.num_lines() as f32 * Self::TEXT_SIZE + self.height_of_editor()
                 - Self::TEXT_SIZE);
 
-        self.scroll_bar = (scroll_bar_height < 1.0).then(|| {
-            let scroll_bar_height = (scroll_bar_height * self.height_of_editor()).max(40.0);
+        self.scroll_bar = (height < 1.0).then(|| {
+            let height = (height * self.height_of_editor()).max(40.0);
 
-            let vertical_offset = (self.height_of_editor() - scroll_bar_height)
-                * (self.scroll / self.maximum_scroll());
+            let vertical_offset =
+                (self.height_of_editor() - height) * (self.scroll / self.maximum_scroll());
 
             ScrollBar {
-                size: Vec2::new(scroll_bar_width, scroll_bar_height),
+                size: Vec2::new(width, height),
                 vertical_offset,
                 is_selected,
                 grab_position,
+                color,
             }
         });
     }
@@ -596,7 +610,7 @@ impl EditorWindow {
                 Self::TITLE_HEIGHT + scroll_bar.vertical_offset,
                 scroll_bar.size.x,
                 scroll_bar.size.y,
-                ScrollBar::COLOR,
+                scroll_bar.color(),
             );
         }
 
@@ -717,15 +731,21 @@ pub struct ScrollBar {
     pub vertical_offset: f32,
     pub is_selected: bool,
     pub grab_position: Option<f32>,
+    pub color: f32,
 }
 
 impl ScrollBar {
-    pub const COLOR: Color = colors::WHITE;
+    pub const BASE_COLOR: Color = colors::WHITE;
+    pub const ALTERNATE_COLOR: Color = colors::LIGHTGRAY;
 
     pub const SELECTED_WIDTH: f32 = 7.5;
     pub const UNSELECTED_WIDTH: f32 = EditorWindow::BORDER_WIDTH;
     pub const MAX_WIDTH: f32 = Self::SELECTED_WIDTH.max(Self::UNSELECTED_WIDTH);
     pub const MIN_WIDTH: f32 = Self::SELECTED_WIDTH.min(Self::UNSELECTED_WIDTH);
+
+    pub fn color(&self) -> Color {
+        color_lerp(Self::BASE_COLOR, Self::ALTERNATE_COLOR, self.color)
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -745,4 +765,17 @@ pub fn exp_decay_cutoff(a: f32, b: f32, decay: f32, dt: f32, cutoff: f32) -> (f3
 /// CREDIT: Freya Holmér: https://www.youtube.com/watch?v=LSNQuFEDOyQ
 pub fn exp_decay(a: f32, b: f32, decay: f32, dt: f32) -> f32 {
     b + (a - b) * (-decay * dt).exp()
+}
+
+pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
+    a + (b - a) * t
+}
+
+pub fn color_lerp(a: Color, b: Color, t: f32) -> Color {
+    Color {
+        r: lerp(a.r, b.r, t),
+        g: lerp(a.g, b.g, t),
+        b: lerp(a.b, b.b, t),
+        a: lerp(a.a, b.a, t),
+    }
 }
