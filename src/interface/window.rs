@@ -48,6 +48,7 @@ pub struct EditorWindow {
     pub scroll_bar: Option<ScrollBar>,
     pub text_offset: f32,
     pub program: Result<Program, Vec<ProgramAssemblyError>>,
+    pub target_computer: Computer,
 
     pub camera: Camera2D,
     pub contents_updated: bool,
@@ -81,7 +82,7 @@ impl EditorWindow {
         title: String,
         title_color: Color,
         text_editor: TextEditor,
-        target_computer: &Computer,
+        target_computer: Computer,
     ) -> EditorWindow {
         let position = Self::position_from_proportionally(proportional_position, size);
 
@@ -92,7 +93,7 @@ impl EditorWindow {
         let target_scroll = 0.0;
         let scroll_bar = None;
         let text_offset = 0.0;
-        let program = Program::assemble_from(title.clone(), &text_editor.text, target_computer);
+        let program = Program::assemble_from(title.clone(), &text_editor.text, &target_computer);
 
         let target_size = size * Self::RESOLUTION_UPSCALING as f32;
 
@@ -124,6 +125,7 @@ impl EditorWindow {
             scroll_bar,
             text_offset,
             program,
+            target_computer,
 
             camera,
             contents_updated,
@@ -346,6 +348,14 @@ impl EditorWindow {
             }
 
             self.contents_updated = true;
+        }
+
+        if typed {
+            self.program = Program::assemble_from(
+                self.title.clone(),
+                &self.text_editor.text,
+                &self.target_computer,
+            );
         }
     }
 

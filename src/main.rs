@@ -42,7 +42,7 @@ async fn main() {
         "KOLAKOSKI SEQUENCE".to_owned(),
         EditorWindow::BLUE,
         TextEditor::new(KOLAKOSKI_SEQUENCE_LONG.to_owned()),
-        &default_computer(),
+        default_computer(),
     ));
 
     windows.push(EditorWindow::new(
@@ -51,7 +51,7 @@ async fn main() {
         "PRIME NUMBERS".to_owned(),
         EditorWindow::ORANGE,
         TextEditor::new(PRIME_NUMBERS_FAST.to_owned()),
-        &default_computer(),
+        default_computer(),
     ));
 
     windows.push(EditorWindow::new(
@@ -60,7 +60,7 @@ async fn main() {
         "FIBONACCI SEQUENCE".to_owned(),
         EditorWindow::RED,
         TextEditor::new(FIBONACCI_SEQUENCE.to_owned()),
-        &default_computer(),
+        default_computer(),
     ));
 
     windows[0].is_focused = true;
