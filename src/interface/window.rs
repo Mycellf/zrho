@@ -393,6 +393,32 @@ impl EditorWindow {
             1.0,
         );
 
+        // Cursors
+        let TextParams {
+            font_size,
+            font_scale,
+            ..
+        } = Self::text_params_with_size(Self::TEXT_SIZE);
+
+        for cursor in &self.text_editor.cursors {
+            if !(start_line..end_line).contains(&cursor.position.line) {
+                continue;
+            }
+
+            let line_start_index = self.text_editor.lines[cursor.position.line].byte_offset;
+            let preceding_contents = &self.text_editor.text[line_start_index..cursor.index];
+
+            shapes::draw_rectangle(
+                text::measure_text(preceding_contents, Some(&FONT), font_size, font_scale).width
+                    + Self::BORDER_WIDTH
+                    + 5.0,
+                (cursor.position.line as f32 - self.scroll) * Self::TEXT_SIZE + Self::TITLE_HEIGHT,
+                1.0,
+                Self::TEXT_SIZE,
+                colors::WHITE,
+            );
+        }
+
         // Header and outline
         let (text_color, background_color) = if self.is_focused {
             (Self::EDITOR_BACKGROUND_COLOR, self.title_color)
