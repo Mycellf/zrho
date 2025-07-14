@@ -131,7 +131,8 @@ impl TextEditor {
         let removed_lines = range.end.line.checked_sub(range.start.line)?;
 
         for moved_line in &mut self.lines[range.end.line + 1..] {
-            moved_line.byte_offset += text.len() - removed_bytes;
+            moved_line.byte_offset += text.len();
+            moved_line.byte_offset -= removed_bytes;
         }
 
         let mut new_lines = Vec::new();
@@ -145,14 +146,14 @@ impl TextEditor {
         let num_new_lines = new_lines.len();
 
         self.lines
-            .splice(range.start.line..range.end.line, new_lines);
+            .splice(range.start.line + 1..range.end.line + 1, new_lines);
 
         self.text.replace_range(start_index..end_index, text);
 
         for i in 0..self.cursors.len() {
             let cursor = &mut self.cursors[i];
 
-            if cursor.index > start_index {
+            if cursor.index >= start_index {
                 if cursor.index < end_index {
                     cursor.index = start_index;
                 } else {
@@ -165,6 +166,7 @@ impl TextEditor {
                     let index = cursor.index;
                     self.cursors[i].position = self.position_of_index(index).unwrap();
                 } else {
+                    println!("a");
                     cursor.position.line += num_new_lines;
                     cursor.position.line -= removed_lines;
                 }
@@ -247,12 +249,16 @@ impl TextEditor {
             .get_line(line)
             .unwrap()
             .chars()
-            .scan(0, |acc, character| {
+            .scan(self.lines[line].byte_offset, |acc, character| {
+                if *acc >= index {
+                    return None;
+                }
+
                 *acc += character.len_utf8();
 
                 assert!(*acc <= index, "Index {index} is inside a codepoint");
 
-                (*acc < index).then_some(())
+                Some(())
             })
             .count();
 
@@ -334,7 +340,7 @@ impl From<ColorChoice> for Color {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CharacterPosition {
     pub line: usize,
     pub column: usize,
