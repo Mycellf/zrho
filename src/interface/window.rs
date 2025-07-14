@@ -170,7 +170,7 @@ impl EditorWindow {
 
             if scroll_bar.is_selected {
                 let mouse_offset =
-                    (mouse_position.y - self.position.y - Self::TITLE_HEIGHT) / scaling_factor();
+                    (mouse_position.y - self.position.y) / scaling_factor() - Self::TITLE_HEIGHT;
 
                 if let Some(grab_position) = scroll_bar.grab_position {
                     if input::is_mouse_button_down(MouseButton::Left) {
