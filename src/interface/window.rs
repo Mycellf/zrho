@@ -1,7 +1,7 @@
 use macroquad::{
     camera::{self, Camera2D},
     color::{Color, colors},
-    input::{self, MouseButton},
+    input::{self, KeyCode, MouseButton},
     math::Vec2,
     shapes,
     text::{self, TextParams},
@@ -197,6 +197,85 @@ impl EditorWindow {
             return;
         }
 
+        let mut moved = false;
+
+        for i in 0..self.text_editor.cursors.len() {
+            // Horizontal
+            let mut index = self.text_editor.cursors[i].index;
+            let line = self.text_editor.cursors[i].position.line;
+
+            let mut moved_horizontally = false;
+
+            if input::is_key_pressed(KeyCode::Left) && index > 0 {
+                index -= 1;
+                moved_horizontally = true;
+            }
+
+            if input::is_key_pressed(KeyCode::Right) && index < self.text_editor.text.len() - 1 {
+                index += 1;
+                moved_horizontally = true;
+            }
+
+            if input::is_key_pressed(KeyCode::Up) && line == 0 {
+                index = 0;
+                moved_horizontally = true;
+            }
+
+            if input::is_key_pressed(KeyCode::Down) && line == self.text_editor.num_lines() - 1 {
+                index = self.text_editor.text.len() - 1;
+                moved_horizontally = true;
+            }
+
+            if moved_horizontally {
+                let position = self.text_editor.position_of_index(index).unwrap();
+
+                let cursor = &mut self.text_editor.cursors[i];
+
+                cursor.index = index;
+                cursor.position = position;
+            }
+
+            // Vertical
+            let mut position = self.text_editor.cursors[i].position;
+
+            let mut moved_vertically = false;
+
+            if input::is_key_pressed(KeyCode::Up) && position.line > 0 {
+                position.line -= 1;
+                moved_vertically = true;
+            }
+
+            if input::is_key_pressed(KeyCode::Down)
+                && position.line < self.text_editor.num_lines() - 1
+            {
+                position.line += 1;
+                moved_vertically = true;
+            }
+
+            if input::is_key_pressed(KeyCode::Home) {
+                position.column = 0;
+                moved_vertically = true;
+            }
+
+            if input::is_key_pressed(KeyCode::End) {
+                position.column = usize::MAX;
+                moved_vertically = true;
+            }
+
+            if moved_vertically {
+                let index = self.text_editor.index_of_position(position).unwrap();
+
+                let cursor = &mut self.text_editor.cursors[i];
+
+                cursor.index = index;
+                cursor.position = position;
+            }
+
+            moved |= moved_horizontally || moved_vertically;
+        }
+
+        let mut typed = false;
+
         while let Some(mut character) = input::get_char_pressed() {
             if character == '\r' {
                 character = '\n';
@@ -215,7 +294,7 @@ impl EditorWindow {
 
                         self.text_editor.remove(range).unwrap();
 
-                        self.contents_updated = true;
+                        typed = true;
                     }
                     // NOTE: 1 because the last character is always a newline
                     '\u{7f}' if cursor.index < self.text_editor.text.len() - 1 => {
@@ -228,7 +307,7 @@ impl EditorWindow {
 
                         self.text_editor.remove(range).unwrap();
 
-                        self.contents_updated = true;
+                        typed = true;
                     }
                     _ if !character.is_control() || character == '\n' => {
                         // Typed character
@@ -236,11 +315,25 @@ impl EditorWindow {
                             .insert(cursor.position, &character.to_string())
                             .unwrap();
 
-                        self.contents_updated = true;
+                        typed = true;
                     }
                     _ => (),
                 }
             }
+        }
+
+        if moved || typed {
+            for cursor in &self.text_editor.cursors {
+                let position = cursor.position.line as f32;
+
+                if position + 1.0 - self.height_of_editor() / Self::TEXT_SIZE > self.target_scroll {
+                    self.target_scroll = position + 1.0 - self.height_of_editor() / Self::TEXT_SIZE;
+                } else if position < self.target_scroll {
+                    self.target_scroll = position;
+                }
+            }
+
+            self.contents_updated = true;
         }
     }
 
