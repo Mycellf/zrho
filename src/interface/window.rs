@@ -216,15 +216,17 @@ impl EditorWindow {
                     ScrollBar::UNSELECTED_WIDTH
                 };
 
-                self.contents_updated |= target_width != scroll_bar.size.x;
+                let next_width = if (target_width - scroll_bar.size.x).abs() < 0.05 {
+                    target_width
+                } else {
+                    let frame_time = macroquad::time::get_frame_time();
 
-                let frame_time = macroquad::time::get_frame_time();
+                    exp_decay(scroll_bar.size.x, target_width, 25.0, frame_time)
+                };
 
-                (
-                    exp_decay(scroll_bar.size.x, target_width, 25.0, frame_time),
-                    is_selected,
-                    scroll_bar.grab_position,
-                )
+                self.contents_updated |= next_width != scroll_bar.size.x;
+
+                (next_width, is_selected, scroll_bar.grab_position)
             } else {
                 (ScrollBar::UNSELECTED_WIDTH, false, None)
             };
