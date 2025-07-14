@@ -33,7 +33,7 @@ pub fn scaling_factor() -> f32 {
 #[derive(Debug)]
 pub struct EditorWindow {
     pub position: Vec2,
-    pub proportional_position: Vec2,
+    pub scaled_position: Vec2,
 
     pub size: Vec2,
     pub title: String,
@@ -84,7 +84,7 @@ impl EditorWindow {
         text_editor: TextEditor,
         target_computer: Computer,
     ) -> EditorWindow {
-        let position = Self::position_from_proportionally(proportional_position, size);
+        let position = Self::position_from_scaled(proportional_position, size);
 
         let grab_position = None;
         let is_focused = false;
@@ -110,7 +110,7 @@ impl EditorWindow {
 
         Self {
             position,
-            proportional_position,
+            scaled_position: proportional_position,
 
             size,
             title,
@@ -144,8 +144,7 @@ impl EditorWindow {
                 self.position = mouse_position - grab_position;
                 self.clamp_within_window_boundary();
 
-                self.proportional_position =
-                    Self::proportional_position_from(self.position, self.size);
+                self.scaled_position = Self::scaled_position_from(self.position);
             } else {
                 self.grab_position = None;
             }
@@ -156,8 +155,7 @@ impl EditorWindow {
         {
             self.grab_position = Some(mouse_position - self.position);
         } else {
-            self.position =
-                Self::position_from_proportionally(self.proportional_position, self.size);
+            self.position = Self::position_from_scaled(self.scaled_position, self.size);
         }
 
         self.update_editor();
@@ -422,23 +420,7 @@ impl EditorWindow {
     }
 
     pub fn clamp_within_window_boundary(&mut self) {
-        let scaling_factor = scaling_factor();
-
-        if self.position.x + self.size.x * scaling_factor > window::screen_width() {
-            self.position.x = window::screen_width() - self.size.x * scaling_factor;
-        }
-
-        if self.position.x < 0.0 {
-            self.position.x = 0.0;
-        }
-
-        if self.position.y + self.size.y * scaling_factor > window::screen_height() {
-            self.position.y = window::screen_height() - self.size.y * scaling_factor;
-        }
-
-        if self.position.y < 0.0 {
-            self.position.y = 0.0;
-        }
+        self.position = Self::clamp_position_within_window_boundary(self.position, self.size);
     }
 
     #[must_use]
@@ -633,35 +615,36 @@ impl EditorWindow {
     }
 
     #[must_use]
-    pub fn proportional_position_from(position: Vec2, size: Vec2) -> Vec2 {
-        let size = size * scaling_factor();
-
-        let maximum_position = Vec2::new(window::screen_width(), window::screen_height()) - size;
-
-        fn safe_divide(position: f32, maximum_position: f32) -> f32 {
-            if maximum_position > 0.0 {
-                position / maximum_position
-            } else {
-                0.0
-            }
-        }
-
-        Vec2::new(
-            safe_divide(position.x, maximum_position.x),
-            safe_divide(position.y, maximum_position.y),
-        )
+    pub fn scaled_position_from(position: Vec2) -> Vec2 {
+        position / scaling_factor()
     }
 
     #[must_use]
-    pub fn position_from_proportionally(proportional_position: Vec2, size: Vec2) -> Vec2 {
-        let size = size * scaling_factor();
+    pub fn position_from_scaled(proportional_position: Vec2, size: Vec2) -> Vec2 {
+        Self::clamp_position_within_window_boundary(proportional_position * scaling_factor(), size)
+    }
 
-        let position = proportional_position
-            * (Vec2::new(window::screen_width(), window::screen_height()) - size);
+    #[must_use]
+    pub fn clamp_position_within_window_boundary(mut position: Vec2, size: Vec2) -> Vec2 {
+        let scaling_factor = scaling_factor();
 
-        let dpi_scale = window::miniquad::window::dpi_scale();
+        if position.x + size.x * scaling_factor > window::screen_width() {
+            position.x = window::screen_width() - size.x * scaling_factor;
+        }
 
-        (position.max(Vec2::ZERO) * dpi_scale).round() / dpi_scale
+        if position.x < 0.0 {
+            position.x = 0.0;
+        }
+
+        if position.y + size.y * scaling_factor > window::screen_height() {
+            position.y = window::screen_height() - size.y * scaling_factor;
+        }
+
+        if position.y < 0.0 {
+            position.y = 0.0;
+        }
+
+        position
     }
 
     #[must_use]
