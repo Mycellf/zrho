@@ -440,6 +440,32 @@ pub struct Cursor {
     pub end: Option<CursorLocation>,
 }
 
+impl Cursor {
+    pub fn range(&self) -> Range<CursorLocation> {
+        if let Some(end) = self.end {
+            if end.index > self.index {
+                self.start..end
+            } else {
+                end..self.start
+            }
+        } else {
+            self.start..self.start
+        }
+    }
+
+    pub fn position_range(&self) -> Range<CharacterPosition> {
+        if let Some(end) = self.end {
+            if end.index > self.index {
+                self.start.position..end.position
+            } else {
+                end.position..self.start.position
+            }
+        } else {
+            self.start.position..self.start.position
+        }
+    }
+}
+
 impl PartialEq for Cursor {
     fn eq(&self, other: &Self) -> bool {
         self.start == other.start

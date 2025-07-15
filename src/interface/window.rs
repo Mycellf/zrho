@@ -418,34 +418,52 @@ impl EditorWindow {
                 let cursor = cursor;
 
                 match character {
-                    '\u{8}' if cursor.index > 0 => {
-                        // Backspace
-                        let range = self
-                            .text_editor
-                            .move_position_left(cursor.position, 1, true)
-                            ..cursor.position;
+                    '\u{8}' => {
+                        if cursor.index > 0 {
+                            // Backspace
 
-                        self.text_editor.remove(range).unwrap();
+                            let range = if cursor.end.is_some() {
+                                cursor.position_range()
+                            } else {
+                                self.text_editor
+                                    .move_position_left(cursor.position, 1, true)
+                                    ..cursor.position
+                            };
 
-                        typed = true;
+                            self.text_editor.remove(range).unwrap();
+
+                            self.text_editor.cursors[i].end = None;
+
+                            typed = true;
+                        }
                     }
                     // NOTE: The last character is always a newline, which has a length of 1
-                    '\u{7f}' if cursor.index < self.text_editor.text.len() - 1 => {
-                        // Delete
-                        let range = cursor.position
-                            ..self
-                                .text_editor
-                                .move_position_right(cursor.position, 1, true);
+                    '\u{7f}' => {
+                        if cursor.index < self.text_editor.text.len() - 1 {
+                            // Delete
+                            let range = if cursor.end.is_some() {
+                                cursor.position_range()
+                            } else {
+                                cursor.position
+                                    ..self
+                                        .text_editor
+                                        .move_position_right(cursor.position, 1, true)
+                            };
 
-                        self.text_editor.remove(range).unwrap();
+                            self.text_editor.remove(range).unwrap();
 
-                        typed = true;
+                            self.text_editor.cursors[i].end = None;
+
+                            typed = true;
+                        }
                     }
                     _ if !character.is_control() || character == '\n' => {
                         // Typed character
                         self.text_editor
-                            .insert(cursor.position, &character.to_string())
+                            .replace(cursor.position_range(), &character.to_string())
                             .unwrap();
+
+                        self.text_editor.cursors[i].end = None;
 
                         typed = true;
                     }
