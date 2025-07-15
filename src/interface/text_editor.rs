@@ -181,7 +181,7 @@ impl TextEditor {
             self.cursors[i] = cursor;
         }
 
-        for line in range.start.line..range.end.line + num_new_lines + 1 {
+        for line in range.start.line..range.start.line + num_new_lines + 1 {
             self.update_colors_of_line(line).unwrap();
         }
 
