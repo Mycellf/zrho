@@ -44,6 +44,7 @@ pub struct EditorWindow {
     pub key_repeats: KeyRepeats,
 
     pub scroll: f32,
+    pub scroll_speed: f32,
     pub target_scroll: f32,
     pub scroll_bar: Option<ScrollBar>,
     pub text_offset: f32,
@@ -78,6 +79,9 @@ impl EditorWindow {
     pub const WINDOW_PADDING: f32 = 10.0;
     pub const ELEMENT_PADDING: f32 = 5.0;
 
+    pub const SCROLL_SPEED: f32 = 10.0;
+    pub const FOLLOW_SPEED: f32 = 25.0;
+
     pub fn new(
         proportional_position: Vec2,
         size: Vec2,
@@ -93,6 +97,7 @@ impl EditorWindow {
         let key_repeats = KeyRepeats::default();
 
         let scroll = 0.0;
+        let scroll_speed = Self::SCROLL_SPEED;
         let target_scroll = 0.0;
         let scroll_bar = None;
         let text_offset = 0.0;
@@ -124,6 +129,7 @@ impl EditorWindow {
             key_repeats,
 
             scroll,
+            scroll_speed,
             target_scroll,
             scroll_bar,
             text_offset,
@@ -178,14 +184,21 @@ impl EditorWindow {
                     self.target_scroll = self.target_scroll.round();
                 }
                 self.target_scroll = self.target_scroll.clamp(0.0, self.maximum_scroll());
+                self.scroll_speed = Self::SCROLL_SPEED;
             }
         }
 
         if self.target_scroll != self.scroll {
             let frame_time = macroquad::time::get_frame_time();
 
-            self.scroll =
-                exp_decay_cutoff(self.scroll, self.target_scroll, 10.0, frame_time, 0.01).0;
+            self.scroll = exp_decay_cutoff(
+                self.scroll,
+                self.target_scroll,
+                self.scroll_speed,
+                frame_time,
+                0.01,
+            )
+            .0;
         }
 
         self.contents_updated |= self.scroll != previous_scroll;
@@ -341,8 +354,10 @@ impl EditorWindow {
 
                 if position + 1.0 - self.height_of_editor() / Self::TEXT_SIZE > self.target_scroll {
                     self.target_scroll = position + 1.0 - self.height_of_editor() / Self::TEXT_SIZE;
+                    self.scroll_speed = Self::FOLLOW_SPEED;
                 } else if position < self.target_scroll {
                     self.target_scroll = position;
+                    self.scroll_speed = Self::FOLLOW_SPEED;
                 }
             }
 
