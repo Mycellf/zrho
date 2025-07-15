@@ -481,17 +481,40 @@ impl EditorWindow {
                         }
                     }
                     _ if !character.is_control() || character == '\n' => {
-                        // Typed character
-                        self.text_editor
-                            .replace(
-                                cursor.position_range(),
-                                &character.to_ascii_uppercase().to_string(),
-                            )
-                            .unwrap();
+                        let character = character.to_ascii_uppercase();
 
-                        self.text_editor.cursors[i].end = None;
+                        if input::is_key_down(KeyCode::LeftControl)
+                            || input::is_key_down(KeyCode::RightControl)
+                        {
+                            match character {
+                                'A' => {
+                                    let end = self.text_editor.text.len() - 1;
 
-                        typed = true;
+                                    self.text_editor.cursors = vec![Cursor {
+                                        start: CursorLocation {
+                                            position: self
+                                                .text_editor
+                                                .position_of_index(end)
+                                                .unwrap(),
+                                            index: end,
+                                        },
+                                        end: Some(CursorLocation::default()),
+                                    }];
+
+                                    moved_any_cursor = true;
+                                }
+                                _ => (),
+                            }
+                        } else {
+                            // Typed character
+                            self.text_editor
+                                .replace(cursor.position_range(), &character.to_string())
+                                .unwrap();
+
+                            self.text_editor.cursors[i].end = None;
+
+                            typed = true;
+                        }
                     }
                     _ => (),
                 }
