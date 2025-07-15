@@ -1,3 +1,5 @@
+use std::{env, sync::LazyLock};
+
 use macroquad::{
     camera::{self, Camera2D},
     color::{Color, colors},
@@ -254,7 +256,7 @@ impl EditorWindow {
 
                 if input::is_key_down(KeyCode::LeftShift)
                     || input::is_key_down(KeyCode::RightShift)
-                    || !input::is_mouse_button_pressed(MouseButton::Left)
+                    || self.is_dragging_selection
                 {
                     if !alt {
                         self.text_editor.cursors.truncate(1);
@@ -264,6 +266,9 @@ impl EditorWindow {
                     if cursor.end.is_none() {
                         cursor.end = Some(cursor.start);
                     }
+
+                    self.contents_updated |= cursor.start != clicked_location;
+
                     cursor.start = clicked_location;
 
                     if let Some(end) = cursor.end {
@@ -271,7 +276,7 @@ impl EditorWindow {
                             cursor.end = None;
                         }
                     }
-                } else if input::is_mouse_button_pressed(MouseButton::Left) {
+                } else {
                     let cursor = Cursor {
                         start: clicked_location,
                         ..Default::default()
@@ -286,9 +291,8 @@ impl EditorWindow {
                     }
 
                     self.is_dragging_selection = true;
+                    self.contents_updated = true;
                 }
-
-                self.contents_updated = true;
             }
         }
 
