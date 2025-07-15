@@ -48,6 +48,7 @@ pub struct EditorWindow {
 
     pub scroll: f32,
     pub scroll_speed: f32,
+    pub cursors_fit_in_window: bool,
     pub target_scroll: f32,
     pub scroll_bar: Option<ScrollBar>,
     pub text_offset: f32,
@@ -103,6 +104,7 @@ impl EditorWindow {
 
         let scroll = 0.0;
         let scroll_speed = Self::SCROLL_SPEED;
+        let cursors_fit_in_window = true;
         let target_scroll = 0.0;
         let scroll_bar = None;
         let text_offset = 0.0;
@@ -135,6 +137,7 @@ impl EditorWindow {
 
             scroll,
             scroll_speed,
+            cursors_fit_in_window,
             target_scroll,
             scroll_bar,
             text_offset,
@@ -407,41 +410,50 @@ impl EditorWindow {
         }
 
         if moved_any_cursor || typed {
-            let min_scroll = (self.text_editor.cursors)
+            let min_line = (self.text_editor.cursors)
                 .iter()
                 .min_by_key(|cursor| cursor.position.line)
                 .unwrap()
                 .position
                 .line as f32;
 
-            let max_scroll = (self.text_editor.cursors)
+            let max_line = (self.text_editor.cursors)
                 .iter()
                 .max_by_key(|cursor| cursor.position.line)
                 .unwrap()
                 .position
-                .line as f32
-                + 1.0
-                - self.height_of_editor() / Self::TEXT_SIZE;
+                .line as f32;
+
+            let height_offset = self.height_of_editor() / Self::TEXT_SIZE - 1.0;
+
+            let cursors_fit_in_window = min_line > max_line - height_offset;
+
+            let (min_scroll, max_scroll) = if cursors_fit_in_window {
+                (max_line - height_offset, min_line)
+            } else {
+                (min_line - height_offset, max_line)
+            };
 
             let mut follow_scroll = false;
 
-            let invert = min_scroll < max_scroll;
-
-            if (self.scroll > min_scroll) ^ invert {
-                self.target_scroll = min_scroll;
-                follow_scroll = true;
-            } else if (self.scroll < max_scroll) ^ invert {
+            if self.target_scroll > max_scroll {
                 self.target_scroll = max_scroll;
+                follow_scroll = true;
+            } else if self.target_scroll < min_scroll {
+                self.target_scroll = min_scroll;
                 follow_scroll = true;
             }
 
             if follow_scroll {
-                self.scroll_speed = if follow_slowly {
-                    Self::PAGE_FOLLOW_SPEED
-                } else {
-                    Self::FOLLOW_SPEED
-                };
+                self.scroll_speed =
+                    if follow_slowly || cursors_fit_in_window && !self.cursors_fit_in_window {
+                        Self::PAGE_FOLLOW_SPEED
+                    } else {
+                        Self::FOLLOW_SPEED
+                    };
             }
+
+            self.cursors_fit_in_window = cursors_fit_in_window;
 
             self.contents_updated = true;
 
