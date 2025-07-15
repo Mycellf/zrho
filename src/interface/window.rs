@@ -409,28 +409,25 @@ impl EditorWindow {
         if moved_any_cursor || typed {
             let min_scroll = (self.text_editor.cursors)
                 .iter()
-                .min_by_key(|cursor| cursor.position.line)
+                .max_by_key(|cursor| cursor.position.line)
                 .unwrap()
                 .position
                 .line as f32;
 
             let max_scroll = (self.text_editor.cursors)
                 .iter()
-                .max_by_key(|cursor| cursor.position.line)
+                .min_by_key(|cursor| cursor.position.line)
                 .unwrap()
                 .position
                 .line as f32
-                + 1.0
-                - self.height_of_editor() / Self::TEXT_SIZE;
+                + (1.0 - self.height_of_editor() / Self::TEXT_SIZE);
 
             let mut follow_scroll = false;
 
-            let invert = min_scroll < max_scroll;
-
-            if (self.scroll > min_scroll) ^ invert {
+            if self.scroll > min_scroll {
                 self.target_scroll = min_scroll;
                 follow_scroll = true;
-            } else if (self.scroll < max_scroll) ^ invert {
+            } else if self.scroll < max_scroll {
                 self.target_scroll = max_scroll;
                 follow_scroll = true;
             }
