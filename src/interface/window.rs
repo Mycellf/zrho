@@ -718,13 +718,7 @@ impl EditorWindow {
             );
         }
 
-        // Header and outline
-        let (text_color, background_color) = if self.is_focused {
-            (Self::EDITOR_BACKGROUND_COLOR, self.title_color)
-        } else {
-            (self.title_color, Self::WINDOW_COLOR)
-        };
-
+        // Outline
         shapes::draw_rectangle_lines(
             0.0,
             0.0,
@@ -733,6 +727,32 @@ impl EditorWindow {
             Self::BORDER_WIDTH * 2.0,
             Self::WINDOW_COLOR,
         );
+
+        // Errors
+        if let Err(errors) = &self.program {
+            for &line in errors.iter().flat_map(|error| &error.lines) {
+                let line = line as usize;
+
+                if line < start_line || line >= end_line {
+                    continue;
+                }
+
+                shapes::draw_rectangle(
+                    0.0,
+                    Self::TITLE_HEIGHT + Self::TEXT_SIZE * (line as f32 - self.scroll),
+                    Self::BORDER_WIDTH,
+                    Self::TEXT_SIZE,
+                    Color::from_hex(0xff0000),
+                );
+            }
+        }
+
+        // Header
+        let (text_color, background_color) = if self.is_focused {
+            (Self::EDITOR_BACKGROUND_COLOR, self.title_color)
+        } else {
+            (self.title_color, Self::WINDOW_COLOR)
+        };
 
         shapes::draw_rectangle(0.0, 0.0, self.size.x, Self::TITLE_HEIGHT, background_color);
 
