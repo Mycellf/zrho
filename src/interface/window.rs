@@ -10,7 +10,10 @@ use macroquad::{
 };
 
 use crate::{
-    interface::FONT,
+    interface::{
+        FONT, FONT_ASPECT,
+        text_editor::{CharacterPosition, Cursor},
+    },
     simulation::{
         computer::Computer,
         program::{Program, ProgramAssemblyError},
@@ -71,6 +74,7 @@ impl EditorWindow {
     pub const BORDER_WIDTH: f32 = 2.5;
 
     pub const TEXT_SIZE: f32 = 15.0;
+    pub const TEXT_WIDTH: f32 = Self::TEXT_SIZE * FONT_ASPECT;
     pub const TITLE_PADDING: f32 = 20.0;
     pub const TITLE_HEIGHT: f32 = Self::TEXT_SIZE + Self::TITLE_PADDING;
 
@@ -214,6 +218,17 @@ impl EditorWindow {
     pub fn update_editor(&mut self) {
         self.key_repeats.update();
 
+        if input::is_mouse_button_pressed(MouseButton::Left) {
+            if let Some(position) = self.position_of_point_in_text(input::mouse_position().into()) {
+                self.text_editor.cursors = vec![Cursor {
+                    position,
+                    index: self.text_editor.index_of_position(position).unwrap(),
+                }];
+
+                self.contents_updated = true;
+            }
+        }
+
         if self.is_grabbed() || !self.is_focused {
             return;
         }
@@ -228,14 +243,9 @@ impl EditorWindow {
             let mut moved = false;
 
             if self.is_key_pressed(KeyCode::Left) {
-                let length_of_line = self
+                cursor.position = self
                     .text_editor
-                    .length_of_line(cursor.position.line)
-                    .unwrap();
-
-                if cursor.position.column > length_of_line {
-                    cursor.position.column = length_of_line;
-                }
+                    .constrain_position_to_contents(cursor.position);
 
                 cursor.position = self
                     .text_editor
@@ -332,7 +342,14 @@ impl EditorWindow {
             }
 
             for i in 0..self.text_editor.cursors.len() {
-                let cursor = self.text_editor.cursors[i];
+                let mut cursor = self.text_editor.cursors[i];
+
+                cursor.position = self
+                    .text_editor
+                    .constrain_position_to_contents(cursor.position);
+
+                self.text_editor.cursors[i] = cursor;
+                let cursor = cursor;
 
                 match character {
                     '\u{8}' if cursor.index > 0 => {
@@ -400,6 +417,34 @@ impl EditorWindow {
                 &self.target_computer,
             );
         }
+    }
+
+    pub fn position_of_point_in_text(&self, point: Vec2) -> Option<CharacterPosition> {
+        if !self.is_point_within_editor(point) {
+            return None;
+        }
+
+        let text_window_space = (point - self.position) / scaling_factor() - self.offset_of_text();
+
+        let text_space = text_window_space + Vec2::Y * self.scroll * Self::TEXT_SIZE;
+
+        let column = (text_space.x / Self::TEXT_WIDTH).round().max(0.0) as usize;
+        let line = (text_space.y / Self::TEXT_SIZE).max(0.0) as usize;
+
+        let final_line = self.text_editor.num_lines() - 1;
+
+        Some(if line > final_line {
+            CharacterPosition {
+                line: final_line,
+                column: self.text_editor.length_of_line(final_line).unwrap(),
+            }
+        } else {
+            CharacterPosition { line, column }
+        })
+    }
+
+    pub fn offset_of_text(&self) -> Vec2 {
+        Vec2::new(Self::BORDER_WIDTH + 5.0, Self::TITLE_HEIGHT)
     }
 
     pub fn update_scroll_bar(&mut self, focus: WindowFocus, index: usize) {
@@ -606,7 +651,7 @@ impl EditorWindow {
 
         self.text_editor.draw_range(
             start_line..end_line,
-            Vec2::new(Self::BORDER_WIDTH + 5.0, Self::TITLE_HEIGHT + text_offset),
+            self.offset_of_text() + Vec2::Y * text_offset,
             Self::TEXT_SIZE,
             1.0,
             1.0,

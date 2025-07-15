@@ -224,6 +224,23 @@ impl TextEditor {
         position
     }
 
+    #[must_use]
+    pub fn constrain_position_to_contents(&self, position: CharacterPosition) -> CharacterPosition {
+        let final_line = self.num_lines() - 1;
+
+        if position.line > final_line {
+            CharacterPosition {
+                line: final_line,
+                column: self.length_of_line(final_line).unwrap(),
+            }
+        } else {
+            CharacterPosition {
+                line: position.line,
+                column: (position.column).min(self.length_of_line(position.line).unwrap()),
+            }
+        }
+    }
+
     pub fn length_of_line(&self, line: usize) -> Option<usize> {
         Some(self.get_line(line)?.chars().count())
     }

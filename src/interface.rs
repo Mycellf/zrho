@@ -9,3 +9,5 @@ pub mod window;
 pub static FONT: LazyLock<Font> = LazyLock::new(|| {
     text::load_ttf_font_from_bytes(include_bytes!("../assets/CommitMono-400-Regular.otf")).unwrap()
 });
+
+pub const FONT_ASPECT: f32 = 0.6;
