@@ -460,7 +460,10 @@ impl EditorWindow {
                     _ if !character.is_control() || character == '\n' => {
                         // Typed character
                         self.text_editor
-                            .replace(cursor.position_range(), &character.to_string())
+                            .replace(
+                                cursor.position_range(),
+                                &character.to_ascii_uppercase().to_string(),
+                            )
                             .unwrap();
 
                         self.text_editor.cursors[i].end = None;
