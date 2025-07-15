@@ -18,7 +18,7 @@ pub struct TextEditor {
 impl TextEditor {
     pub fn new(text: String) -> Self {
         let lines = Self::line_indecies_from(&text);
-        let cursors = vec![Cursor::new()];
+        let cursors = vec![Cursor::default()];
 
         let mut result = Self {
             text,
@@ -392,29 +392,14 @@ impl From<ColorChoice> for Color {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct CharacterPosition {
     pub line: usize,
     pub column: usize,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Cursor {
     pub position: CharacterPosition,
     pub index: usize,
-}
-
-impl Cursor {
-    pub fn new() -> Self {
-        Self {
-            position: CharacterPosition { line: 0, column: 0 },
-            index: 0,
-        }
-    }
-}
-
-impl Default for Cursor {
-    fn default() -> Self {
-        Self::new()
-    }
 }
