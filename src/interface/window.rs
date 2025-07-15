@@ -618,7 +618,11 @@ impl EditorWindow {
                 (cursor.position.line as f32 - self.scroll) * Self::TEXT_SIZE + Self::TITLE_HEIGHT,
                 1.0,
                 Self::TEXT_SIZE,
-                colors::WHITE,
+                if self.is_focused {
+                    colors::WHITE
+                } else {
+                    colors::GRAY
+                },
             );
         }
 
