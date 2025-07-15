@@ -79,8 +79,9 @@ impl EditorWindow {
     pub const WINDOW_PADDING: f32 = 10.0;
     pub const ELEMENT_PADDING: f32 = 5.0;
 
-    pub const SCROLL_SPEED: f32 = 10.0;
-    pub const FOLLOW_SPEED: f32 = 25.0;
+    pub const SCROLL_SPEED: f32 = 25.0;
+    pub const FOLLOW_SPEED: f32 = f32::INFINITY;
+    pub const PAGE_FOLLOW_SPEED: f32 = 10.0;
 
     pub fn new(
         proportional_position: Vec2,
@@ -219,6 +220,8 @@ impl EditorWindow {
 
         let mut moved_any_cursor = false;
 
+        let mut follow_slowly = false;
+
         for i in 0..self.text_editor.cursors.len() {
             let mut cursor = self.text_editor.cursors[i];
 
@@ -242,17 +245,19 @@ impl EditorWindow {
                 self.key_repeats.set_key(KeyCode::Right);
             }
 
-            if self.is_key_pressed(KeyCode::Up) && cursor.position.line > 0 {
-                cursor.position.line -= 1;
+            if self.is_key_pressed(KeyCode::Up) {
+                if cursor.position.line > 0 {
+                    cursor.position.line -= 1;
+                }
                 moved = true;
 
                 self.key_repeats.set_key(KeyCode::Up);
             }
 
-            if self.is_key_pressed(KeyCode::Down)
-                && cursor.position.line < self.text_editor.num_lines() - 1
-            {
-                cursor.position.line += 1;
+            if self.is_key_pressed(KeyCode::Down) {
+                if cursor.position.line < self.text_editor.num_lines() - 1 {
+                    cursor.position.line += 1;
+                }
                 moved = true;
 
                 self.key_repeats.set_key(KeyCode::Down);
@@ -279,6 +284,7 @@ impl EditorWindow {
                 cursor.position.line = (cursor.position.line)
                     .saturating_sub(self.height_of_editor_lines().saturating_sub(1));
                 moved = true;
+                follow_slowly = true;
 
                 self.key_repeats.set_key(KeyCode::PageUp);
             }
@@ -288,6 +294,7 @@ impl EditorWindow {
                     + self.height_of_editor_lines().saturating_sub(1))
                 .min(self.text_editor.num_lines() - 1);
                 moved = true;
+                follow_slowly = true;
 
                 self.key_repeats.set_key(KeyCode::PageDown);
             }
@@ -352,12 +359,18 @@ impl EditorWindow {
             for cursor in &self.text_editor.cursors {
                 let position = cursor.position.line as f32;
 
+                let follow_speed = if follow_slowly {
+                    Self::PAGE_FOLLOW_SPEED
+                } else {
+                    Self::FOLLOW_SPEED
+                };
+
                 if position + 1.0 - self.height_of_editor() / Self::TEXT_SIZE > self.target_scroll {
                     self.target_scroll = position + 1.0 - self.height_of_editor() / Self::TEXT_SIZE;
-                    self.scroll_speed = Self::FOLLOW_SPEED;
+                    self.scroll_speed = follow_speed;
                 } else if position < self.target_scroll {
                     self.target_scroll = position;
-                    self.scroll_speed = Self::FOLLOW_SPEED;
+                    self.scroll_speed = follow_speed;
                 }
             }
 
