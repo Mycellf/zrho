@@ -677,18 +677,20 @@ impl EditorWindow {
         );
 
         // Text
-        let mut start_line = self.scroll.floor() as usize;
+        let start_line = self.scroll.floor() as usize;
         let end_line = (self.scroll + self.height_of_editor() / Self::TEXT_SIZE).ceil() as usize;
 
         let mut text_offset = self.text_offset;
 
-        if start_line > 0 {
-            start_line -= 1;
+        let earlier_start_line = if start_line > 0 {
             text_offset -= Self::TEXT_SIZE;
-        }
+            start_line - 1
+        } else {
+            start_line
+        };
 
         self.text_editor.draw_range(
-            start_line..end_line,
+            earlier_start_line..end_line,
             self.offset_of_text() + Vec2::Y * text_offset,
             Self::TEXT_SIZE,
             1.0,
@@ -703,7 +705,7 @@ impl EditorWindow {
         } = Self::text_params_with_size(Self::TEXT_SIZE);
 
         for cursor in &self.text_editor.cursors {
-            if !(start_line..end_line).contains(&cursor.position.line) {
+            if !(earlier_start_line..end_line).contains(&cursor.position.line) {
                 continue;
             }
 
@@ -725,13 +727,12 @@ impl EditorWindow {
             );
         }
 
-        // Outline
-        shapes::draw_rectangle_lines(
+        // Left outline
+        shapes::draw_rectangle(
             0.0,
-            0.0,
-            self.size.x,
-            self.size.y,
-            Self::BORDER_WIDTH * 2.0,
+            Self::TITLE_HEIGHT,
+            Self::BORDER_WIDTH,
+            self.height_of_editor(),
             Self::WINDOW_COLOR,
         );
 
@@ -754,6 +755,33 @@ impl EditorWindow {
             }
         }
 
+        // Scroll bar / right outline
+        if let Some(scroll_bar) = self.scroll_bar {
+            shapes::draw_rectangle(
+                self.size.x - scroll_bar.size.x,
+                Self::TITLE_HEIGHT,
+                scroll_bar.size.x,
+                self.height_of_editor(),
+                Self::WINDOW_COLOR,
+            );
+
+            shapes::draw_rectangle(
+                self.size.x - scroll_bar.size.x,
+                Self::TITLE_HEIGHT + scroll_bar.vertical_offset,
+                scroll_bar.size.x,
+                scroll_bar.size.y,
+                scroll_bar.color(),
+            );
+        } else {
+            shapes::draw_rectangle(
+                self.size.x - Self::BORDER_WIDTH,
+                Self::TITLE_HEIGHT,
+                Self::BORDER_WIDTH,
+                self.height_of_editor(),
+                Self::WINDOW_COLOR,
+            );
+        };
+
         // Header
         let (text_color, background_color) = if self.is_focused {
             (Self::EDITOR_BACKGROUND_COLOR, self.title_color)
@@ -773,24 +801,14 @@ impl EditorWindow {
             },
         );
 
-        // Scroll bar
-        if let Some(scroll_bar) = self.scroll_bar {
-            shapes::draw_rectangle(
-                self.size.x - scroll_bar.size.x,
-                Self::TITLE_HEIGHT,
-                scroll_bar.size.x - Self::BORDER_WIDTH,
-                self.height_of_editor(),
-                Self::WINDOW_COLOR,
-            );
-
-            shapes::draw_rectangle(
-                self.size.x - scroll_bar.size.x,
-                Self::TITLE_HEIGHT + scroll_bar.vertical_offset,
-                scroll_bar.size.x,
-                scroll_bar.size.y,
-                scroll_bar.color(),
-            );
-        }
+        // Footer
+        shapes::draw_rectangle(
+            0.0,
+            self.size.y - Self::BORDER_WIDTH,
+            self.size.x,
+            Self::BORDER_WIDTH,
+            Self::WINDOW_COLOR,
+        );
 
         camera::pop_camera_state();
     }
