@@ -220,10 +220,17 @@ impl EditorWindow {
 
         if focus.mouse == Some(index) && input::is_mouse_button_pressed(MouseButton::Left) {
             if let Some(position) = self.position_of_point_in_text(input::mouse_position().into()) {
-                self.text_editor.cursors = vec![Cursor {
+                let cursor = Cursor {
                     position,
                     index: self.text_editor.index_of_position(position).unwrap(),
-                }];
+                };
+
+                if input::is_key_down(KeyCode::LeftAlt) || input::is_key_down(KeyCode::RightAlt) {
+                    self.text_editor.cursors.push(cursor);
+                    self.text_editor.deduplicate_cursors();
+                } else {
+                    self.text_editor.cursors = vec![cursor];
+                }
 
                 self.contents_updated = true;
             }
@@ -393,25 +400,45 @@ impl EditorWindow {
         }
 
         if moved_any_cursor || typed {
-            for cursor in &self.text_editor.cursors {
-                let position = cursor.position.line as f32;
+            let min_scroll = (self.text_editor.cursors)
+                .iter()
+                .min_by_key(|cursor| cursor.position.line)
+                .unwrap()
+                .position
+                .line as f32;
 
-                let follow_speed = if follow_slowly {
+            let max_scroll = (self.text_editor.cursors)
+                .iter()
+                .max_by_key(|cursor| cursor.position.line)
+                .unwrap()
+                .position
+                .line as f32
+                + 1.0
+                - self.height_of_editor() / Self::TEXT_SIZE;
+
+            let mut follow_scroll = false;
+
+            let invert = min_scroll < max_scroll;
+
+            if (self.scroll > min_scroll) ^ invert {
+                self.target_scroll = min_scroll;
+                follow_scroll = true;
+            } else if (self.scroll < max_scroll) ^ invert {
+                self.target_scroll = max_scroll;
+                follow_scroll = true;
+            }
+
+            if follow_scroll {
+                self.scroll_speed = if follow_slowly {
                     Self::PAGE_FOLLOW_SPEED
                 } else {
                     Self::FOLLOW_SPEED
                 };
-
-                if position + 1.0 - self.height_of_editor() / Self::TEXT_SIZE > self.scroll {
-                    self.target_scroll = position + 1.0 - self.height_of_editor() / Self::TEXT_SIZE;
-                    self.scroll_speed = follow_speed;
-                } else if position < self.scroll {
-                    self.target_scroll = position;
-                    self.scroll_speed = follow_speed;
-                }
             }
 
             self.contents_updated = true;
+
+            self.text_editor.deduplicate_cursors();
         }
 
         if typed {

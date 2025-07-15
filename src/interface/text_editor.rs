@@ -179,6 +179,16 @@ impl TextEditor {
         Some(())
     }
 
+    pub fn deduplicate_cursors(&mut self) {
+        let old_cursors = std::mem::take(&mut self.cursors);
+
+        for cursor in old_cursors {
+            if !self.cursors.contains(&cursor) {
+                self.cursors.push(cursor);
+            }
+        }
+    }
+
     #[must_use]
     pub fn move_position_left(
         &self,
@@ -415,8 +425,14 @@ pub struct CharacterPosition {
     pub column: usize,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Eq)]
 pub struct Cursor {
     pub position: CharacterPosition,
     pub index: usize,
+}
+
+impl PartialEq for Cursor {
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index
+    }
 }
