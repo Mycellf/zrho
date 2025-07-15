@@ -12,7 +12,7 @@ use macroquad::{
 use crate::{
     interface::{
         FONT, FONT_ASPECT,
-        text_editor::{CharacterPosition, Cursor},
+        text_editor::{CharacterPosition, Cursor, CursorLocation},
     },
     simulation::{
         computer::Computer,
@@ -66,11 +66,12 @@ impl EditorWindow {
 
     pub const EDITOR_BACKGROUND_COLOR: Color = Color::from_hex(0x101018);
     pub const WINDOW_COLOR: Color = Color::from_hex(0x181824);
-    pub const HEADER_COLOR: Color = Color::from_hex(0x202030);
 
     pub const RED: Color = Color::from_hex(0xff0000);
     pub const ORANGE: Color = Color::from_hex(0xff7f00);
     pub const BLUE: Color = Color::from_hex(0x007fff);
+
+    pub const SELECTION_COLOR: Color = Color::from_hex(0x203050);
 
     pub const BORDER_WIDTH: f32 = 2.5;
 
@@ -221,19 +222,51 @@ impl EditorWindow {
     pub fn update_editor(&mut self, focus: WindowFocus, index: usize) {
         self.key_repeats.update();
 
-        if focus.mouse == Some(index) && input::is_mouse_button_pressed(MouseButton::Left) {
+        if focus.mouse == Some(index)
+            && (input::is_mouse_button_pressed(MouseButton::Left)
+                || input::is_mouse_button_down(MouseButton::Left))
+        {
             if let Some(position) = self.position_of_point_in_text(input::mouse_position().into()) {
-                let cursor = Cursor {
+                let clicked_location = CursorLocation {
                     position,
                     index: self.text_editor.index_of_position(position).unwrap(),
                 };
 
-                if input::is_key_down(KeyCode::LeftAlt) || input::is_key_down(KeyCode::RightAlt) {
-                    if !self.text_editor.cursors.contains(&cursor) {
-                        self.text_editor.cursors.push(cursor);
+                let alt =
+                    input::is_key_down(KeyCode::LeftAlt) || input::is_key_down(KeyCode::RightAlt);
+
+                if input::is_key_down(KeyCode::LeftShift)
+                    || input::is_key_down(KeyCode::RightShift)
+                    || !input::is_mouse_button_pressed(MouseButton::Left)
+                {
+                    if !alt {
+                        self.text_editor.cursors.truncate(1);
                     }
-                } else {
-                    self.text_editor.cursors = vec![cursor];
+
+                    let cursor = self.text_editor.cursors.last_mut().unwrap();
+                    if cursor.end.is_none() {
+                        cursor.end = Some(cursor.start);
+                    }
+                    cursor.start = clicked_location;
+
+                    if let Some(end) = cursor.end {
+                        if end == cursor.start {
+                            cursor.end = None;
+                        }
+                    }
+                } else if input::is_mouse_button_pressed(MouseButton::Left) {
+                    let cursor = Cursor {
+                        start: clicked_location,
+                        ..Default::default()
+                    };
+
+                    if alt {
+                        if !self.text_editor.cursors.contains(&cursor) {
+                            self.text_editor.cursors.push(cursor);
+                        }
+                    } else {
+                        self.text_editor.cursors = vec![cursor];
+                    }
                 }
 
                 self.contents_updated = true;
@@ -341,9 +374,21 @@ impl EditorWindow {
             }
 
             if moved {
+                let shift = input::is_key_down(KeyCode::LeftShift)
+                    || input::is_key_down(KeyCode::RightShift);
+
+                if shift {
+                    if cursor.end.is_none() {
+                        cursor.end = Some(self.text_editor.cursors[i].start);
+                    }
+                } else {
+                    cursor.end = None;
+                }
                 cursor.index = self.text_editor.index_of_position(cursor.position).unwrap();
 
-                if input::is_key_down(KeyCode::LeftAlt) || input::is_key_down(KeyCode::RightAlt) {
+                if (input::is_key_down(KeyCode::LeftAlt) || input::is_key_down(KeyCode::RightAlt))
+                    && !shift
+                {
                     if !self.text_editor.cursors.contains(&cursor) {
                         self.text_editor.cursors.push(cursor);
                     }
@@ -688,10 +733,92 @@ impl EditorWindow {
             Self::EDITOR_BACKGROUND_COLOR,
         );
 
-        // Text
+        let TextParams {
+            font_size,
+            font_scale,
+            ..
+        } = Self::text_params_with_size(Self::TEXT_SIZE);
+
         let start_line = self.scroll.floor() as usize;
         let end_line = (self.scroll + self.height_of_editor() / Self::TEXT_SIZE).ceil() as usize;
 
+        // Selections
+        for cursor in &self.text_editor.cursors {
+            let Some(end) = cursor.end else {
+                continue;
+            };
+
+            let start = cursor.start;
+
+            #[allow(unused)]
+            let cursor = ();
+
+            let (start, end) = if start.index > end.index {
+                (end, start)
+            } else {
+                (start, end)
+            };
+
+            let starts_before = start.position.line < start_line;
+            let ends_before = end.position.line < start_line;
+
+            let starts_after = start.position.line >= end_line;
+            let ends_after = end.position.line >= end_line;
+
+            if starts_before && ends_before || starts_after && ends_after {
+                continue;
+            }
+
+            let start_index = self.text_editor.lines[start.position.line].byte_offset;
+            let start_contents = &self.text_editor.text[start_index..start.index];
+
+            let end_index = self.text_editor.lines[end.position.line].byte_offset;
+            let end_contents = &self.text_editor.text[end_index..end.index];
+
+            let start_offset =
+                text::measure_text(start_contents, Some(&FONT), font_size, font_scale).width;
+            let end_offset =
+                text::measure_text(end_contents, Some(&FONT), font_size, font_scale).width;
+
+            if start.position.line == end.position.line {
+                shapes::draw_rectangle(
+                    start_offset + self.offset_of_text().x,
+                    self.position_of_line(start.position.line),
+                    end_offset - start_offset,
+                    Self::TEXT_SIZE,
+                    Self::SELECTION_COLOR,
+                );
+            } else {
+                shapes::draw_rectangle(
+                    start_offset + self.offset_of_text().x,
+                    self.position_of_line(start.position.line),
+                    self.width_of_line(start.position.line).unwrap() - start_offset
+                        + Self::TEXT_WIDTH,
+                    Self::TEXT_SIZE,
+                    Self::SELECTION_COLOR,
+                );
+
+                for line in start.position.line + 1..end.position.line {
+                    shapes::draw_rectangle(
+                        self.offset_of_text().x,
+                        self.position_of_line(line),
+                        self.width_of_line(line).unwrap() + Self::TEXT_WIDTH,
+                        Self::TEXT_SIZE,
+                        Self::SELECTION_COLOR,
+                    );
+                }
+
+                shapes::draw_rectangle(
+                    self.offset_of_text().x,
+                    self.position_of_line(end.position.line),
+                    end_offset,
+                    Self::TEXT_SIZE,
+                    Self::SELECTION_COLOR,
+                );
+            }
+        }
+
+        // Text
         let mut text_offset = self.text_offset;
 
         let earlier_start_line = if start_line > 0 {
@@ -710,14 +837,8 @@ impl EditorWindow {
         );
 
         // Cursors
-        let TextParams {
-            font_size,
-            font_scale,
-            ..
-        } = Self::text_params_with_size(Self::TEXT_SIZE);
-
         for cursor in &self.text_editor.cursors {
-            if !(earlier_start_line..end_line).contains(&cursor.position.line) {
+            if cursor.position.line < start_line || cursor.position.line >= end_line {
                 continue;
             }
 
@@ -726,9 +847,8 @@ impl EditorWindow {
 
             shapes::draw_rectangle(
                 text::measure_text(preceding_contents, Some(&FONT), font_size, font_scale).width
-                    + Self::BORDER_WIDTH
-                    + 5.0,
-                (cursor.position.line as f32 - self.scroll) * Self::TEXT_SIZE + Self::TITLE_HEIGHT,
+                    + self.offset_of_text().x,
+                self.position_of_line(cursor.position.line),
                 1.0,
                 Self::TEXT_SIZE,
                 if self.is_focused {
@@ -823,6 +943,22 @@ impl EditorWindow {
         );
 
         camera::pop_camera_state();
+    }
+
+    pub fn position_of_line(&self, line: usize) -> f32 {
+        (line as f32 - self.scroll) * Self::TEXT_SIZE + self.offset_of_text().y
+    }
+
+    pub fn width_of_line(&self, line: usize) -> Option<f32> {
+        let contents = self.text_editor.get_line(line)?;
+
+        let TextParams {
+            font_size,
+            font_scale,
+            ..
+        } = Self::text_params_with_size(Self::TEXT_SIZE);
+
+        Some(text::measure_text(contents, Some(&FONT), font_size, font_scale).width)
     }
 
     pub fn text_params_with_size(text_size: f32) -> TextParams<'static> {

@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::ops::{Deref, DerefMut, Range};
 
 use macroquad::{
     color::{Color, colors},
@@ -151,25 +151,34 @@ impl TextEditor {
         self.text.replace_range(start_index..end_index, text);
 
         for i in 0..self.cursors.len() {
-            let cursor = &mut self.cursors[i];
+            let update_location = |mut location: CursorLocation| {
+                if location.index >= start_index {
+                    if location.index < end_index {
+                        location.index = start_index;
+                    } else {
+                        location.index -= removed_bytes;
+                    }
 
-            if cursor.index >= start_index {
-                if cursor.index < end_index {
-                    cursor.index = start_index;
-                } else {
-                    cursor.index -= removed_bytes;
+                    location.index += text.len();
+
+                    if location.position.line <= range.end.line {
+                        let index = location.index;
+                        location.position = self.position_of_index(index).unwrap();
+                    } else {
+                        location.position.line += num_new_lines;
+                        location.position.line -= removed_lines;
+                    }
                 }
 
-                cursor.index += text.len();
+                location
+            };
 
-                if cursor.position.line <= range.end.line {
-                    let index = cursor.index;
-                    self.cursors[i].position = self.position_of_index(index).unwrap();
-                } else {
-                    cursor.position.line += num_new_lines;
-                    cursor.position.line -= removed_lines;
-                }
-            }
+            let mut cursor = self.cursors[i];
+
+            cursor.start = update_location(cursor.start);
+            cursor.end = cursor.end.map(update_location);
+
+            self.cursors[i] = cursor;
         }
 
         for line in range.start.line..range.end.line + num_new_lines + 1 {
@@ -427,12 +436,38 @@ pub struct CharacterPosition {
 
 #[derive(Clone, Copy, Debug, Default, Eq)]
 pub struct Cursor {
-    pub position: CharacterPosition,
-    pub index: usize,
+    pub start: CursorLocation,
+    pub end: Option<CursorLocation>,
 }
 
 impl PartialEq for Cursor {
     fn eq(&self, other: &Self) -> bool {
+        self.start == other.start
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq)]
+pub struct CursorLocation {
+    pub position: CharacterPosition,
+    pub index: usize,
+}
+
+impl PartialEq for CursorLocation {
+    fn eq(&self, other: &Self) -> bool {
         self.index == other.index
+    }
+}
+
+impl Deref for Cursor {
+    type Target = CursorLocation;
+
+    fn deref(&self) -> &Self::Target {
+        &self.start
+    }
+}
+
+impl DerefMut for Cursor {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.start
     }
 }
