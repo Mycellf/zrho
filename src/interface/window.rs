@@ -88,14 +88,14 @@ impl EditorWindow {
     pub const PAGE_FOLLOW_SPEED: f32 = 10.0;
 
     pub fn new(
-        proportional_position: Vec2,
+        scaled_position: Vec2,
         size: Vec2,
         title: String,
         title_color: Color,
         text_editor: TextEditor,
         target_computer: Computer,
     ) -> EditorWindow {
-        let position = Self::position_from_scaled(proportional_position, size);
+        let position = Self::position_from_scaled(scaled_position, size);
 
         let grab_position = None;
         let is_focused = false;
@@ -123,7 +123,7 @@ impl EditorWindow {
 
         Self {
             position,
-            scaled_position: proportional_position,
+            scaled_position,
 
             size,
             title,
