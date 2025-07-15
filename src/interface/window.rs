@@ -258,6 +258,10 @@ impl EditorWindow {
             if self.is_key_pressed(KeyCode::Right) {
                 cursor.position = self
                     .text_editor
+                    .constrain_position_to_contents(cursor.position);
+
+                cursor.position = self
+                    .text_editor
                     .move_position_right(cursor.position, 1, true);
                 moved = true;
 
