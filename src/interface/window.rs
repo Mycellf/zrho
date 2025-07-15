@@ -228,6 +228,15 @@ impl EditorWindow {
             let mut moved = false;
 
             if self.is_key_pressed(KeyCode::Left) {
+                let length_of_line = self
+                    .text_editor
+                    .length_of_line(cursor.position.line)
+                    .unwrap();
+
+                if cursor.position.column > length_of_line {
+                    cursor.position.column = length_of_line;
+                }
+
                 cursor.position = self
                     .text_editor
                     .move_position_left(cursor.position, 1, true);
