@@ -248,6 +248,8 @@ impl EditorWindow {
             if self.is_key_pressed(KeyCode::Up) {
                 if cursor.position.line > 0 {
                     cursor.position.line -= 1;
+                } else {
+                    cursor.position.column = 0;
                 }
                 moved = true;
 
@@ -257,6 +259,11 @@ impl EditorWindow {
             if self.is_key_pressed(KeyCode::Down) {
                 if cursor.position.line < self.text_editor.num_lines() - 1 {
                     cursor.position.line += 1;
+                } else {
+                    cursor.position.column = self
+                        .text_editor
+                        .length_of_line(cursor.position.line)
+                        .unwrap();
                 }
                 moved = true;
 
@@ -365,10 +372,10 @@ impl EditorWindow {
                     Self::FOLLOW_SPEED
                 };
 
-                if position + 1.0 - self.height_of_editor() / Self::TEXT_SIZE > self.target_scroll {
+                if position + 1.0 - self.height_of_editor() / Self::TEXT_SIZE > self.scroll {
                     self.target_scroll = position + 1.0 - self.height_of_editor() / Self::TEXT_SIZE;
                     self.scroll_speed = follow_speed;
-                } else if position < self.target_scroll {
+                } else if position < self.scroll {
                     self.target_scroll = position;
                     self.scroll_speed = follow_speed;
                 }
@@ -823,7 +830,7 @@ impl KeyRepeats {
                 *time -= macroquad::time::get_frame_time();
 
                 (*time <= 0.0).then(|| {
-                    *time = self.interval;
+                    *time = (*time + self.interval).max(0.0);
 
                     key_code
                 })
