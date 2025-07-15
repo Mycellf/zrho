@@ -339,7 +339,12 @@ impl EditorWindow {
             if moved {
                 cursor.index = self.text_editor.index_of_position(cursor.position).unwrap();
 
-                self.text_editor.cursors[i] = cursor;
+                if input::is_key_down(KeyCode::LeftAlt) || input::is_key_down(KeyCode::RightAlt) {
+                    self.text_editor.cursors.push(cursor);
+                    self.text_editor.deduplicate_cursors();
+                } else {
+                    self.text_editor.cursors[i] = cursor;
+                }
             }
 
             moved_any_cursor |= moved;
