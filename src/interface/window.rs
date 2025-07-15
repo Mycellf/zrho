@@ -51,6 +51,7 @@ pub struct EditorWindow {
     pub cursors_fit_in_window: bool,
     pub target_scroll: f32,
     pub scroll_bar: Option<ScrollBar>,
+    pub is_dragging_selection: bool,
     pub text_offset: f32,
 
     pub text_editor: TextEditor,
@@ -108,6 +109,7 @@ impl EditorWindow {
         let cursors_fit_in_window = true;
         let target_scroll = 0.0;
         let scroll_bar = None;
+        let is_dragging_selection = false;
         let text_offset = 0.0;
 
         let program = Program::assemble_from(title.clone(), &text_editor.text, &target_computer);
@@ -141,6 +143,7 @@ impl EditorWindow {
             cursors_fit_in_window,
             target_scroll,
             scroll_bar,
+            is_dragging_selection,
             text_offset,
 
             text_editor,
@@ -222,11 +225,25 @@ impl EditorWindow {
     pub fn update_editor(&mut self, focus: WindowFocus, index: usize) {
         self.key_repeats.update();
 
-        if focus.mouse == Some(index)
-            && (input::is_mouse_button_pressed(MouseButton::Left)
-                || input::is_mouse_button_down(MouseButton::Left))
+        if self.is_dragging_selection
+            || focus.mouse == Some(index) && input::is_mouse_button_pressed(MouseButton::Left)
         {
-            if let Some(position) = self.position_of_point_in_text(input::mouse_position().into()) {
+            let mouse_position = input::mouse_position().into();
+
+            if self.is_dragging_selection && !input::is_mouse_button_down(MouseButton::Left) {
+                self.is_dragging_selection = false;
+            } else if let Some(position) = self
+                .position_of_point_in_text(mouse_position, false)
+                .or_else(|| {
+                    self.is_dragging_selection.then(|| {
+                        self.position_of_point_in_text(
+                            self.clamp_point_within_editor(mouse_position),
+                            true,
+                        )
+                        .unwrap()
+                    })
+                })
+            {
                 let clicked_location = CursorLocation {
                     position,
                     index: self.text_editor.index_of_position(position).unwrap(),
@@ -267,6 +284,8 @@ impl EditorWindow {
                     } else {
                         self.text_editor.cursors = vec![cursor];
                     }
+
+                    self.is_dragging_selection = true;
                 }
 
                 self.contents_updated = true;
@@ -535,8 +554,8 @@ impl EditorWindow {
         }
     }
 
-    pub fn position_of_point_in_text(&self, point: Vec2) -> Option<CharacterPosition> {
-        if !self.is_point_within_editor(point) {
+    pub fn position_of_point_in_text(&self, point: Vec2, force: bool) -> Option<CharacterPosition> {
+        if !(force || self.is_point_within_editor(point)) {
             return None;
         }
 
@@ -607,6 +626,7 @@ impl EditorWindow {
 
         let (width, color, is_selected, grab_position) = if let Some(scroll_bar) = self.scroll_bar {
             let is_area_hovered = focus.mouse == Some(index)
+                && (!self.is_grabbed() || self.is_scroll_bar_grabbed())
                 && self.is_point_within_scroll_bar_region(mouse_position);
 
             let is_hovered = is_area_hovered && self.is_point_within_scroll_bar(mouse_position);
@@ -691,7 +711,7 @@ impl EditorWindow {
 
     #[must_use]
     pub fn is_grabbed(&self) -> bool {
-        self.is_being_dragged() || self.is_scroll_bar_grabbed()
+        self.is_being_dragged() || self.is_scroll_bar_grabbed() || self.is_dragging_selection
     }
 
     #[must_use]
@@ -1056,6 +1076,21 @@ impl EditorWindow {
                         })
                         * scaling_factor()
             && point.y <= self.position.y + (self.size.y + Self::WINDOW_PADDING) * scaling_factor()
+    }
+
+    #[must_use]
+    pub fn clamp_point_within_editor(&self, mut point: Vec2) -> Vec2 {
+        point.x = point.x.clamp(
+            self.position.x + Self::BORDER_WIDTH * scaling_factor(),
+            self.position.x + (self.size.x - Self::BORDER_WIDTH) * scaling_factor(),
+        );
+
+        point.y = point.y.clamp(
+            self.position.y + Self::TITLE_HEIGHT * scaling_factor(),
+            self.position.y + (self.size.y - Self::BORDER_WIDTH) * scaling_factor(),
+        );
+
+        point
     }
 
     #[must_use]
