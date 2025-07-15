@@ -174,7 +174,7 @@ impl EditorWindow {
             self.position = Self::position_from_scaled(self.scaled_position, self.size);
         }
 
-        self.update_editor();
+        self.update_editor(focus, index);
 
         // Update scrolling
         let previous_scroll = self.scroll;
@@ -215,10 +215,10 @@ impl EditorWindow {
         is_clicked
     }
 
-    pub fn update_editor(&mut self) {
+    pub fn update_editor(&mut self, focus: WindowFocus, index: usize) {
         self.key_repeats.update();
 
-        if input::is_mouse_button_pressed(MouseButton::Left) {
+        if focus.mouse == Some(index) && input::is_mouse_button_pressed(MouseButton::Left) {
             if let Some(position) = self.position_of_point_in_text(input::mouse_position().into()) {
                 self.text_editor.cursors = vec![Cursor {
                     position,
