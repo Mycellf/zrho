@@ -734,6 +734,10 @@ impl EditorWindow {
         if self.contents_updated {
             self.contents_updated = false;
 
+            if *RAINBOW_DEBUG {
+                self.title_color = Color::from_hex(macroquad::rand::gen_range(0, 0xffffff));
+            }
+
             self.update_texture();
         }
 
@@ -1205,6 +1209,12 @@ pub struct WindowFocus {
     pub grab: Option<usize>,
     pub mouse: Option<usize>,
 }
+
+static RAINBOW_DEBUG: LazyLock<bool> = LazyLock::new(|| {
+    env::args()
+        .skip(1)
+        .any(|argument| argument == "--rainbow-debug")
+});
 
 pub fn exp_decay_cutoff(a: f32, b: f32, decay: f32, dt: f32, cutoff: f32) -> (f32, bool) {
     if (a - b).abs() < cutoff {
