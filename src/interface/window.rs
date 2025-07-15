@@ -226,8 +226,9 @@ impl EditorWindow {
                 };
 
                 if input::is_key_down(KeyCode::LeftAlt) || input::is_key_down(KeyCode::RightAlt) {
-                    self.text_editor.cursors.push(cursor);
-                    self.text_editor.deduplicate_cursors();
+                    if !self.text_editor.cursors.contains(&cursor) {
+                        self.text_editor.cursors.push(cursor);
+                    }
                 } else {
                     self.text_editor.cursors = vec![cursor];
                 }
@@ -340,8 +341,9 @@ impl EditorWindow {
                 cursor.index = self.text_editor.index_of_position(cursor.position).unwrap();
 
                 if input::is_key_down(KeyCode::LeftAlt) || input::is_key_down(KeyCode::RightAlt) {
-                    self.text_editor.cursors.push(cursor);
-                    self.text_editor.deduplicate_cursors();
+                    if !self.text_editor.cursors.contains(&cursor) {
+                        self.text_editor.cursors.push(cursor);
+                    }
                 } else {
                     self.text_editor.cursors[i] = cursor;
                 }
