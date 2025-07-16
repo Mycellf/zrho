@@ -520,6 +520,18 @@ impl Cursor {
             self.start.position..self.start.position
         }
     }
+
+    pub fn index_range(&self) -> Range<usize> {
+        if let Some(end) = self.end {
+            if end.index > self.index {
+                self.start.index..end.index
+            } else {
+                end.index..self.start.index
+            }
+        } else {
+            self.start.index..self.start.index
+        }
+    }
 }
 
 impl PartialEq for Cursor {

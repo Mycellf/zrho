@@ -1,4 +1,4 @@
-use std::{env, sync::LazyLock};
+use std::{cell::LazyCell, env, sync::LazyLock};
 
 use macroquad::{
     camera::{self, Camera2D},
@@ -431,6 +431,10 @@ impl EditorWindow {
 
         let mut seperate_edits_in_history = false;
 
+        let mut copied = String::new();
+        let pasted =
+            LazyCell::new(|| macroquad::miniquad::window::clipboard_get().unwrap_or(String::new()));
+
         while let Some(mut character) = input::get_char_pressed() {
             if character == '\r' {
                 character = '\n';
@@ -540,6 +544,32 @@ impl EditorWindow {
 
                                     break 'cursor;
                                 }
+                                'C' => {
+                                    // Copy
+                                    copied.push_str(&self.text_editor.text[cursor.index_range()]);
+                                }
+                                'X' => {
+                                    // Cut
+                                    copied.push_str(&self.text_editor.text[cursor.index_range()]);
+
+                                    self.text_editor.remove(cursor.position_range()).unwrap();
+
+                                    typed = true;
+                                    moved_any_cursor = true;
+                                }
+                                'V' => {
+                                    // Paste
+                                    if !pasted.is_empty() || cursor.end.is_some() {
+                                        self.text_editor
+                                            .replace(cursor.position_range(), &pasted)
+                                            .unwrap();
+
+                                        self.text_editor.cursors[i].end = None;
+
+                                        typed = true;
+                                        moved_any_cursor = true;
+                                    }
+                                }
                                 _ => (),
                             }
                         } else {
@@ -574,6 +604,12 @@ impl EditorWindow {
                     _ => (),
                 }
             }
+        }
+
+        // BUG: Pasting doesn't work after window::next_frame().await has been called, aka it
+        // doesn't work
+        if !copied.is_empty() {
+            macroquad::miniquad::window::clipboard_set(&copied);
         }
 
         if seperate_edits_in_history {
