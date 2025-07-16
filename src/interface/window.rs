@@ -411,6 +411,8 @@ impl EditorWindow {
                     if !self.text_editor.cursors.contains(&cursor) {
                         self.text_editor.cursors.push(cursor);
                     }
+
+                    self.text_editor.cursors[i].end = None;
                 } else {
                     self.text_editor.cursors[i] = cursor;
                 }
