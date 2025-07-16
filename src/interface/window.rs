@@ -431,6 +431,9 @@ impl EditorWindow {
             }
 
             'cursor: for i in 0..self.text_editor.cursors.len() {
+                let is_first = i == 0;
+                let is_last = i == self.text_editor.cursors.len() - 1;
+
                 let mut cursor = self.text_editor.cursors[i];
 
                 cursor.position = self
@@ -446,7 +449,7 @@ impl EditorWindow {
                             // Backspace
 
                             let range = if cursor.end.is_some() {
-                                if i == 0 {
+                                if is_first {
                                     self.text_editor.history.finish_edit_group();
                                 }
                                 cursor.position_range()
@@ -458,7 +461,12 @@ impl EditorWindow {
 
                             self.text_editor.remove(range).unwrap();
 
-                            self.text_editor.cursors[i].end = None;
+                            if cursor.end.is_some() {
+                                if is_last {
+                                    self.text_editor.history.finish_edit_group();
+                                }
+                                self.text_editor.cursors[i].end = None;
+                            }
 
                             typed = true;
                             moved_any_cursor = true;
@@ -469,7 +477,7 @@ impl EditorWindow {
                         if cursor.index < self.text_editor.text.len() - 1 || cursor.end.is_some() {
                             // Delete
                             let range = if cursor.end.is_some() {
-                                if i == 0 {
+                                if is_first {
                                     self.text_editor.history.finish_edit_group();
                                 }
                                 cursor.position_range()
@@ -482,7 +490,12 @@ impl EditorWindow {
 
                             self.text_editor.remove(range).unwrap();
 
-                            self.text_editor.cursors[i].end = None;
+                            if cursor.end.is_some() {
+                                if is_last {
+                                    self.text_editor.history.finish_edit_group();
+                                }
+                                self.text_editor.cursors[i].end = None;
+                            }
 
                             typed = true;
                             moved_any_cursor = true;
@@ -495,7 +508,7 @@ impl EditorWindow {
                             let character = character.to_ascii_uppercase();
 
                             // Control keybind
-                            if i == 0 {
+                            if is_first {
                                 self.text_editor.history.finish_edit_group();
                             }
 
