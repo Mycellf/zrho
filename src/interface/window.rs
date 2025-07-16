@@ -68,6 +68,8 @@ pub struct EditorWindow {
 
     pub camera: Camera2D,
     pub contents_updated: bool,
+
+    pub initialization_updates: usize,
 }
 
 impl EditorWindow {
@@ -138,6 +140,8 @@ impl EditorWindow {
         };
         let contents_updated = true;
 
+        let initialization_updates = 2;
+
         Self {
             position,
             scaled_position,
@@ -166,6 +170,8 @@ impl EditorWindow {
 
             camera,
             contents_updated,
+
+            initialization_updates,
         }
     }
 
@@ -953,6 +959,14 @@ impl EditorWindow {
     }
 
     pub fn draw(&mut self) {
+        if self.initialization_updates > 0 {
+            for _ in 0..self.initialization_updates {
+                self.update_texture();
+            }
+
+            self.initialization_updates = 0;
+        }
+
         if self.contents_updated {
             self.contents_updated = false;
 
