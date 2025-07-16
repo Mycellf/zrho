@@ -258,10 +258,6 @@ impl EditorWindow {
                     || input::is_key_down(KeyCode::RightShift)
                     || self.is_dragging_selection
                 {
-                    if !alt {
-                        self.text_editor.cursors.truncate(1);
-                    }
-
                     let cursor = self.text_editor.cursors.last_mut().unwrap();
                     if cursor.end.is_none() {
                         cursor.end = Some(cursor.start);
@@ -486,6 +482,7 @@ impl EditorWindow {
                         if input::is_key_down(KeyCode::LeftControl)
                             || input::is_key_down(KeyCode::RightControl)
                         {
+                            // Control keybind
                             match character {
                                 'A' => {
                                     let end = self.text_editor.text.len() - 1;
