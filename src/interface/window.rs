@@ -454,6 +454,7 @@ impl EditorWindow {
                             self.text_editor.cursors[i].end = None;
 
                             typed = true;
+                            moved_any_cursor = true;
                         }
                     }
                     // NOTE: The last character is always a newline, which has a length of 1
@@ -474,6 +475,7 @@ impl EditorWindow {
                             self.text_editor.cursors[i].end = None;
 
                             typed = true;
+                            moved_any_cursor = true;
                         }
                     }
                     _ if !character.is_control() || character == '\n' => {
@@ -500,6 +502,16 @@ impl EditorWindow {
 
                                     moved_any_cursor = true;
                                 }
+                                'Z' => {
+                                    self.text_editor.undo();
+
+                                    typed = true;
+                                }
+                                'Y' => {
+                                    self.text_editor.redo();
+
+                                    typed = true;
+                                }
                                 _ => (),
                             }
                         } else {
@@ -511,6 +523,7 @@ impl EditorWindow {
                             self.text_editor.cursors[i].end = None;
 
                             typed = true;
+                            moved_any_cursor = true;
                         }
                     }
                     _ => (),
@@ -518,7 +531,7 @@ impl EditorWindow {
             }
         }
 
-        if moved_any_cursor || typed {
+        if moved_any_cursor {
             let min_line = (self.text_editor.cursors)
                 .iter()
                 .min_by_key(|cursor| cursor.position.line)
@@ -563,7 +576,9 @@ impl EditorWindow {
             }
 
             self.cursors_fit_in_window = cursors_fit_in_window;
+        }
 
+        if moved_any_cursor || typed {
             self.contents_updated = true;
 
             self.text_editor.deduplicate_cursors();

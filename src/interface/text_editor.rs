@@ -13,6 +13,8 @@ pub struct TextEditor {
     pub text: String,
     pub lines: Vec<Line>,
     pub cursors: Vec<Cursor>,
+
+    pub history: EditHistory,
 }
 
 impl TextEditor {
@@ -20,10 +22,14 @@ impl TextEditor {
         let lines = Self::line_indecies_from(&text);
         let cursors = vec![Cursor::default()];
 
+        let history = EditHistory::default();
+
         let mut result = Self {
             text,
             lines,
             cursors,
+
+            history,
         };
 
         result.update_colors_of_all_lines();
@@ -127,6 +133,28 @@ impl TextEditor {
         let start_index = self.index_of_position(range.start)?;
         let end_index = self.index_of_position(range.end)?;
 
+        let replaced = self.text[start_index..end_index].to_owned();
+
+        self.replace_without_history(range, text)?;
+
+        self.history.push_entry(EditEntry {
+            start: start_index,
+            inserted: text.to_owned(),
+            replaced,
+        });
+
+        Some(())
+    }
+
+    #[must_use]
+    fn replace_without_history(
+        &mut self,
+        range: Range<CharacterPosition>,
+        text: &str,
+    ) -> Option<()> {
+        let start_index = self.index_of_position(range.start)?;
+        let end_index = self.index_of_position(range.end)?;
+
         let removed_bytes = end_index.checked_sub(start_index)?;
         let removed_lines = range.end.line.checked_sub(range.start.line)?;
 
@@ -186,6 +214,32 @@ impl TextEditor {
         }
 
         Some(())
+    }
+
+    pub fn redo(&mut self) {
+        if let Some(entry) = self.history.redo() {
+            let start_index = entry.start;
+            let end_index = entry.start + entry.replaced.len();
+
+            let range = self.position_of_index(start_index).unwrap()
+                ..self.position_of_index(end_index).unwrap();
+
+            self.replace_without_history(range, &entry.inserted)
+                .unwrap();
+        }
+    }
+
+    pub fn undo(&mut self) {
+        if let Some(entry) = self.history.undo() {
+            let start_index = entry.start;
+            let end_index = entry.start + entry.inserted.len();
+
+            let range = self.position_of_index(start_index).unwrap()
+                ..self.position_of_index(end_index).unwrap();
+
+            self.replace_without_history(range, &entry.replaced)
+                .unwrap();
+        }
     }
 
     pub fn deduplicate_cursors(&mut self) {
@@ -496,4 +550,45 @@ impl DerefMut for Cursor {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.start
     }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct EditHistory {
+    pub entries: Vec<EditEntry>,
+    pub next_entry: usize,
+}
+
+impl EditHistory {
+    pub fn push_entry(&mut self, entry: EditEntry) {
+        self.entries.truncate(self.next_entry);
+        self.entries.push(entry);
+
+        self.next_entry += 1;
+    }
+
+    pub fn undo(&mut self) -> Option<EditEntry> {
+        if self.next_entry > 0 {
+            self.next_entry -= 1;
+            Some(self.entries[self.next_entry].clone())
+        } else {
+            None
+        }
+    }
+
+    pub fn redo(&mut self) -> Option<EditEntry> {
+        if self.next_entry < self.entries.len() {
+            let entry = self.entries[self.next_entry].clone();
+            self.next_entry += 1;
+            Some(entry)
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct EditEntry {
+    pub start: usize,
+    pub inserted: String,
+    pub replaced: String,
 }
