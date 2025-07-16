@@ -438,7 +438,7 @@ impl EditorWindow {
 
                 match character {
                     '\u{8}' => {
-                        if cursor.index > 0 {
+                        if cursor.index > 0 || cursor.end.is_some() {
                             // Backspace
 
                             let range = if cursor.end.is_some() {
@@ -459,7 +459,7 @@ impl EditorWindow {
                     }
                     // NOTE: The last character is always a newline, which has a length of 1
                     '\u{7f}' => {
-                        if cursor.index < self.text_editor.text.len() - 1 {
+                        if cursor.index < self.text_editor.text.len() - 1 || cursor.end.is_some() {
                             // Delete
                             let range = if cursor.end.is_some() {
                                 cursor.position_range()
