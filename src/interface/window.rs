@@ -448,6 +448,7 @@ impl EditorWindow {
         });
 
         let pasted_lines = OnceCell::new();
+        let cursors = OnceCell::new();
 
         while let Some(mut character) = input::get_char_pressed() {
             if character == '\r' {
@@ -562,14 +563,16 @@ impl EditorWindow {
                                     // Copy
                                     copied.push((
                                         self.text_editor.text[cursor.index_range()].to_owned(),
-                                        cursor.index,
+                                        i,
                                     ));
                                 }
                                 'X' => {
                                     // Cut
+                                    cursors.get_or_init(|| self.text_editor.cursors.clone());
+
                                     copied.push((
                                         self.text_editor.text[cursor.index_range()].to_owned(),
-                                        cursor.index,
+                                        i,
                                     ));
 
                                     self.text_editor.remove(cursor.position_range()).unwrap();
@@ -670,14 +673,15 @@ impl EditorWindow {
         if !copied.is_empty() {
             let mut copied_string = String::new();
 
-            copied.sort_by_key(|&(_, index)| index);
+            let cursors = cursors.get().unwrap_or(&self.text_editor.cursors);
+            copied.sort_by_key(|&(_, i)| cursors[i].index);
 
             let multi_select = copied.len() > 1;
 
             for (element, _) in copied {
                 copied_string.push_str(&element);
 
-                if multi_select {
+                if multi_select && !element.contains('\n') {
                     copied_string.push('\n');
                 }
             }
