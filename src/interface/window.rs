@@ -1,5 +1,5 @@
 use std::{
-    cell::LazyCell,
+    cell::{LazyCell, OnceCell},
     env,
     sync::{LazyLock, Mutex},
 };
@@ -447,6 +447,8 @@ impl EditorWindow {
             }
         });
 
+        let pasted_lines = OnceCell::new();
+
         while let Some(mut character) = input::get_char_pressed() {
             if character == '\r' {
                 character = '\n';
@@ -578,8 +580,49 @@ impl EditorWindow {
                                 'V' => {
                                     // Paste
                                     if !pasted.is_empty() || cursor.end.is_some() {
+                                        let pasted_lines = pasted_lines.get_or_init(|| {
+                                            if self.text_editor.cursors.len() == 1 {
+                                                return None;
+                                            }
+
+                                            let lines = pasted
+                                                .lines()
+                                                .take(self.text_editor.cursors.len() + 1)
+                                                .collect::<Vec<_>>();
+
+                                            if lines.len() != self.text_editor.cursors.len() {
+                                                return None;
+                                            }
+
+                                            let mut cursor_ordering = self
+                                                .text_editor
+                                                .cursors
+                                                .iter()
+                                                .enumerate()
+                                                .map(|(i, cursor)| (cursor.index, i))
+                                                .collect::<Vec<_>>();
+
+                                            cursor_ordering.sort_by_key(|&(index, _)| index);
+
+                                            let mut reordered_lines = vec![""; lines.len()];
+
+                                            for (line, (_, i)) in
+                                                cursor_ordering.into_iter().enumerate()
+                                            {
+                                                reordered_lines[i] = lines[line];
+                                            }
+
+                                            Some(reordered_lines)
+                                        });
+
+                                        let contents = if let Some(pasted_lines) = &pasted_lines {
+                                            pasted_lines[i]
+                                        } else {
+                                            &pasted
+                                        };
+
                                         self.text_editor
-                                            .replace(cursor.position_range(), &pasted)
+                                            .replace(cursor.position_range(), contents)
                                             .unwrap();
 
                                         self.text_editor.cursors[i].end = None;
