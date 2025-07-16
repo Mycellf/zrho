@@ -1380,6 +1380,9 @@ static RAINBOW_DEBUG: LazyLock<bool> = LazyLock::new(|| {
         .any(|argument| argument == "--rainbow-debug")
 });
 
+/// HACK: Macroquad's clipboard interface often fails to set the clipboard, so values written to
+/// the clipboard are stored internally in case that happens. When it happens, the clipboard is
+/// emptied.
 static INTERNAL_CLIPBOARD: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
 
 pub fn exp_decay_cutoff(a: f32, b: f32, decay: f32, dt: f32, cutoff: f32) -> (f32, bool) {
