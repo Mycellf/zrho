@@ -427,15 +427,14 @@ impl EditorWindow {
 
         let mut typed = false;
 
+        let mut seperate_edits_in_history = false;
+
         while let Some(mut character) = input::get_char_pressed() {
             if character == '\r' {
                 character = '\n';
             }
 
             'cursor: for i in 0..self.text_editor.cursors.len() {
-                let is_first = i == 0;
-                let is_last = i == self.text_editor.cursors.len() - 1;
-
                 let mut cursor = self.text_editor.cursors[i];
 
                 cursor.position = self
@@ -451,9 +450,7 @@ impl EditorWindow {
                             // Backspace
 
                             let range = if cursor.end.is_some() {
-                                if is_first {
-                                    self.text_editor.history.finish_edit_group();
-                                }
+                                seperate_edits_in_history = true;
                                 cursor.position_range()
                             } else {
                                 self.text_editor
@@ -464,9 +461,6 @@ impl EditorWindow {
                             self.text_editor.remove(range).unwrap();
 
                             if cursor.end.is_some() {
-                                if is_last {
-                                    self.text_editor.history.finish_edit_group();
-                                }
                                 self.text_editor.cursors[i].end = None;
                             }
 
@@ -479,9 +473,7 @@ impl EditorWindow {
                         if cursor.index < self.text_editor.text.len() - 1 || cursor.end.is_some() {
                             // Delete
                             let range = if cursor.end.is_some() {
-                                if is_first {
-                                    self.text_editor.history.finish_edit_group();
-                                }
+                                seperate_edits_in_history = true;
                                 cursor.position_range()
                             } else {
                                 cursor.position
@@ -493,9 +485,6 @@ impl EditorWindow {
                             self.text_editor.remove(range).unwrap();
 
                             if cursor.end.is_some() {
-                                if is_last {
-                                    self.text_editor.history.finish_edit_group();
-                                }
                                 self.text_editor.cursors[i].end = None;
                             }
 
@@ -510,9 +499,7 @@ impl EditorWindow {
                             let character = character.to_ascii_uppercase();
 
                             // Control keybind
-                            if is_first {
-                                self.text_editor.history.finish_edit_group();
-                            }
+                            seperate_edits_in_history = true;
 
                             match character {
                                 'A' => {
@@ -585,6 +572,16 @@ impl EditorWindow {
                     _ => (),
                 }
             }
+        }
+
+        if seperate_edits_in_history {
+            self.text_editor.history.finish_edit_group();
+        }
+
+        self.text_editor.history.insert_buffered_edits();
+
+        if seperate_edits_in_history {
+            self.text_editor.history.finish_edit_group();
         }
 
         if moved_any_cursor {

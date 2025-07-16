@@ -137,7 +137,7 @@ impl TextEditor {
 
         self.replace_without_history(range, text)?;
 
-        self.history.push_edit(Edit {
+        self.history.buffer.push(Edit {
             start: start_index,
             inserted: text.to_owned(),
             replaced,
@@ -556,13 +556,31 @@ impl DerefMut for Cursor {
 
 #[derive(Clone, Debug, Default)]
 pub struct EditHistory {
+    pub buffer: Vec<Edit>,
     entries: Vec<EditGroup>,
     next_entry: usize,
     group_next_edit: bool,
 }
 
 impl EditHistory {
-    pub fn push_edit(&mut self, edit: Edit) {
+    pub fn insert_buffered_edits(&mut self) {
+        if self.buffer.is_empty() {
+            return;
+        }
+
+        if self.group_next_edit {
+            self.entries[self.next_entry].edits.append(&mut self.buffer);
+        } else {
+            self.entries.truncate(self.next_entry);
+            self.entries.push(EditGroup {
+                edits: std::mem::take(&mut self.buffer),
+            });
+
+            self.group_next_edit = true;
+        }
+    }
+
+    pub fn insert_edit(&mut self, edit: Edit) {
         if edit.replaced.is_empty() && edit.inserted.is_empty() {
             return;
         }
