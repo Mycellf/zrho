@@ -137,7 +137,7 @@ impl TextEditor {
 
         self.replace_without_history(range, text)?;
 
-        self.history.push_entry(EditEntry {
+        self.history.push_edit(Edit {
             start: start_index,
             inserted: text.to_owned(),
             replaced,
@@ -217,28 +217,30 @@ impl TextEditor {
     }
 
     pub fn redo(&mut self) {
-        if let Some(entry) = self.history.redo() {
-            let start_index = entry.start;
-            let end_index = entry.start + entry.replaced.len();
+        if let Some(group) = self.history.redo() {
+            for edit in group.edits {
+                let start_index = edit.start;
+                let end_index = edit.start + edit.replaced.len();
 
-            let range = self.position_of_index(start_index).unwrap()
-                ..self.position_of_index(end_index).unwrap();
+                let range = self.position_of_index(start_index).unwrap()
+                    ..self.position_of_index(end_index).unwrap();
 
-            self.replace_without_history(range, &entry.inserted)
-                .unwrap();
+                self.replace_without_history(range, &edit.inserted).unwrap();
+            }
         }
     }
 
     pub fn undo(&mut self) {
-        if let Some(entry) = self.history.undo() {
-            let start_index = entry.start;
-            let end_index = entry.start + entry.inserted.len();
+        if let Some(group) = self.history.undo() {
+            for edit in group.edits.into_iter().rev() {
+                let start_index = edit.start;
+                let end_index = edit.start + edit.inserted.len();
 
-            let range = self.position_of_index(start_index).unwrap()
-                ..self.position_of_index(end_index).unwrap();
+                let range = self.position_of_index(start_index).unwrap()
+                    ..self.position_of_index(end_index).unwrap();
 
-            self.replace_without_history(range, &entry.replaced)
-                .unwrap();
+                self.replace_without_history(range, &edit.replaced).unwrap();
+            }
         }
     }
 
@@ -554,19 +556,37 @@ impl DerefMut for Cursor {
 
 #[derive(Clone, Debug, Default)]
 pub struct EditHistory {
-    pub entries: Vec<EditEntry>,
-    pub next_entry: usize,
+    entries: Vec<EditGroup>,
+    next_entry: usize,
+    group_next_edit: bool,
 }
 
 impl EditHistory {
-    pub fn push_entry(&mut self, entry: EditEntry) {
-        self.entries.truncate(self.next_entry);
-        self.entries.push(entry);
+    pub fn push_edit(&mut self, edit: Edit) {
+        if edit.replaced.is_empty() && edit.inserted.is_empty() {
+            return;
+        }
 
-        self.next_entry += 1;
+        if self.group_next_edit {
+            self.entries[self.next_entry].edits.push(edit);
+        } else {
+            self.entries.truncate(self.next_entry);
+            self.entries.push(EditGroup { edits: vec![edit] });
+
+            self.group_next_edit = true;
+        }
     }
 
-    pub fn undo(&mut self) -> Option<EditEntry> {
+    pub fn finish_edit_group(&mut self) {
+        if self.group_next_edit {
+            self.group_next_edit = false;
+            self.next_entry += 1;
+        }
+    }
+
+    pub fn undo(&mut self) -> Option<EditGroup> {
+        self.finish_edit_group();
+
         if self.next_entry > 0 {
             self.next_entry -= 1;
             Some(self.entries[self.next_entry].clone())
@@ -575,7 +595,9 @@ impl EditHistory {
         }
     }
 
-    pub fn redo(&mut self) -> Option<EditEntry> {
+    pub fn redo(&mut self) -> Option<EditGroup> {
+        self.finish_edit_group();
+
         if self.next_entry < self.entries.len() {
             let entry = self.entries[self.next_entry].clone();
             self.next_entry += 1;
@@ -587,7 +609,12 @@ impl EditHistory {
 }
 
 #[derive(Clone, Debug)]
-pub struct EditEntry {
+pub struct EditGroup {
+    pub edits: Vec<Edit>,
+}
+
+#[derive(Clone, Debug)]
+pub struct Edit {
     pub start: usize,
     pub inserted: String,
     pub replaced: String,

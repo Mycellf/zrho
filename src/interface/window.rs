@@ -419,6 +419,10 @@ impl EditorWindow {
             moved_any_cursor |= moved;
         }
 
+        if moved_any_cursor {
+            self.text_editor.history.finish_edit_group();
+        }
+
         let mut typed = false;
 
         while let Some(mut character) = input::get_char_pressed() {
@@ -426,7 +430,7 @@ impl EditorWindow {
                 character = '\n';
             }
 
-            for i in 0..self.text_editor.cursors.len() {
+            'cursor: for i in 0..self.text_editor.cursors.len() {
                 let mut cursor = self.text_editor.cursors[i];
 
                 cursor.position = self
@@ -442,6 +446,9 @@ impl EditorWindow {
                             // Backspace
 
                             let range = if cursor.end.is_some() {
+                                if i == 0 {
+                                    self.text_editor.history.finish_edit_group();
+                                }
                                 cursor.position_range()
                             } else {
                                 self.text_editor
@@ -462,6 +469,9 @@ impl EditorWindow {
                         if cursor.index < self.text_editor.text.len() - 1 || cursor.end.is_some() {
                             // Delete
                             let range = if cursor.end.is_some() {
+                                if i == 0 {
+                                    self.text_editor.history.finish_edit_group();
+                                }
                                 cursor.position_range()
                             } else {
                                 cursor.position
@@ -479,14 +489,19 @@ impl EditorWindow {
                         }
                     }
                     _ if !character.is_control() || character == '\n' => {
-                        let character = character.to_ascii_uppercase();
-
                         if input::is_key_down(KeyCode::LeftControl)
                             || input::is_key_down(KeyCode::RightControl)
                         {
+                            let character = character.to_ascii_uppercase();
+
                             // Control keybind
+                            if i == 0 {
+                                self.text_editor.history.finish_edit_group();
+                            }
+
                             match character {
                                 'A' => {
+                                    // Select all
                                     let end = self.text_editor.text.len() - 1;
 
                                     self.text_editor.cursors = vec![Cursor {
@@ -506,6 +521,7 @@ impl EditorWindow {
                                     break 'cursor;
                                 }
                                 'Z' => {
+                                    // Undo
                                     self.text_editor.undo();
 
                                     typed = true;
@@ -513,6 +529,7 @@ impl EditorWindow {
                                     break 'cursor;
                                 }
                                 'Y' => {
+                                    // Redo
                                     self.text_editor.redo();
 
                                     typed = true;
@@ -522,6 +539,7 @@ impl EditorWindow {
                                 _ => (),
                             }
                         } else {
+                            // Typed character
                             let location = cursor.end.unwrap_or(cursor.start);
 
                             let line_range = self
@@ -539,7 +557,6 @@ impl EditorWindow {
                                 character
                             };
 
-                            // Typed character
                             self.text_editor
                                 .replace(cursor.position_range(), &character.to_string())
                                 .unwrap();
