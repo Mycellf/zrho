@@ -481,7 +481,6 @@ impl EditorWindow {
                     '\u{8}' => {
                         if cursor.index > 0 || cursor.end.is_some() {
                             // Backspace
-
                             let range = if cursor.end.is_some() {
                                 seperate_edits_in_history = true;
                                 cursor.position_range()
