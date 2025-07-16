@@ -428,7 +428,6 @@ impl EditorWindow {
         let mut typed = false;
 
         let mut seperate_edits_in_history = false;
-        let mut new_group_with_edits = false;
 
         while let Some(mut character) = input::get_char_pressed() {
             if character == '\r' {
@@ -560,8 +559,6 @@ impl EditorWindow {
                                 character
                             };
 
-                            new_group_with_edits |= cursor.end.is_some();
-
                             self.text_editor
                                 .replace(cursor.position_range(), &character.to_string())
                                 .unwrap();
@@ -577,7 +574,7 @@ impl EditorWindow {
             }
         }
 
-        if seperate_edits_in_history || new_group_with_edits {
+        if seperate_edits_in_history {
             self.text_editor.history.finish_edit_group();
         }
 
