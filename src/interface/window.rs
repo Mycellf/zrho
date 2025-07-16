@@ -1,4 +1,8 @@
-use std::{cell::LazyCell, env, sync::LazyLock};
+use std::{
+    cell::LazyCell,
+    env,
+    sync::{LazyLock, Mutex},
+};
 
 use macroquad::{
     camera::{self, Camera2D},
@@ -432,8 +436,16 @@ impl EditorWindow {
         let mut seperate_edits_in_history = false;
 
         let mut copied = Vec::new();
-        let pasted =
-            LazyCell::new(|| macroquad::miniquad::window::clipboard_get().unwrap_or(String::new()));
+        let pasted = LazyCell::new(|| {
+            let external_clipboard =
+                macroquad::miniquad::window::clipboard_get().unwrap_or(String::new());
+
+            if external_clipboard.is_empty() {
+                INTERNAL_CLIPBOARD.lock().unwrap().clone()
+            } else {
+                external_clipboard
+            }
+        });
 
         while let Some(mut character) = input::get_char_pressed() {
             if character == '\r' {
@@ -612,8 +624,6 @@ impl EditorWindow {
             }
         }
 
-        // BUG: Pasting doesn't work after window::next_frame().await has been called, aka it
-        // doesn't work
         if !copied.is_empty() {
             let mut copied_string = String::new();
 
@@ -629,7 +639,11 @@ impl EditorWindow {
                 }
             }
 
-            macroquad::miniquad::window::clipboard_set(&copied_string);
+            if !copied_string.is_empty() {
+                macroquad::miniquad::window::clipboard_set(&copied_string);
+
+                *INTERNAL_CLIPBOARD.lock().unwrap() = copied_string;
+            }
         }
 
         if seperate_edits_in_history {
@@ -1365,6 +1379,8 @@ static RAINBOW_DEBUG: LazyLock<bool> = LazyLock::new(|| {
         .skip(1)
         .any(|argument| argument == "--rainbow-debug")
 });
+
+static INTERNAL_CLIPBOARD: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
 
 pub fn exp_decay_cutoff(a: f32, b: f32, decay: f32, dt: f32, cutoff: f32) -> (f32, bool) {
     if (a - b).abs() < cutoff {
