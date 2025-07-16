@@ -1,15 +1,15 @@
-; COMPUTES AND STORES THE FIRST 10000
-; ELEMENTS OF THE KOLAKOSKI SEQUENCE TO H
+; Computes and stores the first 10000
+; elements of the Kolakoski Sequence to H
 
-; USES D AS A BUFFER TO MINIMIZE TIME
-; SPENT WITH H BLOCKING
+; Uses D as a buffer to minimize time
+; spent with H blocking
 
-; MAXIMUM BUFFER SIZE STATISTICS
-; (COLLECTED WITH THE SIZE OF D INCREASED)
+; Maximum buffer size statistics
+; (collected with the size of D increased)
 ; SIZE  RUNTIME
 ; 10    193119
 ; 50    158243
-; 100   154233  (USED)
+; 100   154233  (Used)
 ; 150   152869
 ; 200   152225
 ; 250   151730
@@ -20,33 +20,33 @@
 ; 650   150776
 ; 700   150672
 ; 750   150500
-; 800   150833  (INCREASES)
+; 800   150833  (Increases)
 ; 850   150559
-; 900   150220  (BEST)
-; 950   150486  (INCREASES)
-; 1000  150722  (INCREASES)
+; 900   150220  (Best)
+; 950   150486  (Increases)
+; 1000  150722  (Increases)
 ; 2000  149524
-; 3000  150297  (INCREASES)
-; 3333  150466  (INCREASES)
+; 3000  150297  (Increases)
+; 3333  150466  (Increases)
 ; 3334  150466
 ; 3400  150466
-; 3500  INCORRECT RESULT AT M = 9794
-; 4000  INCORRECT RESULT AT M = 9794
+; 3500  Incorrect result at M = 9794
+; 4000  Incorrect result at M = 9794
 
-; STORE THE FIRST FEW ELEMENTS
+; Store the first few elements
 SET H 1
 SET M 1
 SET H 2
 SET M 2
 SET H 2
 
-; M IS THE FIRST INDEX TO READ
+; M is the first index to read
 
-SET Y 2 ; INDEX OF THE LAST WRITTEN ELEMENT
+SET Y 2 ; Index of the last written element
 
-SET Z 1 ; NEXT ELEMENT
+SET Z 1 ; Next element
 
-; FILL D AS MUCH AS POSSIBLE
+; Fill D as much as possible
 LBL GENERATE
 SET X H
 UJP X = 0 BREAK
@@ -57,16 +57,16 @@ ADD I 1 I
 SET D Z
 
 LBL CONTINUE
-SUB 3 Z Z ; TOGGLE Z BETWEEN 1 AND 2
+SUB 3 Z Z ; Toggle Z between 1 and 2
 ADD I 1 I
 ADD M 1 M
-; CONTINUE IF THE BUFFER IS AT ITS SIZE
-; LIMIT OR MIGHT EXCEED IT NEXT ITERATION
+; Continue if the buffer is at its size
+; limit or might exceed it next iteration
 LJP I < 99 GENERATE
 
 LBL BREAK
 
-; COPY NEW VALUES FROM D TO H
+; Copy new values from D to H
 SET X M
 SET M Y
 
@@ -88,8 +88,8 @@ SET M X
 LJP Y ≤ 9900 GENERATE
 SUB 9999 Y Y
 
-; GENERATE A BUFFER WITH ONLY THE AMOUNT
-; NEEDED TO FILL H
+; Generate a buffer with only the amount
+; needed to fill H
 LBL GENERATE_END
 SET D Z
 JMP H = 1 CONTINUE_END
@@ -97,11 +97,11 @@ ADD I 1 I
 SET D Z
 
 LBL CONTINUE_END
-SUB 3 Z Z ; TOGGLE Z BETWEEN 1 AND 2
+SUB 3 Z Z ; Toggle Z between 1 and 2
 ADD I 1 I
 ADD M 1 M
-; CONTINUE IF THE BUFFER CAN
-; FILL THE REST OF H
+; Continue if the buffer can
+; fill the rest of H
 LJP I < Y GENERATE_END
 
 SUB 9999 Y M

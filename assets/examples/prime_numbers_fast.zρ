@@ -1,9 +1,9 @@
-; COMPUTE THE PRIME NUMBERS
-; FASTER, BUT REQUIRES A THRID REGISTER
+; Compute the prime numbers
+; faster, but requires a thrid register
 
-SET D 2 ; PRIME NUMBERS
-SET Y 1 ; AMOUNT COMPUTED
-SET X 3 ; CURRENT NUMBER
+SET D 2 ; Prime numbers
+SET Y 1 ; Amount computed
+SET X 3 ; Current number
 JMP CHECK_NUMBER
 
 LBL NEXT_NUMBER

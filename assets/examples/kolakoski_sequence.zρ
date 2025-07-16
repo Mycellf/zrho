@@ -1,8 +1,8 @@
-; COMPUTES AND STORES THE FIRST 100 ELEMENTS OF THE
-; KOLAKOSKI SEQUENCE TO D
+; Computes and stores the first 100 elements of the
+; Kolakoski sequence to D
 
-; X IS THE INDEX TO READ FROM
-; Y IS THE INDEX TO WRITE TO
+; X is the index to read from
+; Y is the index to write to
 
 LBL LOOP
 SET I X

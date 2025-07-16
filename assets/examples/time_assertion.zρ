@@ -1,13 +1,13 @@
-; ENSURE THAT THE DURATION OF PROGRAM EXECUTION
-; IS EXACTLY AS EXPECTED
+; Ensure that the duration of program execution
+; is exactly as expected
 
-; PREVIOUS CODE
+; Previous code
 SET I 99
 SLP 9999
 SLP 9999
 SLP 3124
 
-; SOMETHING NEFARIOUS EXTERNALLY INSERTED
+; Something nefarious externally inserted
 SET I 10
 
 SET X 0
@@ -17,8 +17,8 @@ ADD X 1 X
 JMP X < 9999 WAIT
 SLP 9998
 
-; BECAUSE OF THE SECOND CLOCK CHECK, IT OVERFLOWS
-; AFTER 10⁸ TICKS IN STEAD OF 10⁴ TICKS
+; Because of the second clock check, it overflows
+; after 10⁸ ticks in stead of 10⁴ ticks
 CLK X
 UJP X ≠ 3123 ALTERED
 CLK X 4

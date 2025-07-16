@@ -1,7 +1,7 @@
-; COMPUTE THE PRIME NUMBERS
+; Compute the prime numbers
 
-SET D 2 ; PRIME NUMBERS
-SET X 3 ; CURRENT NUMBER
+SET D 2 ; Prime numbers
+SET X 3 ; Current number
 JMP CHECK_NUMBER
 
 LBL NEXT_NUMBER

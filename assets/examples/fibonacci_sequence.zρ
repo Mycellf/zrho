@@ -1,4 +1,4 @@
-; COMPUTE THE FIBONACCI SEQUENCE
+; Compute the fibonacci sequence
 
 SET I 0
 SET X 1
