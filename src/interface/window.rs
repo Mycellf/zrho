@@ -501,16 +501,22 @@ impl EditorWindow {
                                     }];
 
                                     moved_any_cursor = true;
+
+                                    break 'cursor;
                                 }
                                 'Z' => {
                                     self.text_editor.undo();
 
                                     typed = true;
+
+                                    break 'cursor;
                                 }
                                 'Y' => {
                                     self.text_editor.redo();
 
                                     typed = true;
+
+                                    break 'cursor;
                                 }
                                 _ => (),
                             }
