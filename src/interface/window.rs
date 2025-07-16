@@ -515,6 +515,23 @@ impl EditorWindow {
                                 _ => (),
                             }
                         } else {
+                            let location = cursor.end.unwrap_or(cursor.start);
+
+                            let line_range = self
+                                .text_editor
+                                .byte_range_of_line(location.position.line)
+                                .unwrap();
+
+                            let character = if self.text_editor.text[line_range.clone()]
+                                .split_once(';')
+                                .is_none_or(|(before, _)| {
+                                    before.len() + line_range.start >= location.index
+                                }) {
+                                character.to_ascii_uppercase()
+                            } else {
+                                character
+                            };
+
                             // Typed character
                             self.text_editor
                                 .replace(cursor.position_range(), &character.to_string())
