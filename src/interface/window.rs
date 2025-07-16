@@ -290,6 +290,8 @@ impl EditorWindow {
                     self.contents_updated = true;
                 }
             }
+
+            self.text_editor.history.finish_edit_group();
         }
 
         if self.is_grabbed() || !self.is_focused {
