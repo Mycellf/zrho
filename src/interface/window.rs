@@ -80,7 +80,10 @@ impl EditorWindow {
     pub const ORANGE: Color = Color::from_hex(0xff7f00);
     pub const BLUE: Color = Color::from_hex(0x007fff);
 
-    pub const SELECTION_COLOR: Color = Color::from_hex(0x203050);
+    pub const SELECTION_COLOR: Color = Color {
+        a: 2.0 / 7.0,
+        ..Color::from_hex(0x6090ff)
+    };
 
     pub const BORDER_WIDTH: f32 = 2.5;
 
@@ -1201,9 +1204,9 @@ impl EditorWindow {
         // Footer
         shapes::draw_rectangle(
             0.0,
-            self.size.y - self.footer_height,
+            self.size.y - self.distance_of_editor_from_bottom(),
             self.size.x,
-            self.footer_height,
+            self.distance_of_editor_from_bottom(),
             Self::WINDOW_COLOR,
         );
 
