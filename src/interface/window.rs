@@ -48,6 +48,8 @@ pub struct EditorWindow {
     pub title: String,
     pub title_color: Color,
 
+    pub footer_height: f32,
+
     pub grab_position: Option<Vec2>,
     pub is_focused: bool,
     pub key_repeats: KeyRepeats,
@@ -99,6 +101,7 @@ impl EditorWindow {
     pub fn new(
         scaled_position: Vec2,
         size: Vec2,
+        bottom_padding: f32,
         title: String,
         title_color: Color,
         text_editor: TextEditor,
@@ -139,6 +142,8 @@ impl EditorWindow {
             size,
             title,
             title_color,
+
+            footer_height: bottom_padding,
 
             grab_position,
             is_focused,
@@ -192,7 +197,11 @@ impl EditorWindow {
         // Update scrolling
         let previous_scroll = self.scroll;
 
-        if focus.mouse == Some(index) && !self.is_grabbed() {
+        if focus.mouse == Some(index)
+            && !self.is_grabbed()
+            && (self.is_point_within_scroll_bar_region(mouse_position)
+                || self.is_point_within_editor(mouse_position))
+        {
             let scroll_input = input::mouse_wheel().1.clamp(-1.0, 1.0);
 
             if scroll_input != 0.0 {
@@ -902,7 +911,7 @@ impl EditorWindow {
 
     #[must_use]
     pub fn height_of_editor(&self) -> f32 {
-        self.size.y - Self::TITLE_HEIGHT - Self::BORDER_WIDTH
+        self.size.y - Self::TITLE_HEIGHT - self.footer_height
     }
 
     #[must_use]
@@ -1192,9 +1201,9 @@ impl EditorWindow {
         // Footer
         shapes::draw_rectangle(
             0.0,
-            self.size.y - Self::BORDER_WIDTH,
+            self.size.y - self.footer_height,
             self.size.x,
-            Self::BORDER_WIDTH,
+            self.footer_height,
             Self::WINDOW_COLOR,
         );
 
@@ -1290,7 +1299,10 @@ impl EditorWindow {
                             Self::WINDOW_PADDING
                         })
                         * scaling_factor()
-            && point.y <= self.position.y + (self.size.y + Self::WINDOW_PADDING) * scaling_factor()
+            && point.y
+                <= self.position.y
+                    + (self.size.y - self.distance_of_editor_selection_from_bottom())
+                        * scaling_factor()
     }
 
     #[must_use]
@@ -1302,7 +1314,8 @@ impl EditorWindow {
 
         point.y = point.y.clamp(
             self.position.y + Self::TITLE_HEIGHT * scaling_factor(),
-            self.position.y + (self.size.y - Self::BORDER_WIDTH) * scaling_factor(),
+            self.position.y
+                + (self.size.y - self.distance_of_editor_from_bottom()) * scaling_factor(),
         );
 
         point
@@ -1336,7 +1349,27 @@ impl EditorWindow {
                         * scaling_factor()
             && point.y >= self.position.y + Self::TITLE_HEIGHT * scaling_factor()
             && point.x <= self.position.x + (self.size.x + Self::ELEMENT_PADDING) * scaling_factor()
-            && point.y <= self.position.y + (self.size.y - Self::BORDER_WIDTH) * scaling_factor()
+            && point.y
+                <= self.position.y
+                    + (self.size.y - self.distance_of_editor_from_bottom()) * scaling_factor()
+    }
+
+    #[must_use]
+    pub fn distance_of_editor_from_bottom(&self) -> f32 {
+        if self.footer_height > 0.0 {
+            self.footer_height
+        } else {
+            Self::BORDER_WIDTH
+        }
+    }
+
+    #[must_use]
+    pub fn distance_of_editor_selection_from_bottom(&self) -> f32 {
+        if self.footer_height > 0.0 {
+            self.footer_height
+        } else {
+            -Self::WINDOW_PADDING
+        }
     }
 }
 

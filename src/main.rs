@@ -38,7 +38,8 @@ async fn main() {
 
     windows.push(EditorWindow::new(
         Vec2::new(50.0, 50.0),
-        Vec2::new(400.0, 600.0),
+        Vec2::new(400.0, 800.0),
+        200.0,
         "KOLAKOSKI SEQUENCE".to_owned(),
         EditorWindow::BLUE,
         TextEditor::new(KOLAKOSKI_SEQUENCE_LONG.to_owned()),
@@ -48,6 +49,7 @@ async fn main() {
     windows.push(EditorWindow::new(
         Vec2::new(550.0, 50.0),
         Vec2::new(400.0, 400.0),
+        0.0,
         "PRIME NUMBERS".to_owned(),
         EditorWindow::ORANGE,
         TextEditor::new(PRIME_NUMBERS_FAST.to_owned()),
@@ -57,6 +59,7 @@ async fn main() {
     windows.push(EditorWindow::new(
         Vec2::new(1050.0, 50.0),
         Vec2::new(400.0, 300.0),
+        0.0,
         "FIBONACCI SEQUENCE".to_owned(),
         EditorWindow::RED,
         TextEditor::new(FIBONACCI_SEQUENCE.to_owned()),
