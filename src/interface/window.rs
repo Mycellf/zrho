@@ -431,7 +431,7 @@ impl EditorWindow {
 
         let mut seperate_edits_in_history = false;
 
-        let mut copied = String::new();
+        let mut copied = Vec::new();
         let pasted =
             LazyCell::new(|| macroquad::miniquad::window::clipboard_get().unwrap_or(String::new()));
 
@@ -546,11 +546,17 @@ impl EditorWindow {
                                 }
                                 'C' => {
                                     // Copy
-                                    copied.push_str(&self.text_editor.text[cursor.index_range()]);
+                                    copied.push((
+                                        self.text_editor.text[cursor.index_range()].to_owned(),
+                                        cursor.index,
+                                    ));
                                 }
                                 'X' => {
                                     // Cut
-                                    copied.push_str(&self.text_editor.text[cursor.index_range()]);
+                                    copied.push((
+                                        self.text_editor.text[cursor.index_range()].to_owned(),
+                                        cursor.index,
+                                    ));
 
                                     self.text_editor.remove(cursor.position_range()).unwrap();
 
@@ -609,7 +615,21 @@ impl EditorWindow {
         // BUG: Pasting doesn't work after window::next_frame().await has been called, aka it
         // doesn't work
         if !copied.is_empty() {
-            macroquad::miniquad::window::clipboard_set(&copied);
+            let mut copied_string = String::new();
+
+            copied.sort_by_key(|&(_, index)| index);
+
+            let multi_select = copied.len() > 1;
+
+            for (element, _) in copied {
+                copied_string.push_str(&element);
+
+                if multi_select {
+                    copied_string.push('\n');
+                }
+            }
+
+            macroquad::miniquad::window::clipboard_set(&copied_string);
         }
 
         if seperate_edits_in_history {
