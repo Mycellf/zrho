@@ -542,7 +542,7 @@ impl EditorWindow {
                             }
                         } else {
                             // Typed character
-                            let location = cursor.end.unwrap_or(cursor.start);
+                            let location = cursor.range().start;
 
                             let line_range = self
                                 .text_editor
