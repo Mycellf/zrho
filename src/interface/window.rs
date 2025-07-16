@@ -106,7 +106,7 @@ impl EditorWindow {
     pub fn new(
         scaled_position: Vec2,
         size: Vec2,
-        bottom_padding: f32,
+        footer_height: f32,
         title: String,
         title_color: Color,
         text_editor: TextEditor,
@@ -150,7 +150,7 @@ impl EditorWindow {
             title,
             title_color,
 
-            footer_height: bottom_padding,
+            footer_height,
 
             grab_position,
             is_focused,
