@@ -501,6 +501,7 @@ impl EditorWindow {
                                     }];
 
                                     moved_any_cursor = true;
+                                    follow_slowly = true;
 
                                     break 'cursor;
                                 }
