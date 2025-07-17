@@ -254,79 +254,57 @@ impl EditorWindow {
     pub fn update_editor(&mut self, focus: WindowFocus, index: usize) {
         self.key_repeats.update();
 
-        if self.is_dragging_selection
-            || focus.mouse == Some(index) && input::is_mouse_button_pressed(MouseButton::Left)
-        {
-            let mouse_position = input::mouse_position().into();
-
-            if self.is_dragging_selection && !input::is_mouse_button_down(MouseButton::Left) {
-                self.is_dragging_selection = false;
-            } else if let Some(position) = self
-                .position_of_point_in_text(mouse_position, false)
-                .or_else(|| {
-                    self.is_dragging_selection.then(|| {
-                        self.position_of_point_in_text(
-                            self.clamp_point_within_editor(mouse_position),
-                            true,
-                        )
-                        .unwrap()
-                    })
-                })
-            {
-                let clicked_location = CursorLocation {
-                    position,
-                    index: self.text_editor.index_of_position(position).unwrap(),
-                };
-
-                let alt =
-                    input::is_key_down(KeyCode::LeftAlt) || input::is_key_down(KeyCode::RightAlt);
-
-                if input::is_key_down(KeyCode::LeftShift)
-                    || input::is_key_down(KeyCode::RightShift)
-                    || self.is_dragging_selection
-                {
-                    let cursor = self.text_editor.cursors.last_mut().unwrap();
-                    if cursor.end.is_none() {
-                        cursor.end = Some(cursor.start);
-                    }
-
-                    self.contents_updated |= cursor.start != clicked_location;
-
-                    cursor.start = clicked_location;
-
-                    if let Some(end) = cursor.end {
-                        if end == cursor.start {
-                            cursor.end = None;
-                        }
-                    }
-                } else {
-                    let cursor = Cursor {
-                        start: clicked_location,
-                        ..Default::default()
-                    };
-
-                    if alt {
-                        if !self.text_editor.cursors.contains(&cursor) {
-                            self.text_editor.cursors.push(cursor);
-                        }
-                    } else {
-                        self.text_editor.cursors = vec![cursor];
-                    }
-
-                    self.is_dragging_selection = true;
-                    self.contents_updated = true;
-                }
-            }
-
-            self.text_editor.history.finish_edit_group();
-        }
+        self.move_cursors_with_mouse(focus, index);
 
         if self.is_grabbed() || !self.is_focused {
             return;
         }
 
-        let mut moved_any_cursor = false;
+        let (mut moved_any_cursor, mut follow_slowly) = self.move_cursors_with_keybinds();
 
+        if moved_any_cursor {
+            self.text_editor.history.finish_edit_group();
+        }
+
+        let (moved_any_cursor_typing, follow_slowly_typing, typed, seperate_edits_in_history) =
+            self.type_from_input_characters();
+
+        moved_any_cursor |= moved_any_cursor_typing;
+        follow_slowly |= follow_slowly_typing;
+
+        if seperate_edits_in_history {
+            self.text_editor.history.finish_edit_group();
+        }
+
+        self.text_editor.history.insert_buffered_edits();
+
+        if seperate_edits_in_history {
+            self.text_editor.history.finish_edit_group();
+        }
+
+        if moved_any_cursor {
+            self.scroll_to_cursors(follow_slowly);
+        }
+
+        if moved_any_cursor || typed {
+            self.contents_updated = true;
+
+            self.text_editor.deduplicate_cursors();
+        }
+
+        if typed {
+            self.program = Program::assemble_from(
+                self.title.clone(),
+                &self.text_editor.text,
+                &self.target_computer,
+            );
+        }
+    }
+
+    /// Returns `(moved any cursor, follow slowly)`
+    #[must_use]
+    pub fn move_cursors_with_keybinds(&mut self) -> (bool, bool) {
+        let mut moved_any_cursor = false;
         let mut follow_slowly = false;
 
         for i in 0..self.text_editor.cursors.len() {
@@ -450,12 +428,84 @@ impl EditorWindow {
             moved_any_cursor |= moved;
         }
 
-        if moved_any_cursor {
+        (moved_any_cursor, follow_slowly)
+    }
+
+    pub fn move_cursors_with_mouse(&mut self, focus: WindowFocus, index: usize) {
+        if self.is_dragging_selection
+            || focus.mouse == Some(index) && input::is_mouse_button_pressed(MouseButton::Left)
+        {
+            let mouse_position = input::mouse_position().into();
+
+            if self.is_dragging_selection && !input::is_mouse_button_down(MouseButton::Left) {
+                self.is_dragging_selection = false;
+            } else if let Some(position) = self
+                .position_of_point_in_text(mouse_position, false)
+                .or_else(|| {
+                    self.is_dragging_selection.then(|| {
+                        self.position_of_point_in_text(
+                            self.clamp_point_within_editor(mouse_position),
+                            true,
+                        )
+                        .unwrap()
+                    })
+                })
+            {
+                let clicked_location = CursorLocation {
+                    position,
+                    index: self.text_editor.index_of_position(position).unwrap(),
+                };
+
+                let alt =
+                    input::is_key_down(KeyCode::LeftAlt) || input::is_key_down(KeyCode::RightAlt);
+
+                if input::is_key_down(KeyCode::LeftShift)
+                    || input::is_key_down(KeyCode::RightShift)
+                    || self.is_dragging_selection
+                {
+                    let cursor = self.text_editor.cursors.last_mut().unwrap();
+                    if cursor.end.is_none() {
+                        cursor.end = Some(cursor.start);
+                    }
+
+                    self.contents_updated |= cursor.start != clicked_location;
+
+                    cursor.start = clicked_location;
+
+                    if let Some(end) = cursor.end {
+                        if end == cursor.start {
+                            cursor.end = None;
+                        }
+                    }
+                } else {
+                    let cursor = Cursor {
+                        start: clicked_location,
+                        ..Default::default()
+                    };
+
+                    if alt {
+                        if !self.text_editor.cursors.contains(&cursor) {
+                            self.text_editor.cursors.push(cursor);
+                        }
+                    } else {
+                        self.text_editor.cursors = vec![cursor];
+                    }
+
+                    self.is_dragging_selection = true;
+                    self.contents_updated = true;
+                }
+            }
+
             self.text_editor.history.finish_edit_group();
         }
+    }
 
+    /// Returns `(moved any cursor, follow slowly, typed, seperate edits in history)`
+    #[must_use]
+    pub fn type_from_input_characters(&mut self) -> (bool, bool, bool, bool) {
+        let mut moved_any_cursor = false;
+        let mut follow_slowly = false;
         let mut typed = false;
-
         let mut seperate_edits_in_history = false;
 
         let mut copied = Vec::new();
@@ -715,76 +765,59 @@ impl EditorWindow {
             }
         }
 
-        if seperate_edits_in_history {
-            self.text_editor.history.finish_edit_group();
+        (
+            moved_any_cursor,
+            follow_slowly,
+            typed,
+            seperate_edits_in_history,
+        )
+    }
+
+    pub fn scroll_to_cursors(&mut self, follow_slowly: bool) {
+        let min_line = (self.text_editor.cursors)
+            .iter()
+            .min_by_key(|cursor| cursor.position.line)
+            .unwrap()
+            .position
+            .line as f32;
+
+        let max_line = (self.text_editor.cursors)
+            .iter()
+            .max_by_key(|cursor| cursor.position.line)
+            .unwrap()
+            .position
+            .line as f32;
+
+        let height_offset = self.height_of_editor() / Self::TEXT_SIZE - 1.0;
+
+        let cursors_fit_in_window = min_line > max_line - height_offset;
+
+        let (min_scroll, max_scroll) = if cursors_fit_in_window {
+            (max_line - height_offset, min_line)
+        } else {
+            (min_line - height_offset, max_line)
+        };
+
+        let mut follow_scroll = false;
+
+        if self.target_scroll > max_scroll {
+            self.target_scroll = max_scroll;
+            follow_scroll = true;
+        } else if self.target_scroll < min_scroll {
+            self.target_scroll = min_scroll;
+            follow_scroll = true;
         }
 
-        self.text_editor.history.insert_buffered_edits();
-
-        if seperate_edits_in_history {
-            self.text_editor.history.finish_edit_group();
+        if follow_scroll {
+            self.scroll_speed =
+                if follow_slowly || cursors_fit_in_window && !self.cursors_fit_in_window {
+                    Self::PAGE_FOLLOW_SPEED
+                } else {
+                    Self::FOLLOW_SPEED
+                };
         }
 
-        if moved_any_cursor {
-            let min_line = (self.text_editor.cursors)
-                .iter()
-                .min_by_key(|cursor| cursor.position.line)
-                .unwrap()
-                .position
-                .line as f32;
-
-            let max_line = (self.text_editor.cursors)
-                .iter()
-                .max_by_key(|cursor| cursor.position.line)
-                .unwrap()
-                .position
-                .line as f32;
-
-            let height_offset = self.height_of_editor() / Self::TEXT_SIZE - 1.0;
-
-            let cursors_fit_in_window = min_line > max_line - height_offset;
-
-            let (min_scroll, max_scroll) = if cursors_fit_in_window {
-                (max_line - height_offset, min_line)
-            } else {
-                (min_line - height_offset, max_line)
-            };
-
-            let mut follow_scroll = false;
-
-            if self.target_scroll > max_scroll {
-                self.target_scroll = max_scroll;
-                follow_scroll = true;
-            } else if self.target_scroll < min_scroll {
-                self.target_scroll = min_scroll;
-                follow_scroll = true;
-            }
-
-            if follow_scroll {
-                self.scroll_speed =
-                    if follow_slowly || cursors_fit_in_window && !self.cursors_fit_in_window {
-                        Self::PAGE_FOLLOW_SPEED
-                    } else {
-                        Self::FOLLOW_SPEED
-                    };
-            }
-
-            self.cursors_fit_in_window = cursors_fit_in_window;
-        }
-
-        if moved_any_cursor || typed {
-            self.contents_updated = true;
-
-            self.text_editor.deduplicate_cursors();
-        }
-
-        if typed {
-            self.program = Program::assemble_from(
-                self.title.clone(),
-                &self.text_editor.text,
-                &self.target_computer,
-            );
-        }
+        self.cursors_fit_in_window = cursors_fit_in_window;
     }
 
     pub fn position_of_point_in_text(&self, point: Vec2, force: bool) -> Option<CharacterPosition> {
