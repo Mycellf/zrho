@@ -6,7 +6,7 @@ use macroquad::{
     text::{self, TextDimensions, TextParams},
 };
 
-use crate::interface::window::EditorWindow;
+use crate::interface::editor_window::EditorWindow;
 
 #[derive(Clone, Debug)]
 pub struct TextEditor {

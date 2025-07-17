@@ -2,8 +2,8 @@ use std::sync::LazyLock;
 
 use macroquad::text::{self, Font};
 
+pub mod editor_window;
 pub mod text_editor;
-pub mod window;
 
 /// The width of each character should be 0.6 times the font size
 pub static FONT: LazyLock<Font> = LazyLock::new(|| {

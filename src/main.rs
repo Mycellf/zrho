@@ -6,8 +6,8 @@ use macroquad::{
 
 use crate::{
     interface::{
+        editor_window::{EditorWindow, WindowFocus},
         text_editor::TextEditor,
-        window::{EditorWindow, WindowFocus},
     },
     simulation::{
         computer::{self, BlockCondition, Computer, Register, RegisterSet, RegisterValues},
