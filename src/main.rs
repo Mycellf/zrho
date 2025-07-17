@@ -39,7 +39,7 @@ async fn main() {
     windows.push(EditorWindow::new(
         Vec2::new(50.0, 50.0),
         Vec2::new(400.0, 700.0),
-        100.0,
+        110.0,
         "Kolakoski Sequence".to_owned(),
         EditorWindow::BLUE,
         TextEditor::new(KOLAKOSKI_SEQUENCE_LONG.to_owned()),
@@ -201,6 +201,7 @@ pub fn default_computer() -> Computer {
                         index: 0,
                         offset: 0,
                     },
+                    indexed_by: Some(computer::register_with_name('I').unwrap()),
                     read_time: 1,
                     write_time: 1,
                     ..Register::DEFAULT
@@ -218,6 +219,7 @@ pub fn default_computer() -> Computer {
                         minimum_change: 2,
                         block_time: 16,
                     }),
+                    indexed_by: Some(computer::register_with_name('M').unwrap()),
                     read_time: 2,
                     write_time: 4,
                     ..Register::DEFAULT

@@ -3,6 +3,7 @@ use std::sync::LazyLock;
 use macroquad::text::{self, Font};
 
 pub mod editor_window;
+pub mod register_visualisation;
 pub mod text_editor;
 
 /// The width of each character should be 0.6 times the font size

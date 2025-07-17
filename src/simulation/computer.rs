@@ -312,6 +312,8 @@ impl RegisterSet {
                 .get_mut(array_index)
                 .ok_or(RegisterAccessError::NoSuchRegister { got: array_index })?;
 
+            indexed_register.indexed_by = Some(index);
+
             match &mut indexed_register.values {
                 RegisterValues::Vector { index, .. } => {
                     if let Some(BlockCondition::IndexChange {
@@ -374,6 +376,7 @@ pub struct Register {
     pub block_reason: Option<BlockReason>,
     pub block_condition: Option<BlockCondition>,
     pub indexes_array: Option<u32>,
+    pub indexed_by: Option<u32>,
     pub read_time: u32,
     pub write_time: u32,
 }
@@ -400,6 +403,7 @@ impl Register {
         block_reason: None,
         block_condition: None,
         indexes_array: None,
+        indexed_by: None,
         read_time: 0,
         write_time: 0,
     };
@@ -635,6 +639,16 @@ pub const fn register_with_name(name: char) -> Option<u32> {
         Some(name as u32 - 'A' as u32)
     } else {
         None
+    }
+}
+
+#[must_use]
+pub const fn column_of_register(register: u32) -> usize {
+    match register {
+        3..8 => 2,
+        8..13 => 1,
+        20..26 => 0,
+        _ => 3,
     }
 }
 

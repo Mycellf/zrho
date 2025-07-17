@@ -18,10 +18,11 @@ use macroquad::{
 use crate::{
     interface::{
         FONT, FONT_ASPECT,
+        register_visualisation::RegisterVisualisation,
         text_editor::{CharacterPosition, Cursor, CursorLocation},
     },
     simulation::{
-        computer::Computer,
+        computer::{self, Computer},
         program::{Program, ProgramAssemblyError},
     },
 };
@@ -65,6 +66,7 @@ pub struct EditorWindow {
     pub text_editor: TextEditor,
     pub program: Result<Program, Vec<ProgramAssemblyError>>,
     pub target_computer: Computer,
+    pub register_visualisations: Vec<RegisterVisualisation>,
 
     pub camera: Camera2D,
     pub contents_updated: bool,
@@ -132,6 +134,12 @@ impl EditorWindow {
         let text_offset = 0.0;
 
         let program = Program::assemble_from(title.clone(), &text_editor.text, &target_computer);
+        let register_visualisations = (target_computer.registers.registers)
+            .iter()
+            .enumerate()
+            .filter_map(|(i, register)| register.as_ref().map(|register| (i, register)))
+            .map(|(i, register)| RegisterVisualisation::new(i as u32, register))
+            .collect();
 
         let target_size = size * Self::RESOLUTION_UPSCALING as f32;
         let camera = Camera2D {
@@ -172,6 +180,7 @@ impl EditorWindow {
             text_editor,
             program,
             target_computer,
+            register_visualisations,
 
             camera,
             contents_updated,
@@ -1260,6 +1269,29 @@ impl EditorWindow {
             self.distance_of_editor_from_bottom(),
             Self::WINDOW_COLOR,
         );
+
+        if self.footer_height > 0.0 {
+            let mut column_height = [0.0; 4];
+            let column_width = RegisterVisualisation::NAME_WIDTH + Self::TEXT_WIDTH;
+
+            for register_visualisation in &self.register_visualisations {
+                let column = computer::column_of_register(register_visualisation.register);
+
+                register_visualisation.draw_at(
+                    Vec2::new(
+                        column as f32 * column_width,
+                        self.size.y - self.footer_height + column_height[column],
+                    ),
+                    self.target_computer
+                        .registers
+                        .get(register_visualisation.register)
+                        .unwrap(),
+                    self.title_color,
+                );
+
+                column_height[column] += RegisterVisualisation::HEIGHT;
+            }
+        }
 
         camera::pop_camera_state();
     }
