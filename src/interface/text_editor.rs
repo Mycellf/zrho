@@ -70,9 +70,17 @@ impl TextEditor {
         Some(())
     }
 
-    pub fn draw_all(&self, position: Vec2, text_size: f32, line_height: f32, character_width: f32) {
+    pub fn draw_all(
+        &self,
+        selected_lines: &[usize],
+        position: Vec2,
+        text_size: f32,
+        line_height: f32,
+        character_width: f32,
+    ) {
         self.draw_range(
             0..self.lines.len(),
+            selected_lines,
             position,
             text_size,
             line_height,
@@ -83,6 +91,7 @@ impl TextEditor {
     pub fn draw_range(
         &self,
         lines: Range<usize>,
+        selected_lines: &[usize],
         mut position: Vec2,
         text_size: f32,
         line_height: f32,
@@ -97,6 +106,21 @@ impl TextEditor {
 
             position.y += line_height;
             let mut line_position = position - Vec2::Y * line_height * 0.125;
+
+            if selected_lines.contains(&i) {
+                text::draw_text_ex(
+                    self.get_line(i).unwrap(),
+                    line_position.x,
+                    line_position.y,
+                    TextParams {
+                        font_scale_aspect: character_width,
+                        color: colors::BLACK,
+                        ..EditorWindow::text_params_with_size(text_size)
+                    },
+                );
+
+                continue;
+            }
 
             for (range, color_choice) in segments {
                 let segment_text = &self.text[range];

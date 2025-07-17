@@ -66,6 +66,7 @@ pub struct EditorWindow {
     pub text_editor: TextEditor,
     pub program: Result<Program, Vec<ProgramAssemblyError>>,
     pub target_computer: Computer,
+    pub program_active: bool,
     pub register_visualisations: Vec<RegisterVisualisation>,
 
     pub camera: Camera2D,
@@ -134,6 +135,7 @@ impl EditorWindow {
         let text_offset = 0.0;
 
         let program = Program::assemble_from(title.clone(), &text_editor.text, &target_computer);
+        let program_active = false;
         let register_visualisations = (target_computer.registers.registers)
             .iter()
             .enumerate()
@@ -180,6 +182,7 @@ impl EditorWindow {
             text_editor,
             program,
             target_computer,
+            program_active,
             register_visualisations,
 
             camera,
@@ -215,7 +218,9 @@ impl EditorWindow {
             self.position = Self::position_from_scaled(self.scaled_position, self.size);
         }
 
-        self.update_editor(focus, index);
+        if !self.program_active {
+            self.update_editor(focus, index);
+        }
 
         // Update scrolling
         let previous_scroll = self.scroll;
@@ -260,7 +265,12 @@ impl EditorWindow {
         if self.footer_height > 0.0 {
             if self.is_focused && input::is_key_pressed(KeyCode::Tab) {
                 if let Ok(program) = &self.program {
-                    self.target_computer.step_instruction(program);
+                    if self.program_active {
+                        self.target_computer.step_instruction(program);
+                    } else {
+                        self.program_active = true;
+                    }
+
                     self.contents_updated = true;
                 }
             }
@@ -273,6 +283,13 @@ impl EditorWindow {
                         .unwrap(),
                 );
             }
+        }
+
+        if input::is_key_pressed(KeyCode::Escape) {
+            self.target_computer.reset();
+            self.program_active = false;
+
+            self.contents_updated = true;
         }
 
         is_clicked
@@ -321,6 +338,7 @@ impl EditorWindow {
 
         if typed {
             self.target_computer.reset();
+            self.program_active = false;
 
             self.program = Program::assemble_from(
                 self.title.clone(),
@@ -1081,87 +1099,33 @@ impl EditorWindow {
             Self::EDITOR_BACKGROUND_COLOR,
         );
 
-        let TextParams {
-            font_size,
-            font_scale,
-            ..
-        } = Self::text_params_with_size(Self::TEXT_SIZE);
-
         let start_line = self.scroll.floor() as usize;
         let end_line = (self.scroll + self.height_of_editor() / Self::TEXT_SIZE).ceil() as usize;
 
         // Selections
-        for cursor in &self.text_editor.cursors {
-            let Some(end) = cursor.end else {
-                continue;
-            };
+        let current_line = self.current_line();
+        let selected_lines = if self.program_active {
+            &[current_line.unwrap()][..]
+        } else {
+            &[]
+        };
 
-            let start = cursor.start;
+        if !self.program_active {
+            self.draw_selections(start_line, end_line);
+        } else {
+            let line = current_line.unwrap();
 
-            #[allow(unused)]
-            let cursor = ();
-
-            let (start, end) = if start.index > end.index {
-                (end, start)
-            } else {
-                (start, end)
-            };
-
-            let starts_before = start.position.line < start_line;
-            let ends_before = end.position.line < start_line;
-
-            let starts_after = start.position.line >= end_line;
-            let ends_after = end.position.line >= end_line;
-
-            if starts_before && ends_before || starts_after && ends_after {
-                continue;
-            }
-
-            let start_index = self.text_editor.lines[start.position.line].byte_offset;
-            let start_contents = &self.text_editor.text[start_index..start.index];
-
-            let end_index = self.text_editor.lines[end.position.line].byte_offset;
-            let end_contents = &self.text_editor.text[end_index..end.index];
-
-            let start_offset =
-                text::measure_text(start_contents, Some(&FONT), font_size, font_scale).width;
-            let end_offset =
-                text::measure_text(end_contents, Some(&FONT), font_size, font_scale).width;
-
-            if start.position.line == end.position.line {
-                shapes::draw_rectangle(
-                    start_offset + self.offset_of_text().x,
-                    self.position_of_line(start.position.line),
-                    end_offset - start_offset,
-                    Self::TEXT_SIZE,
-                    Self::SELECTION_COLOR,
-                );
-            } else {
-                shapes::draw_rectangle(
-                    start_offset + self.offset_of_text().x,
-                    self.position_of_line(start.position.line),
-                    self.width_of_line(start.position.line).unwrap() - start_offset
-                        + Self::TEXT_WIDTH,
-                    Self::TEXT_SIZE,
-                    Self::SELECTION_COLOR,
-                );
-
-                for line in start.position.line + 1..end.position.line {
-                    shapes::draw_rectangle(
-                        self.offset_of_text().x,
-                        self.position_of_line(line),
-                        self.width_of_line(line).unwrap() + Self::TEXT_WIDTH,
-                        Self::TEXT_SIZE,
-                        Self::SELECTION_COLOR,
-                    );
-                }
-
+            if line >= start_line && line < end_line {
                 shapes::draw_rectangle(
                     self.offset_of_text().x,
-                    self.position_of_line(end.position.line),
-                    end_offset,
+                    self.position_of_line(line),
+                    self.size.x - Self::BORDER_WIDTH - 2.0,
                     Self::TEXT_SIZE,
-                    Self::SELECTION_COLOR,
+                    if self.target_computer.interrupt.is_some() {
+                        Color::from_hex(0xff0000)
+                    } else {
+                        colors::WHITE
+                    },
                 );
             }
         }
@@ -1178,6 +1142,7 @@ impl EditorWindow {
 
         self.text_editor.draw_range(
             earlier_start_line..end_line,
+            selected_lines,
             self.offset_of_text() + Vec2::Y * text_offset,
             Self::TEXT_SIZE,
             1.0,
@@ -1185,26 +1150,8 @@ impl EditorWindow {
         );
 
         // Cursors
-        for cursor in &self.text_editor.cursors {
-            if cursor.position.line < start_line || cursor.position.line >= end_line {
-                continue;
-            }
-
-            let line_start_index = self.text_editor.lines[cursor.position.line].byte_offset;
-            let preceding_contents = &self.text_editor.text[line_start_index..cursor.index];
-
-            shapes::draw_rectangle(
-                text::measure_text(preceding_contents, Some(&FONT), font_size, font_scale).width
-                    + self.offset_of_text().x,
-                self.position_of_line(cursor.position.line),
-                1.0,
-                Self::TEXT_SIZE,
-                if self.is_focused {
-                    colors::WHITE
-                } else {
-                    colors::GRAY
-                },
-            );
+        if !self.program_active {
+            self.draw_cursors(start_line, end_line);
         }
 
         // Left outline
@@ -1314,6 +1261,126 @@ impl EditorWindow {
         }
 
         camera::pop_camera_state();
+    }
+
+    pub fn current_line(&self) -> Option<usize> {
+        self.program_active.then(|| {
+            self.program.as_ref().unwrap().instructions[self.target_computer.instruction as usize]
+                .line as usize
+        })
+    }
+
+    pub fn draw_cursors(&self, start_line: usize, end_line: usize) {
+        let TextParams {
+            font_size,
+            font_scale,
+            ..
+        } = Self::text_params_with_size(Self::TEXT_SIZE);
+
+        for cursor in &self.text_editor.cursors {
+            if cursor.position.line < start_line || cursor.position.line >= end_line {
+                continue;
+            }
+
+            let line_start_index = self.text_editor.lines[cursor.position.line].byte_offset;
+            let preceding_contents = &self.text_editor.text[line_start_index..cursor.index];
+
+            shapes::draw_rectangle(
+                text::measure_text(preceding_contents, Some(&FONT), font_size, font_scale).width
+                    + self.offset_of_text().x,
+                self.position_of_line(cursor.position.line),
+                1.0,
+                Self::TEXT_SIZE,
+                if self.is_focused {
+                    colors::WHITE
+                } else {
+                    colors::GRAY
+                },
+            );
+        }
+    }
+
+    pub fn draw_selections(&self, start_line: usize, end_line: usize) {
+        let TextParams {
+            font_size,
+            font_scale,
+            ..
+        } = Self::text_params_with_size(Self::TEXT_SIZE);
+
+        for cursor in &self.text_editor.cursors {
+            let Some(end) = cursor.end else {
+                continue;
+            };
+
+            let start = cursor.start;
+
+            #[allow(unused)]
+            let cursor = ();
+
+            let (start, end) = if start.index > end.index {
+                (end, start)
+            } else {
+                (start, end)
+            };
+
+            let starts_before = start.position.line < start_line;
+            let ends_before = end.position.line < start_line;
+
+            let starts_after = start.position.line >= end_line;
+            let ends_after = end.position.line >= end_line;
+
+            if starts_before && ends_before || starts_after && ends_after {
+                continue;
+            }
+
+            let start_index = self.text_editor.lines[start.position.line].byte_offset;
+            let start_contents = &self.text_editor.text[start_index..start.index];
+
+            let end_index = self.text_editor.lines[end.position.line].byte_offset;
+            let end_contents = &self.text_editor.text[end_index..end.index];
+
+            let start_offset =
+                text::measure_text(start_contents, Some(&FONT), font_size, font_scale).width;
+            let end_offset =
+                text::measure_text(end_contents, Some(&FONT), font_size, font_scale).width;
+
+            if start.position.line == end.position.line {
+                shapes::draw_rectangle(
+                    start_offset + self.offset_of_text().x,
+                    self.position_of_line(start.position.line),
+                    end_offset - start_offset,
+                    Self::TEXT_SIZE,
+                    Self::SELECTION_COLOR,
+                );
+            } else {
+                shapes::draw_rectangle(
+                    start_offset + self.offset_of_text().x,
+                    self.position_of_line(start.position.line),
+                    self.width_of_line(start.position.line).unwrap() - start_offset
+                        + Self::TEXT_WIDTH,
+                    Self::TEXT_SIZE,
+                    Self::SELECTION_COLOR,
+                );
+
+                for line in start.position.line + 1..end.position.line {
+                    shapes::draw_rectangle(
+                        self.offset_of_text().x,
+                        self.position_of_line(line),
+                        self.width_of_line(line).unwrap() + Self::TEXT_WIDTH,
+                        Self::TEXT_SIZE,
+                        Self::SELECTION_COLOR,
+                    );
+                }
+
+                shapes::draw_rectangle(
+                    self.offset_of_text().x,
+                    self.position_of_line(end.position.line),
+                    end_offset,
+                    Self::TEXT_SIZE,
+                    Self::SELECTION_COLOR,
+                );
+            }
+        }
     }
 
     pub fn position_of_line(&self, line: usize) -> f32 {
