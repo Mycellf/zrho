@@ -320,6 +320,12 @@ impl RegisterSet {
                     }) = indexed_register.block_condition
                     {
                         if index.abs_diff(value) >= minimum_change {
+                            indexed_register.block_reason = Some(match value.cmp(index) {
+                                std::cmp::Ordering::Less => BlockReason::IndexDecreased,
+                                std::cmp::Ordering::Equal => BlockReason::IndexWrittenNoOp,
+                                std::cmp::Ordering::Greater => BlockReason::IndexIncreased,
+                            });
+
                             indexed_register.block_time = block_time;
                         }
                     }
@@ -365,10 +371,18 @@ pub enum CreateRegisterError {
 pub struct Register {
     pub values: RegisterValues,
     pub block_time: u32,
+    pub block_reason: Option<BlockReason>,
     pub block_condition: Option<BlockCondition>,
     pub indexes_array: Option<u32>,
     pub read_time: u32,
     pub write_time: u32,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum BlockReason {
+    IndexIncreased,
+    IndexWrittenNoOp,
+    IndexDecreased,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -383,6 +397,7 @@ impl Register {
     pub const DEFAULT: Self = Self {
         values: RegisterValues::Scalar(DigitInteger::DUMMY),
         block_time: 0,
+        block_reason: None,
         block_condition: None,
         indexes_array: None,
         read_time: 0,
@@ -392,6 +407,10 @@ impl Register {
     pub fn end_of_tick(&mut self) {
         if self.block_time > 0 {
             self.block_time -= 1;
+
+            if self.block_time == 0 {
+                self.block_reason = None;
+            }
         }
     }
 
