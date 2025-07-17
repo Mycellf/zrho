@@ -48,8 +48,8 @@ async fn main() {
 
     windows.push(EditorWindow::new(
         Vec2::new(550.0, 50.0),
-        Vec2::new(400.0, 400.0),
-        0.0,
+        Vec2::new(400.0, 505.0),
+        110.0,
         "Prime Numbers".to_owned(),
         EditorWindow::ORANGE,
         TextEditor::new(PRIME_NUMBERS_FAST.to_owned()),
@@ -58,8 +58,8 @@ async fn main() {
 
     windows.push(EditorWindow::new(
         Vec2::new(1050.0, 50.0),
-        Vec2::new(400.0, 300.0),
-        0.0,
+        Vec2::new(400.0, 400.0),
+        110.0,
         "Fibonacci Sequence".to_owned(),
         EditorWindow::RED,
         TextEditor::new(FIBONACCI_SEQUENCE.to_owned()),

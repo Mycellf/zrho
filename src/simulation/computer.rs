@@ -89,7 +89,7 @@ impl Computer {
     pub fn step_instruction(&mut self, program: &Program) -> u64 {
         let mut ticks = 0;
 
-        loop {
+        while self.interrupt.is_none() {
             let did_something = self.step_cycle(program);
 
             if self.tick_complete {

@@ -257,6 +257,24 @@ impl EditorWindow {
 
         self.text_offset = (self.scroll.floor() - self.scroll) * Self::TEXT_SIZE;
 
+        if self.footer_height > 0.0 {
+            if self.is_focused && input::is_key_pressed(KeyCode::Tab) {
+                if let Ok(program) = &self.program {
+                    self.target_computer.step_instruction(program);
+                    self.contents_updated = true;
+                }
+            }
+
+            for register_visualisation in &mut self.register_visualisations {
+                register_visualisation.update(
+                    self.target_computer
+                        .registers
+                        .get(register_visualisation.register)
+                        .unwrap(),
+                );
+            }
+        }
+
         is_clicked
     }
 
@@ -302,6 +320,8 @@ impl EditorWindow {
         }
 
         if typed {
+            self.target_computer.reset();
+
             self.program = Program::assemble_from(
                 self.title.clone(),
                 &self.text_editor.text,
