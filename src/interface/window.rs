@@ -1317,7 +1317,7 @@ impl EditorWindow {
                         * scaling_factor()
             && point.y
                 <= self.position.y
-                    + (self.size.y - self.distance_of_editor_selection_from_bottom())
+                    + (self.size.y - self.distance_of_editor_hitbox_from_bottom())
                         * scaling_factor()
     }
 
@@ -1380,12 +1380,21 @@ impl EditorWindow {
     }
 
     #[must_use]
-    pub fn distance_of_editor_selection_from_bottom(&self) -> f32 {
+    pub fn distance_of_editor_hitbox_from_bottom(&self) -> f32 {
         if self.footer_height > 0.0 {
             self.footer_height
         } else {
             -Self::WINDOW_PADDING
         }
+    }
+
+    #[must_use]
+    pub fn is_point_within_footer(&self, point: Vec2) -> bool {
+        self.footer_height > 0.0
+            && point.x >= self.position.x + (self.size.y - self.footer_height) * scaling_factor()
+            && point.y >= self.position.y - Self::WINDOW_PADDING * scaling_factor()
+            && point.x <= self.position.x + (self.size.x + Self::WINDOW_PADDING) * scaling_factor()
+            && point.y <= self.position.y + (self.size.y + Self::WINDOW_PADDING) * scaling_factor()
     }
 }
 
