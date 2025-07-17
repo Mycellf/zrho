@@ -38,8 +38,8 @@ async fn main() {
 
     windows.push(EditorWindow::new(
         Vec2::new(50.0, 50.0),
-        Vec2::new(400.0, 800.0),
-        200.0,
+        Vec2::new(400.0, 700.0),
+        100.0,
         "KOLAKOSKI SEQUENCE".to_owned(),
         EditorWindow::BLUE,
         TextEditor::new(KOLAKOSKI_SEQUENCE_LONG.to_owned()),
