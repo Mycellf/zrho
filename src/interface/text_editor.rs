@@ -72,7 +72,7 @@ impl TextEditor {
 
     pub fn draw_all(
         &self,
-        selected_lines: &[usize],
+        highlighted_lines: &[usize],
         position: Vec2,
         text_size: f32,
         line_height: f32,
@@ -80,7 +80,7 @@ impl TextEditor {
     ) {
         self.draw_range(
             0..self.lines.len(),
-            selected_lines,
+            highlighted_lines,
             position,
             text_size,
             line_height,
@@ -91,7 +91,7 @@ impl TextEditor {
     pub fn draw_range(
         &self,
         lines: Range<usize>,
-        selected_lines: &[usize],
+        highlighted_lines: &[usize],
         mut position: Vec2,
         text_size: f32,
         line_height: f32,
@@ -107,14 +107,14 @@ impl TextEditor {
             position.y += line_height;
             let mut line_position = position - Vec2::Y * line_height * 0.125;
 
-            if selected_lines.contains(&i) {
+            if highlighted_lines.contains(&i) {
                 text::draw_text_ex(
                     self.get_line(i).unwrap(),
                     line_position.x,
                     line_position.y,
                     TextParams {
                         font_scale_aspect: character_width,
-                        color: colors::BLACK,
+                        color: EditorWindow::EDITOR_BACKGROUND_COLOR,
                         ..EditorWindow::text_params_with_size(text_size)
                     },
                 );

@@ -67,6 +67,7 @@ pub struct EditorWindow {
     pub program: Result<Program, Vec<ProgramAssemblyError>>,
     pub target_computer: Computer,
     pub program_active: bool,
+    pub highlighted_lines: Vec<usize>,
     pub register_visualisations: Vec<RegisterVisualisation>,
 
     pub camera: Camera2D,
@@ -136,6 +137,7 @@ impl EditorWindow {
 
         let program = Program::assemble_from(title.clone(), &text_editor.text, &target_computer);
         let program_active = false;
+        let highlighted_lines = Vec::new();
         let register_visualisations = (target_computer.registers.registers)
             .iter()
             .enumerate()
@@ -181,6 +183,7 @@ impl EditorWindow {
 
             text_editor,
             program,
+            highlighted_lines,
             target_computer,
             program_active,
             register_visualisations,
@@ -216,6 +219,47 @@ impl EditorWindow {
             self.grab_position = Some(mouse_position - self.position);
         } else {
             self.position = Self::position_from_scaled(self.scaled_position, self.size);
+        }
+
+        if self.footer_height > 0.0 {
+            if self.is_focused && input::is_key_pressed(KeyCode::Tab) {
+                if let Ok(program) = &self.program {
+                    if self.program_active {
+                        if input::is_key_down(KeyCode::LeftShift)
+                            || input::is_key_down(KeyCode::LeftShift)
+                        {
+                            self.target_computer.step_instruction(program);
+                            self.highlighted_lines = vec![self.current_line().unwrap()];
+                        } else {
+                            self.highlighted_lines = (self.target_computer)
+                                .step_tick(program)
+                                .into_iter()
+                                .map(|instruction| {
+                                    self.program.as_ref().unwrap().instructions
+                                        [instruction as usize]
+                                        .line as usize
+                                })
+                                .collect();
+                        }
+                    } else {
+                        self.program_active = true;
+                        self.highlighted_lines = vec![self.current_line().unwrap()];
+                    }
+
+                    self.scroll_to_cursors(false, self.highlighted_lines.clone().into_iter());
+
+                    self.contents_updated = true;
+                }
+            }
+
+            for register_visualisation in &mut self.register_visualisations {
+                register_visualisation.update(
+                    self.target_computer
+                        .registers
+                        .get(register_visualisation.register)
+                        .unwrap(),
+                );
+            }
         }
 
         if !self.program_active {
@@ -262,31 +306,9 @@ impl EditorWindow {
 
         self.text_offset = (self.scroll.floor() - self.scroll) * Self::TEXT_SIZE;
 
-        if self.footer_height > 0.0 {
-            if self.is_focused && input::is_key_pressed(KeyCode::Tab) {
-                if let Ok(program) = &self.program {
-                    if self.program_active {
-                        self.target_computer.step_instruction(program);
-                    } else {
-                        self.program_active = true;
-                    }
-
-                    self.contents_updated = true;
-                }
-            }
-
-            for register_visualisation in &mut self.register_visualisations {
-                register_visualisation.update(
-                    self.target_computer
-                        .registers
-                        .get(register_visualisation.register)
-                        .unwrap(),
-                );
-            }
-        }
-
         if input::is_key_pressed(KeyCode::Escape) {
             self.target_computer.reset();
+            self.highlighted_lines = Vec::new();
             self.program_active = false;
 
             self.contents_updated = true;
@@ -327,7 +349,14 @@ impl EditorWindow {
         }
 
         if moved_any_cursor {
-            self.scroll_to_cursors(follow_slowly);
+            self.scroll_to_cursors(
+                follow_slowly,
+                self.text_editor
+                    .cursors
+                    .clone()
+                    .into_iter()
+                    .map(|cursor| cursor.position.line),
+            );
         }
 
         if moved_any_cursor || typed {
@@ -338,6 +367,7 @@ impl EditorWindow {
 
         if typed {
             self.target_computer.reset();
+            self.highlighted_lines = Vec::new();
             self.program_active = false;
 
             self.program = Program::assemble_from(
@@ -820,24 +850,18 @@ impl EditorWindow {
         )
     }
 
-    pub fn scroll_to_cursors(&mut self, follow_slowly: bool) {
-        let min_line = (self.text_editor.cursors)
-            .iter()
-            .min_by_key(|cursor| cursor.position.line)
-            .unwrap()
-            .position
-            .line as f32;
+    pub fn scroll_to_cursors(
+        &mut self,
+        follow_slowly: bool,
+        lines: impl Iterator<Item = usize> + Clone,
+    ) {
+        let min_line = lines.clone().min().unwrap() as f32;
 
-        let max_line = (self.text_editor.cursors)
-            .iter()
-            .max_by_key(|cursor| cursor.position.line)
-            .unwrap()
-            .position
-            .line as f32;
+        let max_line = lines.clone().max().unwrap() as f32;
 
         let height_offset = self.height_of_editor() / Self::TEXT_SIZE - 1.0;
 
-        let cursors_fit_in_window = min_line > max_line - height_offset;
+        let cursors_fit_in_window = min_line >= max_line - height_offset;
 
         let (min_scroll, max_scroll) = if cursors_fit_in_window {
             (max_line - height_offset, min_line)
@@ -1103,31 +1127,42 @@ impl EditorWindow {
         let end_line = (self.scroll + self.height_of_editor() / Self::TEXT_SIZE).ceil() as usize;
 
         // Selections
-        let current_line = self.current_line();
-        let selected_lines = if self.program_active {
-            &[current_line.unwrap()][..]
+        let highlighted_lines = if self.program_active {
+            &self.highlighted_lines[..]
         } else {
             &[]
         };
 
         if !self.program_active {
             self.draw_selections(start_line, end_line);
-        } else {
-            let line = current_line.unwrap();
+        } else if !self.highlighted_lines.is_empty() {
+            let highlight_line = |line: usize, color: Color| {
+                if line >= start_line && line < end_line {
+                    shapes::draw_rectangle(
+                        self.offset_of_text().x,
+                        self.position_of_line(line),
+                        self.size.x - Self::BORDER_WIDTH - 2.0,
+                        Self::TEXT_SIZE,
+                        color,
+                    );
+                }
+            };
 
-            if line >= start_line && line < end_line {
-                shapes::draw_rectangle(
-                    self.offset_of_text().x,
-                    self.position_of_line(line),
-                    self.size.x - Self::BORDER_WIDTH - 2.0,
-                    Self::TEXT_SIZE,
-                    if self.target_computer.interrupt.is_some() {
-                        Color::from_hex(0xff0000)
-                    } else {
-                        colors::WHITE
-                    },
+            for &line in &self.highlighted_lines[0..self.highlighted_lines.len() - 1] {
+                highlight_line(
+                    line,
+                    color_lerp(Self::EDITOR_BACKGROUND_COLOR, self.title_color, 0.9),
                 );
             }
+
+            highlight_line(
+                *self.highlighted_lines.last().unwrap(),
+                if self.target_computer.interrupt.is_some() {
+                    Color::from_hex(0xff0000)
+                } else {
+                    colors::WHITE
+                },
+            );
         }
 
         // Text
@@ -1142,7 +1177,7 @@ impl EditorWindow {
 
         self.text_editor.draw_range(
             earlier_start_line..end_line,
-            selected_lines,
+            &highlighted_lines,
             self.offset_of_text() + Vec2::Y * text_offset,
             Self::TEXT_SIZE,
             1.0,
@@ -1660,11 +1695,11 @@ pub fn exp_decay(a: f32, b: f32, decay: f32, dt: f32) -> f32 {
     b + (a - b) * (-decay * dt).exp()
 }
 
-pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
+pub const fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a + (b - a) * t
 }
 
-pub fn color_lerp(a: Color, b: Color, t: f32) -> Color {
+pub const fn color_lerp(a: Color, b: Color, t: f32) -> Color {
     Color {
         r: lerp(a.r, b.r, t),
         g: lerp(a.g, b.g, t),
