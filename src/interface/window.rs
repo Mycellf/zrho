@@ -80,7 +80,12 @@ impl EditorWindow {
 
     pub const RED: Color = Color::from_hex(0xff0000);
     pub const ORANGE: Color = Color::from_hex(0xff7f00);
+    pub const YELLOW: Color = Color::from_hex(0xffef00);
+    pub const GREEN: Color = Color::from_hex(0x00ff7f);
+    pub const TEAL: Color = Color::from_hex(0x00efff);
     pub const BLUE: Color = Color::from_hex(0x007fff);
+    pub const PURPLE: Color = Color::from_hex(0x7f00ff);
+    pub const FUSCHIA: Color = Color::from_hex(0xff007f);
 
     pub const SELECTION_COLOR: Color = Color {
         a: 2.0 / 7.0,
