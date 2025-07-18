@@ -839,7 +839,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
             ArgumentRequirement::Comparison,
             ArgumentRequirement::RegisterWriteOnly,
         ]),
-        base_time: 1,
+        base_time: 2,
         base_energy: 1,
         ..InstructionProperties::DEFAULT
     },
@@ -850,7 +850,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
             ArgumentRequirement::Comparison,
             ArgumentRequirement::RegisterWriteOnly,
         ]),
-        base_time: 1,
+        base_time: 2,
         base_energy: 1,
         ..InstructionProperties::DEFAULT
     },
