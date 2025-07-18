@@ -162,7 +162,7 @@ impl ValueVisualisation {
                 target_scroll,
             } => {
                 let RegisterValues::Vector {
-                    values: _,
+                    values,
                     index: register_index,
                     offset,
                 } = &register.values
@@ -170,12 +170,14 @@ impl ValueVisualisation {
                     panic!();
                 };
 
-                let new_index = (*register_index - *offset).try_into().unwrap();
+                let new_index = usize::try_from(register_index.saturating_sub(*offset))
+                    .unwrap()
+                    .clamp(0, values.len() - 1);
 
                 if *index != new_index {
                     *index = new_index;
 
-                    *target_scroll = *register_index as f32 - *offset as f32;
+                    *target_scroll = *index as f32;
                 }
 
                 *scroll = exp_decay_cutoff(
