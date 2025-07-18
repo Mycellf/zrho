@@ -225,28 +225,44 @@ impl EditorWindow {
             if self.is_focused && input::is_key_pressed(KeyCode::Tab) {
                 if let Ok(program) = &self.program {
                     if self.program_active {
-                        if input::is_key_down(KeyCode::LeftShift)
-                            || input::is_key_down(KeyCode::LeftShift)
-                        {
-                            self.target_computer.step_instruction(program);
-                            self.highlighted_lines = vec![self.current_line().unwrap()];
-                        } else {
-                            self.highlighted_lines = (self.target_computer)
-                                .step_tick(program)
-                                .into_iter()
-                                .map(|instruction| {
-                                    self.program.as_ref().unwrap().instructions
-                                        [instruction as usize]
-                                        .line as usize
-                                })
-                                .collect();
+                        while self.target_computer.interrupt.is_none() {
+                            let line =
+                                self.line_of_instruction(self.target_computer.instruction as usize);
+
+                            if self.target_computer.tick_complete {
+                                self.highlighted_lines.clear();
+                            }
+
+                            if !self.highlighted_lines.contains(&line) {
+                                self.highlighted_lines.push(line);
+                            }
+
+                            let did_something = self.target_computer.step_cycle(program);
+
+                            if input::is_key_down(KeyCode::LeftShift)
+                                || input::is_key_down(KeyCode::LeftShift)
+                            {
+                                if self.target_computer.tick_complete {
+                                    break;
+                                }
+                            } else {
+                                if did_something && self.target_computer.block_time == 0 {
+                                    break;
+                                }
+                            }
                         }
                     } else {
                         self.program_active = true;
-                        self.highlighted_lines = vec![self.current_line().unwrap()];
+                        self.highlighted_lines = Vec::new();
                     }
 
-                    self.scroll_to_cursors(false, self.highlighted_lines.clone().into_iter());
+                    self.scroll_to_cursors(
+                        true,
+                        self.highlighted_lines
+                            .clone()
+                            .into_iter()
+                            .chain([self.current_line().unwrap()]),
+                    );
 
                     self.contents_updated = true;
                 }
@@ -855,6 +871,10 @@ impl EditorWindow {
         follow_slowly: bool,
         lines: impl Iterator<Item = usize> + Clone,
     ) {
+        if lines.clone().peekable().peek().is_none() {
+            return;
+        }
+
         let min_line = lines.clone().min().unwrap() as f32;
 
         let max_line = lines.clone().max().unwrap() as f32;
@@ -1126,42 +1146,88 @@ impl EditorWindow {
         let start_line = self.scroll.floor() as usize;
         let end_line = (self.scroll + self.height_of_editor() / Self::TEXT_SIZE).ceil() as usize;
 
-        // Selections
-        let highlighted_lines = if self.program_active {
-            &self.highlighted_lines[..]
-        } else {
-            &[]
+        // Left outline
+        shapes::draw_rectangle(
+            0.0,
+            Self::TITLE_HEIGHT,
+            Self::BORDER_WIDTH,
+            self.height_of_editor(),
+            Self::WINDOW_COLOR,
+        );
+
+        let highlight_line = |line: usize, color: Color, edge: Color| {
+            if line >= start_line && line < end_line {
+                let position_of_line = self.position_of_line(line);
+
+                shapes::draw_rectangle(
+                    Self::BORDER_WIDTH,
+                    position_of_line,
+                    self.size.x - Self::BORDER_WIDTH - 2.0,
+                    Self::TEXT_SIZE,
+                    color,
+                );
+
+                shapes::draw_rectangle(
+                    0.0,
+                    position_of_line,
+                    Self::BORDER_WIDTH,
+                    Self::TEXT_SIZE,
+                    edge,
+                );
+            }
         };
 
+        let mut error_above = false;
+        let mut error_below = false;
+
         if !self.program_active {
-            self.draw_selections(start_line, end_line);
-        } else if !self.highlighted_lines.is_empty() {
-            let highlight_line = |line: usize, color: Color| {
-                if line >= start_line && line < end_line {
-                    shapes::draw_rectangle(
-                        self.offset_of_text().x,
-                        self.position_of_line(line),
-                        self.size.x - Self::BORDER_WIDTH - 2.0,
-                        Self::TEXT_SIZE,
-                        color,
+            // Errors
+            if let Err(errors) = &self.program {
+                for &line in errors.iter().flat_map(|error| &error.lines) {
+                    let line = line as usize;
+
+                    if line < start_line {
+                        error_above = true;
+                        continue;
+                    }
+
+                    if line >= end_line {
+                        error_below = true;
+                        continue;
+                    }
+
+                    highlight_line(
+                        line,
+                        color_lerp(
+                            Self::EDITOR_BACKGROUND_COLOR,
+                            Color::from_hex(0xff0000),
+                            0.3,
+                        ),
+                        colors::BLANK,
                     );
                 }
-            };
+            }
 
-            for &line in &self.highlighted_lines[0..self.highlighted_lines.len() - 1] {
+            // Selections
+            self.draw_selections(start_line, end_line);
+        } else {
+            // Program cursor
+            for &line in &self.highlighted_lines {
                 highlight_line(
                     line,
-                    color_lerp(Self::EDITOR_BACKGROUND_COLOR, self.title_color, 0.9),
+                    color_lerp(Self::EDITOR_BACKGROUND_COLOR, colors::LIGHTGRAY, 0.2),
+                    self.title_color,
                 );
             }
 
             highlight_line(
-                *self.highlighted_lines.last().unwrap(),
+                self.current_line().unwrap(),
                 if self.target_computer.interrupt.is_some() {
                     Color::from_hex(0xff0000)
                 } else {
-                    colors::WHITE
+                    colors::LIGHTGRAY
                 },
+                colors::BLANK,
             );
         }
 
@@ -1177,44 +1243,42 @@ impl EditorWindow {
 
         self.text_editor.draw_range(
             earlier_start_line..end_line,
-            &highlighted_lines,
+            self.current_line().as_slice(),
             self.offset_of_text() + Vec2::Y * text_offset,
             Self::TEXT_SIZE,
             1.0,
             1.0,
         );
 
-        // Cursors
+        // Editor cursors
         if !self.program_active {
             self.draw_cursors(start_line, end_line);
         }
 
-        // Left outline
-        shapes::draw_rectangle(
-            0.0,
-            Self::TITLE_HEIGHT,
-            Self::BORDER_WIDTH,
-            self.height_of_editor(),
-            Self::WINDOW_COLOR,
-        );
+        if error_below {
+            shapes::draw_rectangle(
+                Self::BORDER_WIDTH,
+                self.size.y - self.footer_height - Self::TEXT_SIZE / 3.0,
+                self.size.x - Self::BORDER_WIDTH - 2.0,
+                Self::TEXT_SIZE / 3.0,
+                Color {
+                    a: 0.75,
+                    ..Color::from_hex(0xff0000)
+                },
+            );
+        }
 
-        // Errors
-        if let Err(errors) = &self.program {
-            for &line in errors.iter().flat_map(|error| &error.lines) {
-                let line = line as usize;
-
-                if line < start_line || line >= end_line {
-                    continue;
-                }
-
-                shapes::draw_rectangle(
-                    0.0,
-                    Self::TITLE_HEIGHT + Self::TEXT_SIZE * (line as f32 - self.scroll),
-                    Self::BORDER_WIDTH,
-                    Self::TEXT_SIZE,
-                    Color::from_hex(0xff0000),
-                );
-            }
+        if error_above {
+            shapes::draw_rectangle(
+                Self::BORDER_WIDTH,
+                Self::TITLE_HEIGHT,
+                self.size.x - Self::BORDER_WIDTH - 2.0,
+                Self::TEXT_SIZE / 3.0,
+                Color {
+                    a: 0.75,
+                    ..Color::from_hex(0xff0000)
+                },
+            );
         }
 
         // Scroll bar / right outline
@@ -1299,10 +1363,24 @@ impl EditorWindow {
     }
 
     pub fn current_line(&self) -> Option<usize> {
-        self.program_active.then(|| {
-            self.program.as_ref().unwrap().instructions[self.target_computer.instruction as usize]
-                .line as usize
-        })
+        self.program_active
+            .then(|| self.line_of_instruction(self.target_computer.instruction as usize))
+    }
+
+    pub fn line_of_instruction(&self, instruction: usize) -> usize {
+        let program = self.program.as_ref().unwrap();
+
+        program
+            .instructions
+            .get(instruction)
+            .map(|instruction| instruction.line as usize)
+            .unwrap_or_else(|| {
+                program
+                    .instructions
+                    .last()
+                    .map(|instruction| instruction.line as usize)
+                    .unwrap_or_else(|| 0)
+            })
     }
 
     pub fn draw_cursors(&self, start_line: usize, end_line: usize) {

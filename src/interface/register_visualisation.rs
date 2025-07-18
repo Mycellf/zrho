@@ -95,27 +95,27 @@ impl RegisterVisualisation {
             },
         );
 
-        match self.value_visualisation {
-            ValueVisualisation::Scalar => {
-                assert!(matches!(register.values, RegisterValues::Scalar(..)));
-            }
-            ValueVisualisation::Vector {
-                index,
-                scroll,
-                target_scroll,
-            } => {
-                let RegisterValues::Vector {
-                    values,
-                    index: register_index,
-                    offset,
-                } = &register.values
-                else {
-                    panic!();
-                };
-
-                // TODO:
-            }
-        }
+        // match self.value_visualisation {
+        //     ValueVisualisation::Scalar => {
+        //         assert!(matches!(register.values, RegisterValues::Scalar(..)));
+        //     }
+        //     ValueVisualisation::Vector {
+        //         index,
+        //         scroll,
+        //         target_scroll,
+        //     } => {
+        //         let RegisterValues::Vector {
+        //             values,
+        //             index: register_index,
+        //             offset,
+        //         } = &register.values
+        //         else {
+        //             panic!();
+        //         };
+        //
+        //         // TODO:
+        //     }
+        // }
     }
 
     fn draw_centered_text(text: &str, location: Vec2, width: f32, color: Color) {

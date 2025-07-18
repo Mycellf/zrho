@@ -75,21 +75,14 @@ impl Computer {
         *self = Computer::new(self.maximum_digits, registers, instruction_properties);
     }
 
-    pub fn step_tick(&mut self, program: &Program) -> Vec<u32> {
-        let mut instructions = Vec::new();
-
+    pub fn step_tick(&mut self, program: &Program) {
         while self.interrupt.is_none() {
             self.step_cycle(program);
-            if !instructions.contains(&self.instruction) {
-                instructions.push(self.instruction);
-            }
 
             if self.tick_complete {
                 break;
             }
         }
-
-        instructions
     }
 
     /// Returns the amount of ticks taken during the step
