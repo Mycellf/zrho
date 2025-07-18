@@ -928,6 +928,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
         kind: InstructionKind::TryRead,
         name: "TRY",
         arguments: arguments([ArgumentRequirement::Register]),
+        base_energy: 1,
         calls_per_tick_limit: None,
         ..InstructionProperties::DEFAULT
     },
@@ -935,6 +936,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
         kind: InstructionKind::TryWrite,
         name: "TRW",
         arguments: arguments([ArgumentRequirement::RegisterWriteOnly]),
+        base_energy: 1,
         calls_per_tick_limit: None,
         ..InstructionProperties::DEFAULT
     },
