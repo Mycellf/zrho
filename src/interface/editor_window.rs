@@ -18,11 +18,11 @@ use macroquad::{
 use crate::{
     interface::{
         FONT, FONT_ASPECT,
-        register_visualisation::RegisterVisualisation,
+        register_visualisation::RegisterVisualisationLayout,
         text_editor::{CharacterPosition, Cursor, CursorLocation},
     },
     simulation::{
-        computer::{self, Computer},
+        computer::Computer,
         program::{Program, ProgramAssemblyError},
     },
 };
@@ -68,7 +68,7 @@ pub struct EditorWindow {
     pub target_computer: Computer,
     pub program_active: bool,
     pub highlighted_lines: Vec<usize>,
-    pub register_visualisations: Vec<RegisterVisualisation>,
+    pub register_visualisations: RegisterVisualisationLayout,
 
     pub camera: Camera2D,
     pub contents_updated: bool,
@@ -139,12 +139,7 @@ impl EditorWindow {
         let program = Program::assemble_from(title.clone(), &text_editor.text, &target_computer);
         let program_active = false;
         let highlighted_lines = Vec::new();
-        let register_visualisations = (target_computer.registers.registers)
-            .iter()
-            .enumerate()
-            .filter_map(|(i, register)| register.as_ref().map(|register| (i, register)))
-            .map(|(i, register)| RegisterVisualisation::new(i.try_into().unwrap(), register))
-            .collect();
+        let register_visualisations = RegisterVisualisationLayout::new(&target_computer);
 
         let target_size = size * f32::from(Self::RESOLUTION_UPSCALING);
         let camera = Camera2D {
@@ -230,14 +225,7 @@ impl EditorWindow {
                 );
             }
 
-            for register_visualisation in &mut self.register_visualisations {
-                register_visualisation.update(
-                    self.target_computer
-                        .registers
-                        .get(register_visualisation.register)
-                        .unwrap(),
-                );
-            }
+            self.register_visualisations.update(&self.target_computer);
         }
 
         if !self.program_active {
@@ -1342,26 +1330,14 @@ impl EditorWindow {
         );
 
         if self.footer_height > 0.0 {
-            let mut column_height = [0.0; 4];
-            let column_width = RegisterVisualisation::NAME_WIDTH + Self::TEXT_WIDTH;
-
-            for register_visualisation in &self.register_visualisations {
-                let column = computer::column_of_register(register_visualisation.register);
-
-                register_visualisation.draw_at(
-                    Vec2::new(
-                        column as f32 * column_width,
-                        self.size.y - self.footer_height + column_height[column],
-                    ),
-                    self.target_computer
-                        .registers
-                        .get(register_visualisation.register)
-                        .unwrap(),
-                    self.title_color,
-                );
-
-                column_height[column] += RegisterVisualisation::HEIGHT;
-            }
+            self.register_visualisations.draw_at(
+                Vec2::new(
+                    Self::BORDER_WIDTH,
+                    self.size.y - self.footer_height + Self::BORDER_WIDTH,
+                ),
+                &self.target_computer,
+                self.title_color,
+            );
         }
 
         camera::pop_camera_state();

@@ -10,11 +10,57 @@ use crate::{
         FONT,
         editor_window::{EditorWindow, exp_decay_cutoff},
     },
-    simulation::computer::{self, Register, RegisterValues},
+    simulation::computer::{self, Computer, Register, RegisterValues},
 };
 
-#[derive(Clone, Copy, Debug)]
-pub struct RegisterVisualisationLayout {}
+#[derive(Clone, Debug)]
+pub struct RegisterVisualisationLayout {
+    pub visualisations: Vec<RegisterVisualisation>,
+}
+
+impl RegisterVisualisationLayout {
+    pub fn new(computer: &Computer) -> Self {
+        let visualisations = (computer.registers.registers)
+            .iter()
+            .enumerate()
+            .filter_map(|(i, register)| register.as_ref().map(|register| (i, register)))
+            .map(|(i, register)| RegisterVisualisation::new(i.try_into().unwrap(), register))
+            .collect();
+
+        Self { visualisations }
+    }
+
+    pub fn update(&mut self, computer: &Computer) {
+        for register_visualisation in &mut self.visualisations {
+            register_visualisation.update(
+                computer
+                    .registers
+                    .get(register_visualisation.register)
+                    .unwrap(),
+            );
+        }
+    }
+
+    pub fn draw_at(&self, location: Vec2, computer: &Computer, color: Color) {
+        let mut column_height = [0.0; 4];
+        let column_width = RegisterVisualisation::NAME_WIDTH + EditorWindow::TEXT_WIDTH;
+
+        for register_visualisation in &self.visualisations {
+            let column = computer::column_of_register(register_visualisation.register);
+
+            register_visualisation.draw_at(
+                location + Vec2::new(column as f32 * column_width, column_height[column]),
+                computer
+                    .registers
+                    .get(register_visualisation.register)
+                    .unwrap(),
+                color,
+            );
+
+            column_height[column] += RegisterVisualisation::HEIGHT;
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug)]
 pub struct RegisterVisualisation {
@@ -23,7 +69,7 @@ pub struct RegisterVisualisation {
 }
 
 impl RegisterVisualisation {
-    pub const NAME_WIDTH: f32 = EditorWindow::TEXT_WIDTH * 8.0;
+    pub const NAME_WIDTH: f32 = EditorWindow::TEXT_WIDTH * 5.0;
     pub const HEIGHT: f32 = EditorWindow::TEXT_SIZE * 2.5;
 
     #[must_use]
