@@ -43,7 +43,7 @@ async fn main() {
         "Kolakoski Sequence".to_owned(),
         EditorWindow::BLUE,
         TextEditor::new(KOLAKOSKI_SEQUENCE_LONG.to_owned()),
-        default_computer(),
+        default_computer(true),
     ));
 
     windows.push(EditorWindow::new(
@@ -53,7 +53,7 @@ async fn main() {
         "Prime Numbers".to_owned(),
         EditorWindow::ORANGE,
         TextEditor::new(PRIME_NUMBERS_FAST.to_owned()),
-        default_computer(),
+        default_computer(false),
     ));
 
     windows.push(EditorWindow::new(
@@ -63,7 +63,7 @@ async fn main() {
         "Fibonacci Sequence".to_owned(),
         EditorWindow::RED,
         TextEditor::new(FIBONACCI_SEQUENCE.to_owned()),
-        default_computer(),
+        default_computer(false),
     ));
 
     windows[0].is_focused = true;
@@ -124,7 +124,7 @@ async fn main() {
 }
 
 pub fn run_test_computer() {
-    let mut computer = default_computer();
+    let mut computer = default_computer(true);
 
     let program = match Program::assemble_from("Test Program".to_owned(), PROGRAM, &computer) {
         Ok(program) => program,
@@ -188,26 +188,56 @@ pub fn run_test_computer() {
 }
 
 #[must_use]
-pub fn default_computer() -> Computer {
+pub fn default_computer(h_register: bool) -> Computer {
     const DIGITS: u8 = 3;
 
-    Computer::new(
-        DIGITS,
-        RegisterSet::new_empty()
-            .with_register(
-                'D',
-                Register {
-                    values: RegisterValues::Vector {
-                        values: Box::new([DigitInteger::new(0, DIGITS).unwrap(); 100]),
-                        index: 0,
-                        offset: 0,
-                    },
-                    indexed_by: Some(computer::register_with_name('I').unwrap()),
-                    read_time: 1,
-                    write_time: 1,
-                    ..Register::DEFAULT
+    let registers = RegisterSet::new_empty()
+        .with_register(
+            'D',
+            Register {
+                values: RegisterValues::Vector {
+                    values: Box::new([DigitInteger::new(0, DIGITS).unwrap(); 100]),
+                    index: 0,
+                    offset: 0,
                 },
-            )
+                indexed_by: Some(computer::register_with_name('I').unwrap()),
+                read_time: 1,
+                write_time: 1,
+                ..Register::DEFAULT
+            },
+        )
+        .with_register(
+            'I',
+            Register {
+                values: RegisterValues::Scalar(DigitInteger::new(0, DIGITS).unwrap()),
+                indexes_array: Some(computer::register_with_name('D').unwrap()),
+                ..Register::DEFAULT
+            },
+        )
+        .with_register(
+            'X',
+            Register {
+                values: RegisterValues::Scalar(DigitInteger::new(0, DIGITS).unwrap()),
+                ..Register::DEFAULT
+            },
+        )
+        .with_register(
+            'Y',
+            Register {
+                values: RegisterValues::Scalar(DigitInteger::new(0, DIGITS).unwrap()),
+                ..Register::DEFAULT
+            },
+        )
+        .with_register(
+            'Z',
+            Register {
+                values: RegisterValues::Scalar(DigitInteger::new(0, DIGITS).unwrap()),
+                ..Register::DEFAULT
+            },
+        );
+
+    let registers = if h_register {
+        registers
             .with_register(
                 'H',
                 Register {
@@ -228,14 +258,6 @@ pub fn default_computer() -> Computer {
                 },
             )
             .with_register(
-                'I',
-                Register {
-                    values: RegisterValues::Scalar(DigitInteger::new(0, DIGITS).unwrap()),
-                    indexes_array: Some(computer::register_with_name('D').unwrap()),
-                    ..Register::DEFAULT
-                },
-            )
-            .with_register(
                 'M',
                 Register {
                     values: RegisterValues::Scalar(DigitInteger::new(0, DIGITS).unwrap()),
@@ -243,29 +265,11 @@ pub fn default_computer() -> Computer {
                     ..Register::DEFAULT
                 },
             )
-            .with_register(
-                'X',
-                Register {
-                    values: RegisterValues::Scalar(DigitInteger::new(0, DIGITS).unwrap()),
-                    ..Register::DEFAULT
-                },
-            )
-            .with_register(
-                'Y',
-                Register {
-                    values: RegisterValues::Scalar(DigitInteger::new(0, DIGITS).unwrap()),
-                    ..Register::DEFAULT
-                },
-            )
-            .with_register(
-                'Z',
-                Register {
-                    values: RegisterValues::Scalar(DigitInteger::new(0, DIGITS).unwrap()),
-                    ..Register::DEFAULT
-                },
-            ),
-        instruction::DEFAULT_INSTRUCTIONS,
-    )
+    } else {
+        registers
+    };
+
+    Computer::new(DIGITS, registers, instruction::DEFAULT_INSTRUCTIONS)
 }
 
 const PROGRAM: &str = KOLAKOSKI_SEQUENCE_LONG;
