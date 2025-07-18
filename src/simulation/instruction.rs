@@ -790,7 +790,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
             },
         )),
         base_energy: 8,
-        conditional_energy: Some(0),
+        conditional_energy: Some(2),
         ..InstructionProperties::DEFAULT
     },
     InstructionProperties {
@@ -810,7 +810,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
             },
         )),
         base_energy: 8,
-        conditional_energy: Some(0),
+        conditional_energy: Some(2),
         ..InstructionProperties::DEFAULT
     },
     InstructionProperties {
@@ -840,7 +840,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
             ArgumentRequirement::RegisterWriteOnly,
         ]),
         base_time: 1,
-        base_energy: 2,
+        base_energy: 1,
         ..InstructionProperties::DEFAULT
     },
     InstructionProperties {
@@ -851,7 +851,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
             ArgumentRequirement::RegisterWriteOnly,
         ]),
         base_time: 1,
-        base_energy: 2,
+        base_energy: 1,
         ..InstructionProperties::DEFAULT
     },
     InstructionProperties {
@@ -914,6 +914,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
         kind: InstructionKind::Sleep,
         name: "SLP",
         arguments: arguments([ArgumentRequirement::ConstantOrRegister]),
+        base_energy: 1,
         calls_per_tick_limit: None,
         ..InstructionProperties::DEFAULT
     },
