@@ -223,49 +223,10 @@ impl EditorWindow {
 
         if self.footer_height > 0.0 {
             if self.is_focused && input::is_key_pressed(KeyCode::Tab) {
-                if let Ok(program) = &self.program {
-                    if self.program_active {
-                        while self.target_computer.interrupt.is_none() {
-                            let line =
-                                self.line_of_instruction(self.target_computer.instruction as usize);
-
-                            if self.target_computer.tick_complete {
-                                self.highlighted_lines.clear();
-                            }
-
-                            if !self.highlighted_lines.contains(&line) {
-                                self.highlighted_lines.push(line);
-                            }
-
-                            let did_something = self.target_computer.step_cycle(program);
-
-                            if input::is_key_down(KeyCode::LeftShift)
-                                || input::is_key_down(KeyCode::LeftShift)
-                            {
-                                if self.target_computer.tick_complete {
-                                    break;
-                                }
-                            } else {
-                                if did_something && self.target_computer.block_time == 0 {
-                                    break;
-                                }
-                            }
-                        }
-                    } else {
-                        self.program_active = true;
-                        self.highlighted_lines = Vec::new();
-                    }
-
-                    self.scroll_to_cursors(
-                        true,
-                        self.highlighted_lines
-                            .clone()
-                            .into_iter()
-                            .chain([self.current_line().unwrap()]),
-                    );
-
-                    self.contents_updated = true;
-                }
+                self.tick_program(
+                    input::is_key_down(KeyCode::LeftShift)
+                        || input::is_key_down(KeyCode::LeftShift),
+                );
             }
 
             for register_visualisation in &mut self.register_visualisations {
@@ -331,6 +292,47 @@ impl EditorWindow {
         }
 
         is_clicked
+    }
+
+    pub fn tick_program(&mut self, single_tick: bool) {
+        let Ok(program) = &self.program else {
+            return;
+        };
+
+        if self.program_active {
+            while self.target_computer.interrupt.is_none() {
+                let line = self.line_of_instruction(self.target_computer.instruction as usize);
+
+                if self.target_computer.tick_complete {
+                    self.highlighted_lines.clear();
+                }
+
+                if !self.highlighted_lines.contains(&line) {
+                    self.highlighted_lines.push(line);
+                }
+
+                let did_something = self.target_computer.step_cycle(program);
+
+                if single_tick {
+                    if self.target_computer.tick_complete {
+                        break;
+                    }
+                } else {
+                    if did_something && self.target_computer.block_time == 0 {
+                        break;
+                    }
+                }
+            }
+        } else {
+            self.program_active = true;
+            self.highlighted_lines = Vec::new();
+        }
+
+        self.scroll_to_cursors(false, self.highlighted_lines.clone().into_iter());
+
+        self.scroll_to_cursors(false, self.current_line().into_iter());
+
+        self.contents_updated = true;
     }
 
     pub fn update_editor(&mut self, focus: WindowFocus, index: usize) {
