@@ -283,7 +283,7 @@ impl EditorWindow {
 
         self.text_offset = (self.scroll.floor() - self.scroll) * Self::TEXT_SIZE;
 
-        if input::is_key_pressed(KeyCode::Escape) {
+        if self.is_focused && input::is_key_pressed(KeyCode::Escape) {
             self.target_computer.reset();
             self.highlighted_lines = Vec::new();
             self.program_active = false;
