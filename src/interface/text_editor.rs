@@ -18,6 +18,7 @@ pub struct TextEditor {
 }
 
 impl TextEditor {
+    #[must_use]
     pub fn new(text: String) -> Self {
         let lines = Self::line_indecies_from(&text);
         let cursors = vec![Cursor::default()];
@@ -37,6 +38,7 @@ impl TextEditor {
         result
     }
 
+    #[must_use]
     pub fn line_indecies_from(text: &str) -> Vec<Line> {
         let mut lines = Vec::new();
 
@@ -51,6 +53,7 @@ impl TextEditor {
         lines
     }
 
+    #[must_use]
     pub fn num_lines(&self) -> usize {
         self.lines.len() - 1
     }
@@ -289,11 +292,11 @@ impl TextEditor {
             if offset <= position.column || !wrap || position.line == 0 {
                 position.column = position.column.saturating_sub(offset);
                 break;
-            } else {
-                offset -= position.column + 1;
-                position.line -= 1;
-                position.column = self.length_of_line(position.line).unwrap();
             }
+
+            offset -= position.column + 1;
+            position.line -= 1;
+            position.column = self.length_of_line(position.line).unwrap();
         }
 
         position
@@ -313,11 +316,11 @@ impl TextEditor {
             {
                 position.column = (position.column + offset).min(length);
                 break;
-            } else {
-                offset -= length - position.column + 1;
-                position.line += 1;
-                position.column = 0;
             }
+
+            offset -= length - position.column + 1;
+            position.line += 1;
+            position.column = 0;
         }
 
         position
@@ -340,6 +343,7 @@ impl TextEditor {
         }
     }
 
+    #[must_use]
     pub fn length_of_line(&self, line: usize) -> Option<usize> {
         Some(self.get_line(line)?.chars().count())
     }
@@ -521,6 +525,7 @@ pub struct Cursor {
 }
 
 impl Cursor {
+    #[must_use]
     pub fn range(&self) -> Range<CursorLocation> {
         if let Some(end) = self.end {
             if end.index > self.index {
@@ -533,6 +538,7 @@ impl Cursor {
         }
     }
 
+    #[must_use]
     pub fn position_range(&self) -> Range<CharacterPosition> {
         if let Some(end) = self.end {
             if end.index > self.index {
@@ -545,6 +551,7 @@ impl Cursor {
         }
     }
 
+    #[must_use]
     pub fn index_range(&self) -> Range<usize> {
         if let Some(end) = self.end {
             if end.index > self.index {

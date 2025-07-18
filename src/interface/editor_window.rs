@@ -112,6 +112,7 @@ impl EditorWindow {
     pub const FOLLOW_SPEED: f32 = f32::INFINITY;
     pub const PAGE_FOLLOW_SPEED: f32 = 10.0;
 
+    #[must_use]
     pub fn new(
         scaled_position: Vec2,
         size: Vec2,
@@ -142,10 +143,10 @@ impl EditorWindow {
             .iter()
             .enumerate()
             .filter_map(|(i, register)| register.as_ref().map(|register| (i, register)))
-            .map(|(i, register)| RegisterVisualisation::new(i as u32, register))
+            .map(|(i, register)| RegisterVisualisation::new(i.try_into().unwrap(), register))
             .collect();
 
-        let target_size = size * Self::RESOLUTION_UPSCALING as f32;
+        let target_size = size * f32::from(Self::RESOLUTION_UPSCALING);
         let camera = Camera2D {
             zoom: -2.0 / size,
             offset: Vec2::new(1.0, 1.0),
@@ -183,9 +184,9 @@ impl EditorWindow {
 
             text_editor,
             program,
-            highlighted_lines,
             target_computer,
             program_active,
+            highlighted_lines,
             register_visualisations,
 
             camera,
@@ -879,7 +880,7 @@ impl EditorWindow {
 
         let min_line = lines.clone().min().unwrap() as f32;
 
-        let max_line = lines.clone().max().unwrap() as f32;
+        let max_line = lines.max().unwrap() as f32;
 
         let height_offset = self.height_of_editor() / Self::TEXT_SIZE - 1.0;
 
@@ -913,6 +914,7 @@ impl EditorWindow {
         self.cursors_fit_in_window = cursors_fit_in_window;
     }
 
+    #[must_use]
     pub fn position_of_point_in_text(&self, point: Vec2, force: bool) -> Option<CharacterPosition> {
         if !(force || self.is_point_within_editor(point)) {
             return None;
@@ -937,6 +939,7 @@ impl EditorWindow {
         })
     }
 
+    #[must_use]
     pub fn offset_of_text(&self) -> Vec2 {
         Vec2::new(Self::BORDER_WIDTH + 5.0, Self::TITLE_HEIGHT)
     }
@@ -1182,7 +1185,26 @@ impl EditorWindow {
         let mut error_above = false;
         let mut error_below = false;
 
-        if !self.program_active {
+        if self.program_active {
+            // Program cursor
+            for &line in &self.highlighted_lines {
+                highlight_line(
+                    line,
+                    color_lerp(Self::EDITOR_BACKGROUND_COLOR, colors::LIGHTGRAY, 0.2),
+                    self.title_color,
+                );
+            }
+
+            highlight_line(
+                self.current_line().unwrap(),
+                if self.target_computer.interrupt.is_some() {
+                    Color::from_hex(0xff0000)
+                } else {
+                    colors::LIGHTGRAY
+                },
+                colors::BLANK,
+            );
+        } else {
             // Errors
             if let Err(errors) = &self.program {
                 for &line in errors.iter().flat_map(|error| &error.lines) {
@@ -1212,25 +1234,6 @@ impl EditorWindow {
 
             // Selections
             self.draw_selections(start_line, end_line);
-        } else {
-            // Program cursor
-            for &line in &self.highlighted_lines {
-                highlight_line(
-                    line,
-                    color_lerp(Self::EDITOR_BACKGROUND_COLOR, colors::LIGHTGRAY, 0.2),
-                    self.title_color,
-                );
-            }
-
-            highlight_line(
-                self.current_line().unwrap(),
-                if self.target_computer.interrupt.is_some() {
-                    Color::from_hex(0xff0000)
-                } else {
-                    colors::LIGHTGRAY
-                },
-                colors::BLANK,
-            );
         }
 
         // Text
@@ -1308,7 +1311,7 @@ impl EditorWindow {
                 self.height_of_editor(),
                 Self::WINDOW_COLOR,
             );
-        };
+        }
 
         // Header
         let (text_color, background_color) = if self.is_focused {
@@ -1364,11 +1367,13 @@ impl EditorWindow {
         camera::pop_camera_state();
     }
 
+    #[must_use]
     pub fn current_line(&self) -> Option<usize> {
         self.program_active
             .then(|| self.line_of_instruction(self.target_computer.instruction as usize))
     }
 
+    #[must_use]
     pub fn line_of_instruction(&self, instruction: usize) -> usize {
         let program = self.program.as_ref().unwrap();
 
@@ -1380,8 +1385,7 @@ impl EditorWindow {
                 program
                     .instructions
                     .last()
-                    .map(|instruction| instruction.line as usize)
-                    .unwrap_or(0)
+                    .map_or(0, |instruction| instruction.line as usize)
             })
     }
 
@@ -1499,6 +1503,7 @@ impl EditorWindow {
         (line as f32 - self.scroll) * Self::TEXT_SIZE + self.offset_of_text().y
     }
 
+    #[must_use]
     pub fn width_of_line(&self, line: usize) -> Option<f32> {
         let contents = self.text_editor.get_line(line)?;
 
@@ -1511,11 +1516,12 @@ impl EditorWindow {
         Some(text::measure_text(contents, Some(&FONT), font_size, font_scale).width)
     }
 
+    #[must_use]
     pub fn text_params_with_size(text_size: f32) -> TextParams<'static> {
         TextParams {
             font: Some(&FONT),
             font_size: (text_size * Self::RESOLUTION_UPSCALING as f32) as u16,
-            font_scale: 1.0 / Self::RESOLUTION_UPSCALING as f32,
+            font_scale: 1.0 / f32::from(Self::RESOLUTION_UPSCALING),
             font_scale_aspect: 1.0,
             rotation: 0.0,
             color: colors::WHITE,
@@ -1685,6 +1691,7 @@ impl ScrollBar {
     pub const MAX_WIDTH: f32 = Self::SELECTED_WIDTH.max(Self::UNSELECTED_WIDTH);
     pub const MIN_WIDTH: f32 = Self::SELECTED_WIDTH.min(Self::UNSELECTED_WIDTH);
 
+    #[must_use]
     pub fn color(&self) -> Color {
         color_lerp(Self::BASE_COLOR, Self::ALTERNATE_COLOR, self.color)
     }
@@ -1759,6 +1766,7 @@ static RAINBOW_DEBUG: LazyLock<bool> = LazyLock::new(|| {
 /// emptied.
 static INTERNAL_CLIPBOARD: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
 
+#[must_use]
 pub fn exp_decay_cutoff(a: f32, b: f32, decay: f32, dt: f32, cutoff: f32) -> (f32, bool) {
     if (a - b).abs() < cutoff {
         (b, true)
@@ -1767,15 +1775,18 @@ pub fn exp_decay_cutoff(a: f32, b: f32, decay: f32, dt: f32, cutoff: f32) -> (f3
     }
 }
 
-/// CREDIT: Freya Holmér: https://www.youtube.com/watch?v=LSNQuFEDOyQ
+/// CREDIT: Freya Holmér: <https://www.youtube.com/watch?v=LSNQuFEDOyQ>
+#[must_use]
 pub fn exp_decay(a: f32, b: f32, decay: f32, dt: f32) -> f32 {
     b + (a - b) * (-decay * dt).exp()
 }
 
+#[must_use]
 pub const fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a + (b - a) * t
 }
 
+#[must_use]
 pub const fn color_lerp(a: Color, b: Color, t: f32) -> Color {
     Color {
         r: lerp(a.r, b.r, t),

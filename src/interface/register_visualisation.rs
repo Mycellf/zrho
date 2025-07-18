@@ -26,6 +26,7 @@ impl RegisterVisualisation {
     pub const NAME_WIDTH: f32 = EditorWindow::TEXT_WIDTH * 8.0;
     pub const HEIGHT: f32 = EditorWindow::TEXT_SIZE * 2.5;
 
+    #[must_use]
     pub fn new(index: u32, register: &Register) -> Self {
         Self {
             register: index,
@@ -169,12 +170,12 @@ impl ValueVisualisation {
                     panic!();
                 };
 
-                let new_index = *register_index as usize + *offset as usize;
+                let new_index = (*register_index - *offset).try_into().unwrap();
 
                 if *index != new_index {
                     *index = new_index;
 
-                    *target_scroll = *register_index as f32 + *offset as f32;
+                    *target_scroll = *register_index as f32 - *offset as f32;
                 }
 
                 *scroll = exp_decay_cutoff(

@@ -38,6 +38,7 @@ pub struct Computer {
 }
 
 impl Computer {
+    #[must_use]
     pub fn new(
         maximum_digits: u8,
         registers: RegisterSet,
@@ -150,10 +151,9 @@ impl Computer {
                         self.previous_instruction = update_previous_instruction
                             .then_some((self.instruction, argument_values));
 
-                        if time == 0 {
-                            self.tick_complete = false;
-                        } else if time > 0 {
-                            self.block_time = time - 1;
+                        match time {
+                            0 => self.tick_complete = false,
+                            _ => self.block_time = time - 1,
                         }
 
                         if let Some(energy_used) = self.energy_used.checked_add(1) {
@@ -256,7 +256,7 @@ impl RegisterSet {
         let register_entry = self.registers.get_mut(index as usize).ok_or(
             CreateRegisterError::IndexOutOfBounds {
                 got: index,
-                maximum: NUM_REGISTERS as u32 - 1,
+                maximum: u32::try_from(NUM_REGISTERS).unwrap() - 1,
             },
         )?;
 
@@ -334,7 +334,9 @@ impl RegisterSet {
 
                     *index = value;
                 }
-                _ => return Err(RegisterAccessError::NoSuchRegister { got: array_index }),
+                RegisterValues::Scalar(_) => {
+                    return Err(RegisterAccessError::NoSuchRegister { got: array_index });
+                }
             }
         }
 
@@ -349,7 +351,7 @@ impl Display for RegisterSet {
                 continue;
             };
 
-            let name = name_of_register(i as u32).unwrap();
+            let name = name_of_register(i.try_into().unwrap()).unwrap();
 
             writeln!(f, "{name}: {register}")?;
         }
@@ -494,7 +496,7 @@ impl Display for Register {
 
                 write!(f, "][{index}]")?;
             }
-        };
+        }
 
         if let Some(array) = self.indexes_array {
             write!(f, " → {}", name_of_register(array).unwrap())?;

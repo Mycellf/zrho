@@ -187,6 +187,7 @@ pub fn run_test_computer() {
     println!("Verified Kolakoski Sequence stored in H");
 }
 
+#[must_use]
 pub fn default_computer() -> Computer {
     const DIGITS: u8 = 3;
 
@@ -211,7 +212,8 @@ pub fn default_computer() -> Computer {
                 'H',
                 Register {
                     values: RegisterValues::Vector {
-                        values: Box::new([DigitInteger::new(0, DIGITS).unwrap(); 10000]),
+                        values: vec![DigitInteger::new(0, DIGITS).unwrap(); 10000]
+                            .into_boxed_slice(),
                         index: 0,
                         offset: 0,
                     },

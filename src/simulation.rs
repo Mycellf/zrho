@@ -116,11 +116,10 @@ pub fn interactively_run(computer: &mut Computer, program: &Program) {
                     if let Some(Some(input)) = tokens.next().map(|input| input.parse::<u64>().ok())
                     {
                         let conversion_factor = match tokens.next() {
-                            Some("ns") | Some("nanosecond") | Some("nanoseconds") => 0,
-                            Some("μs") | Some("us") | Some("microsecond")
-                            | Some("microseconds") => 3,
-                            Some("ms") | Some("millisecond") | Some("milliseconds") => 6,
-                            Some("s") | Some("second") | Some("seconds") | None => 9,
+                            Some("ns" | "nanosecond" | "nanoseconds") => 0,
+                            Some("μs" | "us" | "microsecond" | "microseconds") => 3,
+                            Some("ms" | "millisecond" | "milliseconds") => 6,
+                            Some("s" | "second" | "seconds") | None => 9,
                             _ => 9,
                         };
 

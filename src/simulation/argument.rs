@@ -102,10 +102,9 @@ impl Argument {
     #[must_use]
     pub fn number_sources(&self) -> &[NumberSource] {
         match self {
-            Argument::Instruction(_) => &[],
             Argument::Number(number_source) => slice::from_ref(number_source),
             Argument::Comparison(comparison) => &comparison.values,
-            Argument::Empty => &[],
+            Argument::Instruction(_) | Argument::Empty => &[],
         }
     }
 }
