@@ -147,7 +147,7 @@ impl Computer {
                     &mut self.next_instruction,
                     self.runtime,
                 ) {
-                    Ok((time, argument_values, update_previous_instruction)) => {
+                    Ok((time, energy, argument_values, update_previous_instruction)) => {
                         self.previous_instruction = update_previous_instruction
                             .then_some((self.instruction, argument_values));
 
@@ -156,7 +156,7 @@ impl Computer {
                             _ => self.block_time = time - 1,
                         }
 
-                        if let Some(energy_used) = self.energy_used.checked_add(1) {
+                        if let Some(energy_used) = self.energy_used.checked_add(energy.into()) {
                             self.energy_used = energy_used;
                         } else {
                             self.interrupt =

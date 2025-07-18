@@ -25,7 +25,7 @@ pub struct Instruction {
 impl Instruction {
     pub const NUM_ARGUMENTS: usize = 3;
 
-    /// Returns the total time taken by the instruction, the value of each input, and
+    /// Returns the total time and energy taken by the instruction, the value of each input, and
     /// whether or not to update `previous_instruction`.
     pub fn evaluate(
         &self,
@@ -34,7 +34,7 @@ impl Instruction {
         previous_instruction: Option<(&Instruction, &ArgumentValues)>,
         next_instruction: &mut u32,
         runtime: u64,
-    ) -> Result<(u32, ArgumentValues, bool), InstructionEvaluationInterrupt> {
+    ) -> Result<(u32, u32, ArgumentValues, bool), InstructionEvaluationInterrupt> {
         let properties = instruction_properties[self.kind];
 
         let mut argument_values = [None; 3];
@@ -84,11 +84,12 @@ impl Instruction {
             }
         }
 
-        let (mut instruction_time, update_previous_instruction) = self.execution_time(
-            instruction_properties,
-            previous_instruction,
-            &argument_values,
-        );
+        let (mut instruction_time, instruction_energy, update_previous_instruction) = self
+            .execution_time(
+                instruction_properties,
+                previous_instruction,
+                &argument_values,
+            );
 
         let mut jump = None;
 
@@ -251,7 +252,12 @@ impl Instruction {
             *next_instruction += 1;
         }
 
-        Ok((total_time, argument_values, update_previous_instruction))
+        Ok((
+            total_time,
+            instruction_energy,
+            argument_values,
+            update_previous_instruction,
+        ))
     }
 
     /// Returns the time to evaluate the instruction and whether or not to update the
@@ -262,16 +268,20 @@ impl Instruction {
         instruction_properties: &InstructionKindMap<InstructionProperties>,
         previous_instruction: Option<(&Instruction, &ArgumentValues)>,
         argument_values: &ArgumentValues,
-    ) -> (u32, bool) {
+    ) -> (u32, u32, bool) {
         let properties = instruction_properties[self.kind];
 
         if let &Some((time, ref condition)) = &properties.conditional_time {
             if condition.matches_context(previous_instruction, self.arguments, argument_values) {
-                return (time, !condition.allows_cascade());
+                let energy = properties
+                    .conditional_energy
+                    .unwrap_or(properties.base_energy);
+
+                return (time, energy, !condition.allows_cascade());
             }
         }
 
-        (properties.base_time, true)
+        (properties.base_time, properties.base_energy, true)
     }
 
     pub fn group(
@@ -571,6 +581,8 @@ pub struct InstructionProperties {
     pub arguments: [ArgumentRequirement; Instruction::NUM_ARGUMENTS],
     pub base_time: u32,
     pub conditional_time: Option<(u32, PropertyCondition)>,
+    pub base_energy: u32,
+    pub conditional_energy: Option<u32>,
     pub calls_per_tick_limit: Option<NonZeroU8>,
     pub group: Option<(InstructionKind, PropertyCondition)>,
 }
@@ -582,6 +594,8 @@ impl InstructionProperties {
         arguments: [ArgumentRequirement::Empty; Instruction::NUM_ARGUMENTS],
         base_time: 0,
         conditional_time: None,
+        base_energy: 0,
+        conditional_energy: None,
         calls_per_tick_limit: Some(NonZeroU8::new(1).unwrap()),
         group: None,
     };
@@ -706,6 +720,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
             ArgumentRequirement::ConstantOrRegister,
         ]),
         base_time: 1,
+        base_energy: 1,
         ..InstructionProperties::DEFAULT
     },
     InstructionProperties {
@@ -717,6 +732,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
             ArgumentRequirement::RegisterWriteOnly,
         ]),
         base_time: 1,
+        base_energy: 2,
         ..InstructionProperties::DEFAULT
     },
     InstructionProperties {
@@ -728,6 +744,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
             ArgumentRequirement::RegisterWriteOnly,
         ]),
         base_time: 1,
+        base_energy: 2,
         group: Some((
             InstructionKind::Negate,
             PropertyCondition::ArgumentTypeMatches {
@@ -741,6 +758,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
         kind: InstructionKind::Negate,
         name: "NEG",
         arguments: arguments([ArgumentRequirement::Register]),
+        base_energy: 1,
         ..InstructionProperties::DEFAULT
     },
     InstructionProperties {
@@ -752,6 +770,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
             ArgumentRequirement::RegisterWriteOnly,
         ]),
         base_time: 2,
+        base_energy: 4,
         ..InstructionProperties::DEFAULT
     },
     InstructionProperties {
@@ -770,6 +789,8 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
                 allow_cascade: false,
             },
         )),
+        base_energy: 8,
+        conditional_energy: Some(0),
         ..InstructionProperties::DEFAULT
     },
     InstructionProperties {
@@ -788,6 +809,8 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
                 allow_cascade: false,
             },
         )),
+        base_energy: 8,
+        conditional_energy: Some(0),
         ..InstructionProperties::DEFAULT
     },
     InstructionProperties {
@@ -795,6 +818,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
         name: "ODD",
         arguments: arguments([ArgumentRequirement::Register]),
         base_time: 0,
+        base_energy: 1,
         ..InstructionProperties::DEFAULT
     },
     InstructionProperties {
@@ -805,6 +829,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
             ArgumentRequirement::RegisterWriteOnly,
         ]),
         base_time: 1,
+        base_energy: 1,
         ..InstructionProperties::DEFAULT
     },
     InstructionProperties {
@@ -815,6 +840,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
             ArgumentRequirement::RegisterWriteOnly,
         ]),
         base_time: 1,
+        base_energy: 2,
         ..InstructionProperties::DEFAULT
     },
     InstructionProperties {
@@ -825,6 +851,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
             ArgumentRequirement::RegisterWriteOnly,
         ]),
         base_time: 1,
+        base_energy: 2,
         ..InstructionProperties::DEFAULT
     },
     InstructionProperties {
@@ -842,6 +869,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
                 requirement: ArgumentRequirement::ConstantOrEmpty,
             },
         )),
+        base_energy: 1,
         ..InstructionProperties::DEFAULT
     },
     InstructionProperties {
@@ -859,6 +887,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
                 value: 0,
             },
         )),
+        base_energy: 5,
         group: Some((InstructionKind::Jump, PropertyCondition::Always)),
         ..InstructionProperties::DEFAULT
     },
@@ -877,6 +906,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
                 value: 0,
             },
         )),
+        base_energy: 5,
         group: Some((InstructionKind::Jump, PropertyCondition::Always)),
         ..InstructionProperties::DEFAULT
     },
@@ -914,6 +944,7 @@ pub static DEFAULT_INSTRUCTIONS: InstructionKindMap<InstructionProperties> = Ins
             ArgumentRequirement::RegisterWriteOnly,
             ArgumentRequirement::ConstantOrEmpty,
         ]),
+        base_energy: 2,
         ..InstructionProperties::DEFAULT
     },
 ]);
