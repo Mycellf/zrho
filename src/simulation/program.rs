@@ -31,9 +31,9 @@ impl Program {
         self
     }
 
-    pub fn assemble_from<'a>(
+    pub fn assemble_from(
         name: String,
-        source_code: &'a str,
+        source_code: &str,
         target_computer: &Computer,
     ) -> Result<Self, Vec<ProgramAssemblyError>> {
         let mut errors = Vec::new();

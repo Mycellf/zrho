@@ -175,7 +175,7 @@ pub fn run_test_computer() {
         .get(computer::register_with_name('H').unwrap())
         .unwrap();
 
-    for (i, (computed, actual)) in register.all_values().into_iter().zip(sequence).enumerate() {
+    for (i, (computed, actual)) in register.all_values().iter().zip(sequence).enumerate() {
         assert_eq!(
             computed.get(),
             actual,

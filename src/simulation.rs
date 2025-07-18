@@ -79,7 +79,7 @@ pub fn interactively_run(computer: &mut Computer, program: &Program) {
             if let Some(instruction) = program.instructions.get(instruction as usize) {
                 print!("Line {line} ({instruction})", line = instruction.line);
             } else {
-                print!("Instruction {}", instruction);
+                print!("Instruction {instruction}");
             }
 
             println!(":");

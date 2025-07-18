@@ -313,14 +313,14 @@ impl EditorWindow {
 
                 let did_something = self.target_computer.step_cycle(program);
 
-                if single_tick {
-                    if self.target_computer.tick_complete {
-                        break;
-                    }
+                let finished = if single_tick {
+                    self.target_computer.tick_complete
                 } else {
-                    if did_something && self.target_computer.block_time == 0 {
-                        break;
-                    }
+                    did_something && self.target_computer.block_time == 0
+                };
+
+                if finished {
+                    break;
                 }
             }
         } else {
@@ -606,7 +606,7 @@ impl EditorWindow {
         let mut copied = Vec::new();
         let pasted = LazyCell::new(|| {
             let external_clipboard =
-                macroquad::miniquad::window::clipboard_get().unwrap_or(String::new());
+                macroquad::miniquad::window::clipboard_get().unwrap_or_default();
 
             if external_clipboard.is_empty() {
                 INTERNAL_CLIPBOARD.lock().unwrap().clone()
@@ -1381,7 +1381,7 @@ impl EditorWindow {
                     .instructions
                     .last()
                     .map(|instruction| instruction.line as usize)
-                    .unwrap_or_else(|| 0)
+                    .unwrap_or(0)
             })
     }
 
@@ -1428,9 +1428,6 @@ impl EditorWindow {
             };
 
             let start = cursor.start;
-
-            #[allow(unused)]
-            let cursor = ();
 
             let (start, end) = if start.index > end.index {
                 (end, start)
