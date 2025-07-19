@@ -232,6 +232,7 @@ impl EditorWindow {
         if !self.program_active {
             self.update_editor(focus, index);
         } else if self.is_focused {
+            // Clear keyboard input
             while let Some(_) = input::get_char_pressed() {}
         }
 
@@ -610,7 +611,13 @@ impl EditorWindow {
         let pasted_lines = OnceCell::new();
         let cursors = OnceCell::new();
 
-        while let Some(mut character) = input::get_char_pressed() {
+        let mut characters = Vec::new();
+
+        while let Some(character) = input::get_char_pressed() {
+            characters.push(character);
+        }
+
+        for mut character in characters.into_iter().rev() {
             if character == '\r' {
                 character = '\n';
             }
