@@ -556,7 +556,7 @@ impl RegisterValues {
                 })?)
                 .ok_or_else(|| RegisterAccessError::IndexTooBig {
                     got: *index,
-                    maximum: values.len() as Integer - 1 - offset,
+                    maximum: values.len() as Integer - 1 + offset,
                 }),
         }
     }
