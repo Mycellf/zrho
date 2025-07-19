@@ -660,16 +660,6 @@ pub const fn register_with_name(name: char) -> Option<u32> {
     }
 }
 
-#[must_use]
-pub const fn column_of_register(register: u32) -> usize {
-    match register {
-        3..8 => 2,
-        8..13 => 1,
-        20..26 => 0,
-        _ => 3,
-    }
-}
-
 #[derive(Clone, Copy, Debug)]
 pub struct RegisterMap<T>(pub [T; 26]);
 
