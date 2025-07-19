@@ -117,10 +117,8 @@ impl RegisterVisualisation {
 
         let name = computer::name_of_register(self.register).unwrap();
 
-        let seperation = 2.0;
-
         let width = if register.block_time > 0 {
-            (Self::NAME_WIDTH - seperation) * 0.4
+            EditorWindow::TEXT_WIDTH * 2.0
         } else {
             Self::NAME_WIDTH
         };
@@ -143,21 +141,21 @@ impl RegisterVisualisation {
 
         if register.block_time > 0 {
             // Block time
-            let width = Self::NAME_WIDTH - width - seperation;
+            let width = Self::NAME_WIDTH - width - EditorWindow::BORDER_WIDTH;
 
             shapes::draw_rectangle(
                 location.x + Self::NAME_WIDTH - width,
                 location.y,
                 width,
                 EditorWindow::TEXT_SIZE,
-                Color::from_hex(0xff0000),
+                EditorWindow::EDITOR_BACKGROUND_COLOR,
             );
 
             draw_centered_text(
                 &register.block_time.to_string(),
                 location + Vec2::new(Self::NAME_WIDTH - width, 0.0),
                 width,
-                EditorWindow::EDITOR_BACKGROUND_COLOR,
+                colors::WHITE,
             );
         }
 
