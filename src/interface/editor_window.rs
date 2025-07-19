@@ -565,6 +565,8 @@ impl EditorWindow {
                             cursor.end = None;
                         }
                     }
+
+                    self.is_dragging_selection = true;
                 } else {
                     let cursor = Cursor {
                         start: clicked_location,
@@ -572,14 +574,22 @@ impl EditorWindow {
                     };
 
                     if alt {
-                        if !self.text_editor.cursors.contains(&cursor) {
+                        if let Some(index) = (self.text_editor.cursors)
+                            .iter()
+                            .position(|&other_cursor| other_cursor == cursor)
+                        {
+                            if self.text_editor.cursors.len() > 1 {
+                                self.text_editor.cursors.remove(index);
+                            }
+                        } else {
                             self.text_editor.cursors.push(cursor);
+                            self.is_dragging_selection = true;
                         }
                     } else {
                         self.text_editor.cursors = vec![cursor];
+                        self.is_dragging_selection = true;
                     }
 
-                    self.is_dragging_selection = true;
                     self.contents_updated = true;
                 }
             }
