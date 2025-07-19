@@ -160,8 +160,12 @@ impl RegisterVisualisation {
         }
 
         // Value
-        let (value, color) = match register.value() {
-            Ok(value) => (value.to_string(), colors::WHITE),
+        let (value, foreground_color, background_color) = match register.value() {
+            Ok(value) => (
+                value.to_string(),
+                colors::WHITE,
+                EditorWindow::EDITOR_BACKGROUND_COLOR,
+            ),
             Err(error) => (
                 match error {
                     computer::RegisterAccessError::IndexTooBig { maximum, .. } => {
@@ -178,6 +182,7 @@ impl RegisterVisualisation {
                     }
                     _ => unreachable!(),
                 },
+                EditorWindow::EDITOR_BACKGROUND_COLOR,
                 Color::from_hex(0xff0000),
             ),
         };
@@ -189,10 +194,10 @@ impl RegisterVisualisation {
             location.y,
             Self::NAME_WIDTH,
             EditorWindow::TEXT_SIZE,
-            EditorWindow::EDITOR_BACKGROUND_COLOR,
+            background_color,
         );
 
-        draw_centered_text(&value, location, Self::NAME_WIDTH, color);
+        draw_centered_text(&value, location, Self::NAME_WIDTH, foreground_color);
 
         // match self.value_visualisation {
         //     ValueVisualisation::Scalar => {
