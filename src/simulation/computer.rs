@@ -613,6 +613,22 @@ impl RegisterValues {
             RegisterValues::Vector { offset, .. } => *offset,
         }
     }
+
+    /// Returns `true` if the register values is [`Scalar`].
+    ///
+    /// [`Scalar`]: RegisterValues::Scalar
+    #[must_use]
+    pub fn is_scalar(&self) -> bool {
+        matches!(self, Self::Scalar(..))
+    }
+
+    /// Returns `true` if the register values is [`Vector`].
+    ///
+    /// [`Vector`]: RegisterValues::Vector
+    #[must_use]
+    pub fn is_vector(&self) -> bool {
+        matches!(self, Self::Vector { .. })
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
