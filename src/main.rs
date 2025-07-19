@@ -124,6 +124,8 @@ async fn main() {
         }
 
         if *DRAW_FPS {
+            // BUG: The windows build (tested with bottles) has all the text replaced with black
+            // boxes if this is turned on, but only after the first frame is run.
             text::draw_text_ex(
                 &macroquad::time::get_fps().to_string(),
                 10.0,
