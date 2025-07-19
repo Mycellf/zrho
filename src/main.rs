@@ -1,6 +1,10 @@
+use std::{env, sync::LazyLock};
+
 use macroquad::{
+    color::colors,
     input::{self, KeyCode},
     math::Vec2,
+    text::{self, TextParams},
     window::{self, Conf},
 };
 
@@ -119,9 +123,24 @@ async fn main() {
             window.draw();
         }
 
+        if *DRAW_FPS {
+            text::draw_text_ex(
+                &macroquad::time::get_fps().to_string(),
+                10.0,
+                50.0,
+                TextParams {
+                    color: colors::WHITE,
+                    ..EditorWindow::text_params_with_size(40.0)
+                },
+            );
+        }
+
         window::next_frame().await;
     }
 }
+
+static DRAW_FPS: LazyLock<bool> =
+    LazyLock::new(|| env::args().skip(1).any(|argument| argument == "--draw-fps"));
 
 pub fn run_test_computer() {
     let mut computer = default_computer(true);
