@@ -53,13 +53,30 @@ impl RegisterVisualisationLayout {
         for register_visualisation in &self.visualisations {
             let column = computer::column_of_register(register_visualisation.register);
 
-            register_visualisation.draw_at(
+            register_visualisation.draw_background_at(
                 location + Vec2::new(column as f32 * Self::COLUMN_WIDTH, column_height[column]),
                 computer
                     .registers
                     .get(register_visualisation.register)
                     .unwrap(),
                 color,
+            );
+
+            column_height[column] += RegisterVisualisation::HEIGHT;
+        }
+
+        // PERFORMANCE: Interleaving text and shape drawing is extremely slow
+        let mut column_height = [0.0; 4];
+
+        for register_visualisation in &self.visualisations {
+            let column = computer::column_of_register(register_visualisation.register);
+
+            register_visualisation.draw_text_at(
+                location + Vec2::new(column as f32 * Self::COLUMN_WIDTH, column_height[column]),
+                computer
+                    .registers
+                    .get(register_visualisation.register)
+                    .unwrap(),
             );
 
             column_height[column] += RegisterVisualisation::HEIGHT;
@@ -103,7 +120,7 @@ impl RegisterVisualisation {
         self.value_visualisation.update(register);
     }
 
-    pub fn draw_at(&self, location: Vec2, register: &Register, title_color: Color) {
+    pub fn draw_background_at(&self, location: Vec2, register: &Register, title_color: Color) {
         if self.value_visualisation.is_index() {
             let offset = Vec2::new(Self::NAME_WIDTH, EditorWindow::TEXT_SIZE / 2.0);
 
@@ -114,8 +131,6 @@ impl RegisterVisualisation {
 
             draw_arrow(start, end, 2.0, 7.5, title_color);
         }
-
-        let name = computer::name_of_register(self.register).unwrap();
 
         let width = if register.block_time > 0 {
             EditorWindow::TEXT_WIDTH * 2.0
@@ -132,13 +147,6 @@ impl RegisterVisualisation {
             title_color,
         );
 
-        draw_centered_text(
-            &name.to_string(),
-            location,
-            width,
-            EditorWindow::EDITOR_BACKGROUND_COLOR,
-        );
-
         if register.block_time > 0 {
             // Block time
             let width = Self::NAME_WIDTH - width - EditorWindow::BORDER_WIDTH;
@@ -150,6 +158,72 @@ impl RegisterVisualisation {
                 EditorWindow::TEXT_SIZE,
                 EditorWindow::EDITOR_BACKGROUND_COLOR,
             );
+        }
+
+        // Value
+        let background_color = match register.value() {
+            Ok(_) => EditorWindow::EDITOR_BACKGROUND_COLOR,
+            Err(_) => Color::from_hex(0xff0000),
+        };
+
+        let location = location + Vec2::new(0.0, EditorWindow::TEXT_SIZE);
+
+        shapes::draw_rectangle(
+            location.x,
+            location.y,
+            Self::NAME_WIDTH,
+            EditorWindow::TEXT_SIZE,
+            background_color,
+        );
+
+        // match self.value_visualisation {
+        //     ValueVisualisation::Scalar => {
+        //         assert!(register.values.is_scalar());
+        //         assert!(register.indexes_array.is_none());
+        //     }
+        //     ValueVisualisation::Index => {
+        //         assert!(register.values.is_scalar());
+        //         assert!(register.indexes_array.is_some());
+        //     }
+        //     ValueVisualisation::Vector {
+        //         index,
+        //         scroll,
+        //         target_scroll,
+        //     } => {
+        //         let RegisterValues::Vector {
+        //             values,
+        //             index: register_index,
+        //             offset,
+        //         } = &register.values
+        //         else {
+        //             panic!();
+        //         };
+        //
+        //         // TODO:
+        //     }
+        // }
+    }
+
+    pub fn draw_text_at(&self, location: Vec2, register: &Register) {
+        let name = computer::name_of_register(self.register).unwrap();
+
+        let width = if register.block_time > 0 {
+            EditorWindow::TEXT_WIDTH * 2.0
+        } else {
+            Self::NAME_WIDTH
+        };
+
+        // Name
+        draw_centered_text(
+            &name.to_string(),
+            location,
+            width,
+            EditorWindow::EDITOR_BACKGROUND_COLOR,
+        );
+
+        if register.block_time > 0 {
+            // Block time
+            let width = Self::NAME_WIDTH - width - EditorWindow::BORDER_WIDTH;
 
             draw_centered_text(
                 &register.block_time.to_string(),
@@ -160,12 +234,8 @@ impl RegisterVisualisation {
         }
 
         // Value
-        let (value, foreground_color, background_color) = match register.value() {
-            Ok(value) => (
-                value.to_string(),
-                colors::WHITE,
-                EditorWindow::EDITOR_BACKGROUND_COLOR,
-            ),
+        let (value, foreground_color) = match register.value() {
+            Ok(value) => (value.to_string(), colors::WHITE),
             Err(error) => (
                 match error {
                     computer::RegisterAccessError::IndexTooBig { maximum, .. } => {
@@ -183,19 +253,10 @@ impl RegisterVisualisation {
                     _ => unreachable!(),
                 },
                 EditorWindow::EDITOR_BACKGROUND_COLOR,
-                Color::from_hex(0xff0000),
             ),
         };
 
         let location = location + Vec2::new(0.0, EditorWindow::TEXT_SIZE);
-
-        shapes::draw_rectangle(
-            location.x,
-            location.y,
-            Self::NAME_WIDTH,
-            EditorWindow::TEXT_SIZE,
-            background_color,
-        );
 
         draw_centered_text(&value, location, Self::NAME_WIDTH, foreground_color);
 
