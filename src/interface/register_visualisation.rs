@@ -182,12 +182,17 @@ impl RegisterVisualisation {
             ),
         };
 
-        draw_centered_text(
-            &value,
-            location + Vec2::new(0.0, EditorWindow::TEXT_SIZE),
+        let location = location + Vec2::new(0.0, EditorWindow::TEXT_SIZE);
+
+        shapes::draw_rectangle(
+            location.x,
+            location.y,
             Self::NAME_WIDTH,
-            color,
+            EditorWindow::TEXT_SIZE,
+            EditorWindow::EDITOR_BACKGROUND_COLOR,
         );
+
+        draw_centered_text(&value, location, Self::NAME_WIDTH, color);
 
         // match self.value_visualisation {
         //     ValueVisualisation::Scalar => {
