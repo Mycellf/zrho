@@ -99,9 +99,7 @@ async fn main() {
 
             let is_clicked = window.update(focus, i) && focus.grab.is_none();
 
-            if !is_clicked {
-                i += 1;
-            } else {
+            if is_clicked {
                 focus.grab = Some(i);
 
                 if i > 0 {
@@ -113,8 +111,12 @@ async fn main() {
                     window.is_focused = true;
                     window.contents_updated = true;
                     windows.insert(0, window);
+
+                    continue;
                 }
             }
+
+            i += 1;
         }
 
         window::clear_background(EditorWindow::BACKGROUND_COLOR);
