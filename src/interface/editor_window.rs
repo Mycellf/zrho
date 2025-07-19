@@ -221,7 +221,7 @@ impl EditorWindow {
             if self.is_focused && input::is_key_pressed(KeyCode::Tab) {
                 self.tick_program(
                     input::is_key_down(KeyCode::LeftShift)
-                        || input::is_key_down(KeyCode::LeftShift),
+                        || input::is_key_down(KeyCode::RightShift),
                 );
             }
 
