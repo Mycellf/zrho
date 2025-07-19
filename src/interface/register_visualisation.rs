@@ -217,8 +217,8 @@ impl ValueVisualisation {
                 };
 
                 let new_index = usize::try_from(register_index.saturating_sub(*offset))
-                    .unwrap()
-                    .clamp(0, values.len() - 1);
+                    .unwrap_or(0)
+                    .min(values.len() - 1);
 
                 if *index != new_index {
                     *index = new_index;
