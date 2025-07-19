@@ -218,6 +218,7 @@ impl EditorWindow {
         }
 
         if self.footer_height > 0.0 {
+            // Update ticking
             if self.is_focused && input::is_key_pressed(KeyCode::Tab) {
                 self.tick_program(
                     input::is_key_down(KeyCode::LeftShift)
@@ -230,6 +231,8 @@ impl EditorWindow {
 
         if !self.program_active {
             self.update_editor(focus, index);
+        } else if self.is_focused {
+            while let Some(_) = input::get_char_pressed() {}
         }
 
         // Update scrolling
