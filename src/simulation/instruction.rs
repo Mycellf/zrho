@@ -200,13 +200,18 @@ impl Instruction {
             InstructionKind::TryWrite => {
                 let register = self.register_of_argument(0);
 
-                registers
-                    .get(register)
-                    .ok_or(InstructionEvaluationInterrupt::RegisterError {
+                if let Some(register_data) = registers.get(register) {
+                    register_data.value().map_err(|error| {
+                        InstructionEvaluationInterrupt::RegisterError { register, error }
+                    })?;
+
+                    register_data.set_time_to_write(&mut write_time, &mut write_block_time);
+                } else {
+                    return Err(InstructionEvaluationInterrupt::RegisterError {
                         register,
                         error: RegisterAccessError::NoSuchRegister { got: register },
-                    })?
-                    .set_time_to_write(&mut write_time, &mut write_block_time);
+                    });
+                }
             }
             InstructionKind::Clock => {
                 let register_index = self.register_of_argument(0);
