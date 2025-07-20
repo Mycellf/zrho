@@ -25,45 +25,76 @@ impl RegisterVisualisationLayout {
     pub const VERTICAL_SPACING: f32 = EditorWindow::TEXT_SIZE / 2.0;
     pub const COLUMN_WIDTH: f32 = RegisterVisualisation::WIDTH + Self::HORIZONTAL_SPACING;
 
-    pub fn new(computer: &Computer) -> Self {
-        let mut num_scalar = 0;
-        let mut num_index = 0;
-        let mut num_vector = 0;
+    pub fn new(computer: &Computer, num_rows: usize) -> Self {
+        let mut scalars = Vec::new();
+        let mut indexes = Vec::new();
+        let mut vectors = Vec::new();
 
-        let visualisations = (computer.registers.registers)
-            .iter()
-            .enumerate()
-            .filter_map(|(i, register)| register.as_ref().map(|register| (i, register)))
-            .map(|(i, register)| {
-                let position;
-                match register.values {
-                    RegisterValues::Scalar(..) => {
-                        if register.indexes_array.is_none() {
-                            position = RegisterVisualisationPosition {
-                                column: 0,
-                                row: num_scalar,
-                            };
-                            num_scalar += 1;
-                        } else {
-                            position = RegisterVisualisationPosition {
-                                column: num_index + 1,
-                                row: 0,
-                            };
-                            num_index += 1;
-                        }
-                    }
-                    RegisterValues::Vector { .. } => {
-                        position = RegisterVisualisationPosition {
-                            column: num_vector + 1,
-                            row: 0,
-                        };
-                        num_vector += 1;
-                    }
-                };
+        for (i, register) in computer.registers.registers.iter().enumerate() {
+            let Some(register) = register else { continue };
 
-                RegisterVisualisation::new(i.try_into().unwrap(), register, position)
-            })
-            .collect();
+            let visualisation = RegisterVisualisation::new(i.try_into().unwrap(), register);
+
+            let visualisation_set = match visualisation.value_visualisation {
+                ValueVisualisation::Scalar => &mut scalars,
+                ValueVisualisation::Index => &mut indexes,
+                ValueVisualisation::Vector { .. } => &mut vectors,
+            };
+
+            visualisation_set.push(visualisation);
+        }
+
+        let mut visualisations = Vec::new();
+
+        scalars.sort_by_key(|&RegisterVisualisation { register, .. }| {
+            computer::ordering_of_register(register)
+        });
+
+        let vectors_start = scalars.len().div_ceil(num_rows);
+
+        for (i, mut visualisation) in scalars.into_iter().enumerate() {
+            visualisation.position = RegisterVisualisationPosition {
+                column: i / num_rows,
+                row: i % num_rows,
+            };
+
+            visualisations.push(visualisation);
+        }
+
+        for (visualisation, column) in vectors.iter_mut().zip(vectors_start..) {
+            visualisation.position = RegisterVisualisationPosition {
+                column,
+                row: computer
+                    .registers
+                    .get(visualisation.register)
+                    .unwrap()
+                    .indexed_by
+                    .is_some() as usize,
+            };
+
+            visualisations.push(*visualisation);
+        }
+
+        for mut visualisation in indexes.into_iter() {
+            let target_register = computer
+                .registers
+                .get(visualisation.register)
+                .unwrap()
+                .indexes_array
+                .unwrap();
+
+            let target_index = vectors
+                .iter()
+                .position(|&RegisterVisualisation { register, .. }| target_register == register)
+                .unwrap();
+
+            visualisation.position = RegisterVisualisationPosition {
+                column: vectors[target_index].position.column,
+                row: 0,
+            };
+
+            visualisations.push(visualisation);
+        }
 
         Self { visualisations }
     }
@@ -104,7 +135,7 @@ impl RegisterVisualisationLayout {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RegisterVisualisationPosition {
     pub column: usize,
     pub row: usize,
@@ -123,16 +154,17 @@ impl RegisterVisualisation {
     pub const HEIGHT: f32 = Self::BASE_HEIGHT + RegisterVisualisationLayout::VERTICAL_SPACING;
 
     pub fn offset(&self) -> Vec2 {
+        let nudge_up = self.value_visualisation.is_vector() && self.position.row % 2 == 1;
+
         Vec2::new(
             self.position.column as f32 * RegisterVisualisationLayout::COLUMN_WIDTH,
             self.position.row as f32 * RegisterVisualisation::HEIGHT
-                + self.value_visualisation.is_vector() as usize as f32
-                    * RegisterVisualisation::BASE_HEIGHT,
+                - nudge_up as usize as f32 * RegisterVisualisationLayout::VERTICAL_SPACING,
         )
     }
 
     #[must_use]
-    pub fn new(index: u32, register: &Register, position: RegisterVisualisationPosition) -> Self {
+    pub fn new(index: u32, register: &Register) -> Self {
         Self {
             register: index,
             value_visualisation: match register.values {
@@ -149,7 +181,7 @@ impl RegisterVisualisation {
                     target_scroll: 0.0,
                 },
             },
-            position,
+            position: RegisterVisualisationPosition::default(),
         }
     }
 

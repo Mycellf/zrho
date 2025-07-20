@@ -660,6 +660,19 @@ pub const fn register_with_name(name: char) -> Option<u32> {
     }
 }
 
+#[must_use]
+pub const fn ordering_of_register(register: u32) -> Option<u32> {
+    match register {
+        23 => Some(0), // X
+        24 => Some(1), // Y
+        25 => Some(2), // Z
+        22 => Some(3), // W
+        20 => Some(4), // U
+        21 => Some(5), // V
+        _ => None,
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct RegisterMap<T>(pub [T; 26]);
 

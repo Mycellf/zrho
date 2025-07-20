@@ -19,6 +19,7 @@ use crate::{
     interface::{
         FONT, FONT_ASPECT,
         register_visualisation::RegisterVisualisationLayout,
+        simulation_control_panel::SimulationControlPanel,
         text_editor::{CharacterPosition, Cursor, CursorLocation},
     },
     simulation::{
@@ -48,6 +49,8 @@ pub struct EditorWindow {
     pub size: Vec2,
     pub title: String,
     pub title_color: Color,
+
+    pub control_panel: SimulationControlPanel,
 
     pub footer_height: f32,
 
@@ -124,6 +127,8 @@ impl EditorWindow {
     ) -> EditorWindow {
         let position = Self::position_from_scaled(scaled_position, size);
 
+        let control_panel = SimulationControlPanel::default();
+
         let grab_position = None;
         let is_focused = false;
         let key_repeats = KeyRepeats::default();
@@ -139,7 +144,7 @@ impl EditorWindow {
         let program = Program::assemble_from(title.clone(), &text_editor.text, &target_computer);
         let program_active = false;
         let highlighted_lines = Vec::new();
-        let register_visualisations = RegisterVisualisationLayout::new(&target_computer);
+        let register_visualisations = RegisterVisualisationLayout::new(&target_computer, 3);
 
         let target_size = size * f32::from(Self::RESOLUTION_UPSCALING);
         let camera = Camera2D {
@@ -162,6 +167,8 @@ impl EditorWindow {
             size,
             title,
             title_color,
+
+            control_panel,
 
             footer_height,
 
@@ -215,6 +222,16 @@ impl EditorWindow {
             self.grab_position = Some(mouse_position - self.position);
         } else {
             self.position = Self::position_from_scaled(self.scaled_position, self.size);
+        }
+
+        if focus.mouse == Some(index) && !self.is_being_dragged() {
+            self.contents_updated |= self.control_panel.update_mouse_position(
+                (mouse_position - self.position) / scaling_factor()
+                    - Vec2::new(self.size.x - SimulationControlPanel::WIDTH, 0.0),
+            );
+        } else if self.control_panel.mouse_position.is_some() {
+            self.control_panel.mouse_position = None;
+            self.contents_updated = true;
         }
 
         if self.footer_height > 0.0 {
@@ -1338,6 +1355,12 @@ impl EditorWindow {
                 color: text_color,
                 ..Self::text_params_with_size(Self::TEXT_SIZE)
             },
+        );
+
+        self.control_panel.draw_at(
+            Vec2::new(self.size.x - SimulationControlPanel::WIDTH, 0.0),
+            self.title_color,
+            self.is_focused,
         );
 
         // Footer
