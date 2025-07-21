@@ -1,15 +1,20 @@
-use std::ops::{Deref, DerefMut, Range};
+use std::{
+    cell::{LazyCell, OnceCell},
+    ops::{Deref, DerefMut, Range},
+    sync::Mutex,
+};
 
 use macroquad::{
     color::{Color, colors},
+    input::{self, KeyCode},
     math::Vec2,
     text::{self, TextDimensions, TextParams},
 };
 
-use crate::interface::editor_window::EditorWindow;
+use super::window;
 
 #[derive(Clone, Debug)]
-pub struct TextEditor {
+pub struct TextEditorOperations {
     pub text: String,
     pub lines: Vec<Line>,
     pub cursors: Vec<Cursor>,
@@ -17,7 +22,7 @@ pub struct TextEditor {
     pub history: EditHistory,
 }
 
-impl TextEditor {
+impl TextEditorOperations {
     #[must_use]
     pub fn new(text: String) -> Self {
         let lines = Self::line_indecies_from(&text);
@@ -75,6 +80,7 @@ impl TextEditor {
 
     pub fn draw_all(
         &self,
+        background_color: Color,
         highlighted_lines: &[usize],
         position: Vec2,
         text_size: f32,
@@ -83,6 +89,7 @@ impl TextEditor {
     ) {
         self.draw_range(
             0..self.lines.len(),
+            background_color,
             highlighted_lines,
             position,
             text_size,
@@ -94,6 +101,7 @@ impl TextEditor {
     pub fn draw_range(
         &self,
         lines: Range<usize>,
+        background_color: Color,
         highlighted_lines: &[usize],
         mut position: Vec2,
         text_size: f32,
@@ -117,8 +125,8 @@ impl TextEditor {
                     line_position.y,
                     TextParams {
                         font_scale_aspect: character_width,
-                        color: EditorWindow::EDITOR_BACKGROUND_COLOR,
-                        ..EditorWindow::text_params_with_size(text_size)
+                        color: background_color,
+                        ..window::text_params_with_height(text_size)
                     },
                 );
 
@@ -136,7 +144,7 @@ impl TextEditor {
                     TextParams {
                         font_scale_aspect: character_width,
                         color: segment_color,
-                        ..EditorWindow::text_params_with_size(text_size)
+                        ..window::text_params_with_height(text_size)
                     },
                 );
 
@@ -447,6 +455,360 @@ impl TextEditor {
     #[must_use]
     pub fn get_character(&self, position: CharacterPosition) -> Option<char> {
         self.get_line(position.line)?.chars().nth(position.column)
+    }
+
+    #[must_use]
+    pub fn move_cursors_with_keybinds(&mut self, page_height: usize) -> (bool, bool) {
+        let mut moved_any_cursor = false;
+        let mut follow_slowly = false;
+
+        for i in 0..self.cursors.len() {
+            let mut cursor = self.cursors[i];
+
+            let mut moved = false;
+
+            if super::is_key_typed(KeyCode::Left) {
+                cursor.position = self.constrain_position_to_contents(cursor.position);
+
+                cursor.position = self.move_position_left(cursor.position, 1, true);
+                moved = true;
+            }
+
+            if super::is_key_typed(KeyCode::Right) {
+                cursor.position = self.constrain_position_to_contents(cursor.position);
+
+                cursor.position = self.move_position_right(cursor.position, 1, true);
+                moved = true;
+            }
+
+            if super::is_key_typed(KeyCode::Up) {
+                if cursor.position.line > 0 {
+                    cursor.position.line -= 1;
+                } else {
+                    cursor.position.column = 0;
+                }
+                moved = true;
+            }
+
+            if super::is_key_typed(KeyCode::Down) {
+                if cursor.position.line < self.num_lines() - 1 {
+                    cursor.position.line += 1;
+                } else {
+                    cursor.position.column = self.length_of_line(cursor.position.line).unwrap();
+                }
+                moved = true;
+            }
+
+            if super::is_key_typed(KeyCode::Home) {
+                cursor.position.column = 0;
+                moved = true;
+            }
+
+            if super::is_key_typed(KeyCode::End) {
+                cursor.position.column = self.length_of_line(cursor.position.line).unwrap();
+                moved = true;
+            }
+
+            if super::is_key_typed(KeyCode::PageUp) {
+                cursor.position.line =
+                    (cursor.position.line).saturating_sub(page_height.saturating_sub(1));
+                moved = true;
+                follow_slowly = true;
+            }
+
+            if super::is_key_typed(KeyCode::PageDown) {
+                cursor.position.line = (cursor.position.line + page_height.saturating_sub(1))
+                    .min(self.num_lines() - 1);
+                moved = true;
+                follow_slowly = true;
+            }
+
+            if moved {
+                let shift = input::is_key_down(KeyCode::LeftShift)
+                    || input::is_key_down(KeyCode::RightShift);
+
+                if shift {
+                    if cursor.end.is_none() {
+                        cursor.end = Some(self.cursors[i].start);
+                    }
+                } else {
+                    cursor.end = None;
+                }
+                cursor.index = self.index_of_position(cursor.position).unwrap();
+
+                if (input::is_key_down(KeyCode::LeftAlt) || input::is_key_down(KeyCode::RightAlt))
+                    && !shift
+                {
+                    if !self.cursors.contains(&cursor) {
+                        self.cursors.push(cursor);
+                    }
+
+                    self.cursors[i].end = None;
+                } else {
+                    self.cursors[i] = cursor;
+                }
+            }
+
+            moved_any_cursor |= moved;
+        }
+
+        (moved_any_cursor, follow_slowly)
+    }
+
+    /// Returns `(moved any cursor, follow slowly, typed, seperate edits in history)`
+    #[must_use]
+    pub fn type_from_input_characters(&mut self) -> (bool, bool, bool, bool) {
+        /// HACK: Macroquad's clipboard interface often fails to set the clipboard, so values written to
+        /// the clipboard are stored internally in case that happens. When it happens, the clipboard is
+        /// emptied.
+        static INTERNAL_CLIPBOARD: Mutex<String> = Mutex::new(String::new());
+
+        let mut moved = false;
+        let mut follow_slowly = false;
+        let mut typed = false;
+        let mut seperate_edits_in_history = false;
+
+        let mut copied = Vec::new();
+        let pasted = LazyCell::new(|| {
+            let external_clipboard =
+                macroquad::miniquad::window::clipboard_get().unwrap_or_default();
+
+            if external_clipboard.is_empty() {
+                INTERNAL_CLIPBOARD.lock().unwrap().clone()
+            } else {
+                external_clipboard
+            }
+        });
+
+        let pasted_lines = OnceCell::new();
+        let cursors = OnceCell::new();
+
+        let mut characters = Vec::new();
+
+        while let Some(character) = input::get_char_pressed() {
+            characters.push(character);
+        }
+
+        for mut character in characters.into_iter().rev() {
+            if character == '\r' {
+                character = '\n';
+            }
+
+            'cursor: for i in 0..self.cursors.len() {
+                let mut cursor = self.cursors[i];
+
+                cursor.position = self.constrain_position_to_contents(cursor.position);
+
+                self.cursors[i] = cursor;
+                let cursor = cursor;
+
+                match character {
+                    '\u{8}' => {
+                        if cursor.index > 0 || cursor.end.is_some() {
+                            // Backspace
+                            let range = if cursor.end.is_some() {
+                                seperate_edits_in_history = true;
+                                cursor.position_range()
+                            } else {
+                                self.move_position_left(cursor.position, 1, true)..cursor.position
+                            };
+
+                            self.remove(range).unwrap();
+
+                            if cursor.end.is_some() {
+                                self.cursors[i].end = None;
+                            }
+
+                            typed = true;
+                            moved = true;
+                        }
+                    }
+                    // NOTE: The last character is always a newline, which has a length of 1
+                    '\u{7f}' => {
+                        if cursor.index < self.text.len() - 1 || cursor.end.is_some() {
+                            // Delete
+                            let range = if cursor.end.is_some() {
+                                seperate_edits_in_history = true;
+                                cursor.position_range()
+                            } else {
+                                cursor.position..self.move_position_right(cursor.position, 1, true)
+                            };
+
+                            self.remove(range).unwrap();
+
+                            if cursor.end.is_some() {
+                                self.cursors[i].end = None;
+                            }
+
+                            typed = true;
+                            moved = true;
+                        }
+                    }
+                    _ if !character.is_control() || character == '\n' => {
+                        if input::is_key_down(KeyCode::LeftControl)
+                            || input::is_key_down(KeyCode::RightControl)
+                        {
+                            let character = character.to_ascii_uppercase();
+
+                            // Control keybind
+                            seperate_edits_in_history = true;
+
+                            match character {
+                                'A' => {
+                                    // Select all
+                                    let end = self.text.len() - 1;
+
+                                    self.cursors = vec![Cursor {
+                                        start: CursorLocation {
+                                            position: self.position_of_index(end).unwrap(),
+                                            index: end,
+                                        },
+                                        end: Some(CursorLocation::default()),
+                                    }];
+
+                                    moved = true;
+                                    follow_slowly = true;
+
+                                    break 'cursor;
+                                }
+                                'Z' => {
+                                    // Undo
+                                    self.undo();
+
+                                    typed = true;
+
+                                    break 'cursor;
+                                }
+                                'Y' => {
+                                    // Redo
+                                    self.redo();
+
+                                    typed = true;
+
+                                    break 'cursor;
+                                }
+                                'C' => {
+                                    // Copy
+                                    copied.push((self.text[cursor.index_range()].to_owned(), i));
+                                }
+                                'X' => {
+                                    // Cut
+                                    cursors.get_or_init(|| self.cursors.clone());
+
+                                    copied.push((self.text[cursor.index_range()].to_owned(), i));
+
+                                    self.remove(cursor.position_range()).unwrap();
+
+                                    typed = true;
+                                    moved = true;
+                                }
+                                'V' => {
+                                    // Paste
+                                    if !pasted.is_empty() || cursor.end.is_some() {
+                                        let pasted_lines = pasted_lines.get_or_init(|| {
+                                            if self.cursors.len() == 1 {
+                                                return None;
+                                            }
+
+                                            let lines = pasted
+                                                .lines()
+                                                .take(self.cursors.len() + 1)
+                                                .collect::<Vec<_>>();
+
+                                            if lines.len() != self.cursors.len() {
+                                                return None;
+                                            }
+
+                                            let mut cursor_ordering = self
+                                                .cursors
+                                                .iter()
+                                                .enumerate()
+                                                .map(|(i, cursor)| (cursor.index, i))
+                                                .collect::<Vec<_>>();
+
+                                            cursor_ordering.sort_by_key(|&(index, _)| index);
+
+                                            let mut reordered_lines = vec![""; lines.len()];
+
+                                            for (line, (_, i)) in
+                                                cursor_ordering.into_iter().enumerate()
+                                            {
+                                                reordered_lines[i] = lines[line];
+                                            }
+
+                                            Some(reordered_lines)
+                                        });
+
+                                        let contents = if let Some(pasted_lines) = &pasted_lines {
+                                            pasted_lines[i]
+                                        } else {
+                                            &pasted
+                                        };
+
+                                        self.replace(cursor.position_range(), contents).unwrap();
+
+                                        self.cursors[i].end = None;
+
+                                        typed = true;
+                                        moved = true;
+                                    }
+                                }
+                                _ => (),
+                            }
+                        } else {
+                            // Typed character
+                            let location = cursor.range().start;
+
+                            let line_range =
+                                self.byte_range_of_line(location.position.line).unwrap();
+
+                            let character =
+                                if self.text[line_range.clone()].split_once(';').is_none_or(
+                                    |(before, _)| before.len() + line_range.start >= location.index,
+                                ) {
+                                    character.to_ascii_uppercase()
+                                } else {
+                                    character
+                                };
+
+                            self.replace(cursor.position_range(), &character.to_string())
+                                .unwrap();
+
+                            self.cursors[i].end = None;
+
+                            typed = true;
+                            moved = true;
+                        }
+                    }
+                    _ => (),
+                }
+            }
+        }
+
+        if !copied.is_empty() {
+            let mut copied_string = String::new();
+
+            let cursors = cursors.get().unwrap_or(&self.cursors);
+            copied.sort_by_key(|&(_, i)| cursors[i].index);
+
+            let multi_select = copied.len() > 1;
+
+            for (element, _) in copied {
+                copied_string.push_str(&element);
+
+                if multi_select && !element.contains('\n') {
+                    copied_string.push('\n');
+                }
+            }
+
+            if !copied_string.is_empty() {
+                macroquad::miniquad::window::clipboard_set(&copied_string);
+
+                *INTERNAL_CLIPBOARD.lock().unwrap() = copied_string;
+            }
+        }
+
+        (moved, follow_slowly, typed, seperate_edits_in_history)
     }
 }
 
