@@ -61,7 +61,7 @@ async fn main() {
 
     let mut window = Window::new(Vec2::new(500.0, 50.0), 400.0, false);
 
-    window.theme.accent_color = ui::colors::FUSCHIA;
+    window.theme.accent_color = ui::colors::GREEN;
 
     window.push_element(Header {
         title: "Prime Numbers".to_owned(),
@@ -81,7 +81,7 @@ async fn main() {
         title: "Fibonacci Sequence".to_owned(),
     });
 
-    window.theme.accent_color = ui::colors::RED;
+    window.theme.accent_color = ui::colors::FUSCHIA;
 
     window.push_element(ScrollBar::new(TextEditor::new(
         TextEditorOperations::new(FIBONACCI_SEQUENCE.to_owned()),
