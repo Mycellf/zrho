@@ -41,6 +41,7 @@ pub struct WindowContext {
 }
 
 impl WindowContext {
+    #[must_use]
     pub fn mouse_position(&self) -> Vec2 {
         super::mouse_position() - self.position
     }
@@ -51,6 +52,7 @@ impl Window {
     pub const BASE_TEXT_HEIGHT: f32 = 15.0;
     pub const BASE_TEXT_WIDTH: f32 = Self::BASE_TEXT_HEIGHT * FONT_ASPECT;
 
+    #[must_use]
     pub fn new(position: Vec2, width: f32, is_focused: bool) -> Self {
         Self {
             position,

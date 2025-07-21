@@ -448,10 +448,12 @@ impl TextEditor {
         }
     }
 
+    #[must_use]
     pub fn vertical_offset_of_line(&self, line: usize) -> f32 {
         (line as f32 - self.scroll) * Self::TEXT_HEIGHT
     }
 
+    #[must_use]
     pub fn width_of_line(&self, line: usize) -> Option<f32> {
         let contents = self.editor.get_line(line)?;
 

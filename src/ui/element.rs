@@ -45,6 +45,7 @@ pub struct UpdateContext {
 }
 
 impl UpdateContext {
+    #[must_use]
     pub fn new(window: WindowContext, area: DrawArea, element: &ElementEntry) -> Self {
         let mut focus = element.focus;
 
@@ -73,6 +74,7 @@ pub enum WindowFocusUse {
 }
 
 impl WindowFocusUse {
+    #[must_use]
     pub fn is_usesd(&self, keyboard_focus: bool) -> bool {
         match self {
             WindowFocusUse::Never => false,
@@ -159,6 +161,7 @@ pub struct DrawArea {
 }
 
 impl DrawArea {
+    #[must_use]
     pub fn contains_point(&self, point: Vec2) -> bool {
         point.x > self.offset.x
             && point.y > self.offset.y
@@ -166,6 +169,7 @@ impl DrawArea {
             && point.y < self.offset.y + self.size.y
     }
 
+    #[must_use]
     pub fn clamp_point(&self, point: Vec2) -> Vec2 {
         Vec2::new(
             point.x.clamp(self.offset.x, self.offset.x + self.size.x),

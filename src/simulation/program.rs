@@ -19,6 +19,7 @@ pub struct Program {
 }
 
 impl Program {
+    #[must_use]
     pub fn new_empty(name: String) -> Self {
         Self {
             name,
@@ -26,6 +27,7 @@ impl Program {
         }
     }
 
+    #[must_use]
     pub fn instruction(mut self, instruction: Instruction) -> Self {
         self.instructions.push(instruction);
         self
@@ -189,6 +191,7 @@ pub enum ArgumentIntermediate<'a> {
 }
 
 impl<'a> ArgumentIntermediate<'a> {
+    #[must_use]
     pub fn to_owned(&self) -> OwnedArgumentIntermediate {
         match *self {
             ArgumentIntermediate::Token(slice) => {

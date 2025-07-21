@@ -289,6 +289,7 @@ impl Instruction {
         (properties.base_time, properties.base_energy, true)
     }
 
+    #[must_use]
     pub fn group(
         &self,
         instruction_properties: &InstructionKindMap<InstructionProperties>,
@@ -442,6 +443,7 @@ pub enum InstructionKind {
 }
 
 impl InstructionKind {
+    #[must_use]
     pub const fn get_default_properties(self) -> &'static InstructionProperties {
         DEFAULT_INSTRUCTIONS.get(self)
     }
@@ -483,6 +485,7 @@ impl InstructionKindMap<InstructionProperties> {
         self
     }
 
+    #[must_use]
     pub fn instruction_with_name(&self, name: &str) -> Option<&InstructionProperties> {
         if name.is_empty() {
             return None;
@@ -546,6 +549,7 @@ pub enum ArgumentRequirement {
 }
 
 impl ArgumentRequirement {
+    #[must_use]
     pub fn allows_empty(self) -> bool {
         matches!(
             self,
@@ -605,6 +609,7 @@ impl InstructionProperties {
         group: None,
     };
 
+    #[must_use]
     pub fn minimum_arguments(&self) -> usize {
         self.arguments
             .iter()
@@ -619,6 +624,7 @@ impl InstructionProperties {
             .count()
     }
 
+    #[must_use]
     pub fn maximum_arguments(&self) -> usize {
         self.arguments
             .iter()
@@ -676,6 +682,7 @@ impl PropertyCondition {
         }
     }
 
+    #[must_use]
     pub fn allows_cascade(&self) -> bool {
         match self {
             PropertyCondition::SameAsPrevious { allow_cascade, .. } => *allow_cascade,

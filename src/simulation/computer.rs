@@ -586,6 +586,7 @@ impl RegisterValues {
         }
     }
 
+    #[must_use]
     pub fn all_values(&self) -> &[DigitInteger] {
         match self {
             RegisterValues::Scalar(value) => slice::from_ref(value),
@@ -600,6 +601,7 @@ impl RegisterValues {
         }
     }
 
+    #[must_use]
     pub fn index(&self) -> i32 {
         match self {
             RegisterValues::Scalar(_) => 0,
@@ -607,6 +609,7 @@ impl RegisterValues {
         }
     }
 
+    #[must_use]
     pub fn offset(&self) -> i32 {
         match self {
             RegisterValues::Scalar(_) => 0,

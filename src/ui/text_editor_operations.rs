@@ -820,6 +820,7 @@ pub struct Line {
 }
 
 impl Line {
+    #[must_use]
     pub fn from_byte_offset(byte_offset: usize) -> Self {
         Self {
             byte_offset,
