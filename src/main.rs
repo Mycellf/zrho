@@ -1,28 +1,31 @@
 use std::{env, sync::LazyLock};
 
 use macroquad::{
-    color::colors,
+    color::{Color, colors},
     input::{self, KeyCode},
     math::Vec2,
     text::{self, TextParams},
-    window::{self, Conf},
+    window::Conf,
 };
 
 use crate::{
-    interface::{
-        editor_window::{EditorWindow, WindowFocus},
-        text_editor::TextEditor,
-    },
     simulation::{
         computer::{self, BlockCondition, Computer, Register, RegisterSet, RegisterValues},
         instruction,
         integer::{DigitInteger, Integer},
         program::Program,
     },
+    ui::{
+        header::Header,
+        scroll_bar::ScrollBar,
+        text_editor::TextEditor,
+        text_editor_operations::TextEditorOperations,
+        window::{self, Window},
+    },
 };
 
-pub mod interface;
 pub mod simulation;
+pub mod ui;
 
 const START_IN_FULLSCREEN: bool = true;
 
@@ -40,86 +43,96 @@ async fn main() {
 
     let mut windows = Vec::new();
 
-    windows.push(EditorWindow::new(
-        Vec2::new(50.0, 50.0),
-        Vec2::new(400.0, 700.0),
-        110.0,
-        "Kolakoski Sequence".to_owned(),
-        EditorWindow::BLUE,
-        TextEditor::new(KOLAKOSKI_SEQUENCE_LONG.to_owned()),
-        default_computer(true),
-    ));
+    let mut window = Window::new(Vec2::new(50.0, 50.0), 400.0, true);
 
-    windows.push(EditorWindow::new(
-        Vec2::new(550.0, 50.0),
-        Vec2::new(400.0, 505.0),
-        110.0,
-        "Prime Numbers".to_owned(),
-        EditorWindow::ORANGE,
-        TextEditor::new(PRIME_NUMBERS_FAST.to_owned()),
-        default_computer(false),
-    ));
+    window.theme.accent_color = ui::colors::BLUE;
 
-    windows.push(EditorWindow::new(
-        Vec2::new(1050.0, 50.0),
-        Vec2::new(400.0, 400.0),
-        110.0,
-        "Fibonacci Sequence".to_owned(),
-        EditorWindow::RED,
-        TextEditor::new(FIBONACCI_SEQUENCE.to_owned()),
-        default_computer(false),
-    ));
+    window.push_element(Header {
+        title: "Kolakoski Sequence".to_owned(),
+    });
 
-    windows[0].is_focused = true;
+    window.push_element(ScrollBar::new(TextEditor::new(
+        TextEditorOperations::new(KOLAKOSKI_SEQUENCE_LONG.to_owned()),
+        35.0,
+        2.5,
+    )));
+
+    windows.push(window);
+
+    let mut window = Window::new(Vec2::new(500.0, 50.0), 400.0, false);
+
+    window.theme.accent_color = ui::colors::FUSCHIA;
+
+    window.push_element(Header {
+        title: "Prime Numbers".to_owned(),
+    });
+
+    window.push_element(ScrollBar::new(TextEditor::new(
+        TextEditorOperations::new(PRIME_NUMBERS.to_owned()),
+        21.0,
+        2.5,
+    )));
+
+    windows.push(window);
+
+    let mut window = Window::new(Vec2::new(950.0, 50.0), 400.0, false);
+
+    window.push_element(Header {
+        title: "Fibonacci Sequence".to_owned(),
+    });
+
+    window.theme.accent_color = ui::colors::RED;
+
+    window.push_element(ScrollBar::new(TextEditor::new(
+        TextEditorOperations::new(FIBONACCI_SEQUENCE.to_owned()),
+        17.0,
+        2.5,
+    )));
+
+    windows.push(window);
+
+    // HACK: Macroquad renders the first bit of text drawn as black boxes,
+    // so draw everything twice on the first frame.
+    for _ in 0..2 {
+        for window in &mut windows {
+            for element in &mut window.elements {
+                element.force_update();
+            }
+
+            window.update_all = true;
+            window.update_texture();
+        }
+    }
 
     loop {
         if input::is_key_pressed(KeyCode::F11) {
             fullscreen ^= true;
-            window::set_fullscreen(fullscreen);
+            macroquad::window::set_fullscreen(fullscreen);
         }
 
-        let mut focus = WindowFocus::default();
+        ui::update_key_repeats();
 
-        let mut i = 0;
-        while i < windows.len() {
-            let window = &mut windows[i];
+        let mut found_hovered_window = false;
 
-            if focus.grab.is_none() {
-                if window.should_hold_mouse_focus() {
-                    focus.grab = Some(i);
-                    focus.mouse = None;
-                }
+        for i in 0..windows.len() {
+            let clicked = windows[i].update(&mut found_hovered_window);
 
-                if focus.mouse.is_none()
-                    && window.is_point_within_bounds(input::mouse_position().into())
-                {
-                    focus.mouse = Some(i);
-                }
+            if clicked && i > 0 {
+                let front_window = windows.first_mut().unwrap();
+                front_window.is_focused = false;
+                front_window.update_focus = true;
+
+                let mut window = windows.remove(i);
+                window.is_focused = true;
+                window.update_focus = true;
+
+                windows.insert(0, window);
             }
-
-            let is_clicked = window.update(focus, i) && focus.grab.is_none();
-
-            if is_clicked {
-                focus.grab = Some(i);
-
-                if i > 0 {
-                    let front_window = &mut windows[0];
-                    front_window.is_focused = false;
-                    front_window.contents_updated = true;
-
-                    let mut window = windows.remove(i);
-                    window.is_focused = true;
-                    window.contents_updated = true;
-                    windows.insert(0, window);
-
-                    continue;
-                }
-            }
-
-            i += 1;
         }
 
-        window::clear_background(EditorWindow::BACKGROUND_COLOR);
+        ui::clear_chars_typed();
+
+        macroquad::window::clear_background(Color::from_hex(0x08080b));
 
         for window in windows.iter_mut().rev() {
             window.draw();
@@ -134,12 +147,12 @@ async fn main() {
                 50.0,
                 TextParams {
                     color: colors::WHITE,
-                    ..EditorWindow::text_params_with_size(40.0)
+                    ..window::text_params_with_height(40.0)
                 },
             );
         }
 
-        window::next_frame().await;
+        macroquad::window::next_frame().await;
     }
 }
 
