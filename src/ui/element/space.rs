@@ -1,4 +1,4 @@
-use super::element::{Element, UpdateContext, UpdateResult};
+use crate::ui::element::{Element, UpdateContext, UpdateResult};
 
 #[derive(Debug)]
 pub struct Space {

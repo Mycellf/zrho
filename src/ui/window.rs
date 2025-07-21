@@ -7,7 +7,7 @@ use macroquad::{
     texture,
 };
 
-use super::{
+use crate::ui::{
     FONT, FONT_ASPECT, FONT_VERTICAL_OFFSET,
     element::{DrawArea, Element, ElementEntry, UpdateContext, UpdateResult},
     theme::Theme,

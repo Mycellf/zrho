@@ -3,7 +3,7 @@ use macroquad::{
     math::Vec2,
 };
 
-use super::{
+use crate::ui::{
     element::{Element, UpdateContext, UpdateResult, WindowFocusUse},
     window::{self, Window},
 };

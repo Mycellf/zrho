@@ -5,7 +5,10 @@ use macroquad::{
     shapes,
 };
 
-use super::element::{Element, UpdateContext, UpdateResult};
+use crate::ui::{
+    self,
+    element::{Element, UpdateContext, UpdateResult, WindowFocusUse},
+};
 
 pub trait ScrollableElement: Element {
     fn set_scroll(&mut self, scroll: f32);
@@ -46,7 +49,7 @@ impl Element for ScrollBar {
             && self.state.is_none_or(|state| state.grab_position.is_none())
     }
 
-    fn uses_window_focus(&self) -> super::element::WindowFocusUse {
+    fn uses_window_focus(&self) -> WindowFocusUse {
         self.inner.uses_window_focus()
     }
 
@@ -138,7 +141,7 @@ impl ScrollBarState {
 
     #[must_use]
     pub fn color(&self) -> Color {
-        super::color_lerp(Self::BASE_COLOR, Self::ALTERNATE_COLOR, self.color)
+        ui::color_lerp(Self::BASE_COLOR, Self::ALTERNATE_COLOR, self.color)
     }
 
     #[must_use]
@@ -173,8 +176,7 @@ impl ScrollBarState {
 
         let frame_time = macroquad::time::get_frame_time();
 
-        let next_width =
-            super::exp_decay_cutoff(self.size.x, target_width, 25.0, frame_time, 0.05).0;
+        let next_width = ui::exp_decay_cutoff(self.size.x, target_width, 25.0, frame_time, 0.05).0;
 
         self.size.x = next_width;
 
@@ -219,8 +221,7 @@ impl ScrollBarState {
 
         let target_color = (bar_hovered && self.grab_position.is_none()) as usize as f32;
 
-        let next_color =
-            super::exp_decay_cutoff(self.color, target_color, 50.0, frame_time, 0.05).0;
+        let next_color = ui::exp_decay_cutoff(self.color, target_color, 50.0, frame_time, 0.05).0;
 
         self.color = next_color;
 

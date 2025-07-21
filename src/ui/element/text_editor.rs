@@ -7,13 +7,18 @@ use macroquad::{
     texture::{self, DrawTextureParams},
 };
 
-use super::{
-    FONT,
-    element::{DrawArea, Element, UpdateContext, UpdateResult, WindowFocusUse},
-    scroll_bar::ScrollableElement,
-    text_editor_operations::{CharacterPosition, Cursor, CursorLocation, TextEditorOperations},
+use crate::ui::{
+    self, FONT,
+    element::{
+        DrawArea, Element, UpdateContext, UpdateResult, WindowFocusUse,
+        scroll_bar::ScrollableElement,
+    },
     window::{self, Window},
 };
+
+use operations::{CharacterPosition, Cursor, CursorLocation, TextEditorOperations};
+
+pub mod operations;
 
 #[derive(Debug)]
 pub struct TextEditor {
@@ -70,7 +75,7 @@ impl Element for TextEditor {
         if self.target_scroll != self.scroll {
             let frame_time = macroquad::time::get_frame_time();
 
-            self.scroll = super::exp_decay_cutoff(
+            self.scroll = ui::exp_decay_cutoff(
                 self.scroll,
                 self.target_scroll,
                 self.scroll_speed,

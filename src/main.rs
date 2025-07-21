@@ -16,10 +16,11 @@ use crate::{
         program::Program,
     },
     ui::{
-        header::Header,
-        scroll_bar::ScrollBar,
-        text_editor::TextEditor,
-        text_editor_operations::TextEditorOperations,
+        element::{
+            header::Header,
+            scroll_bar::ScrollBar,
+            text_editor::{TextEditor, operations::TextEditorOperations},
+        },
         window::{self, Window},
     },
 };

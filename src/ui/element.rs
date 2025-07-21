@@ -14,6 +14,11 @@ use macroquad::{
 
 use super::window::WindowContext;
 
+pub mod header;
+pub mod scroll_bar;
+pub mod space;
+pub mod text_editor;
+
 pub trait Element: Debug + 'static {
     #[must_use]
     fn height(&self) -> f32;

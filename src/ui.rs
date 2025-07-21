@@ -8,11 +8,6 @@ use macroquad::{
 };
 
 pub mod element;
-pub mod header;
-pub mod scroll_bar;
-pub mod space;
-pub mod text_editor;
-pub mod text_editor_operations;
 pub mod theme;
 pub mod window;
 

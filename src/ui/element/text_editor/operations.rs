@@ -11,7 +11,7 @@ use macroquad::{
     text::{self, TextDimensions, TextParams},
 };
 
-use super::window;
+use crate::ui::{self, window};
 
 #[derive(Clone, Debug)]
 pub struct TextEditorOperations {
@@ -467,21 +467,21 @@ impl TextEditorOperations {
 
             let mut moved = false;
 
-            if super::is_key_typed(KeyCode::Left) {
+            if ui::is_key_typed(KeyCode::Left) {
                 cursor.position = self.constrain_position_to_contents(cursor.position);
 
                 cursor.position = self.move_position_left(cursor.position, 1, true);
                 moved = true;
             }
 
-            if super::is_key_typed(KeyCode::Right) {
+            if ui::is_key_typed(KeyCode::Right) {
                 cursor.position = self.constrain_position_to_contents(cursor.position);
 
                 cursor.position = self.move_position_right(cursor.position, 1, true);
                 moved = true;
             }
 
-            if super::is_key_typed(KeyCode::Up) {
+            if ui::is_key_typed(KeyCode::Up) {
                 if cursor.position.line > 0 {
                     cursor.position.line -= 1;
                 } else {
@@ -490,7 +490,7 @@ impl TextEditorOperations {
                 moved = true;
             }
 
-            if super::is_key_typed(KeyCode::Down) {
+            if ui::is_key_typed(KeyCode::Down) {
                 if cursor.position.line < self.num_lines() - 1 {
                     cursor.position.line += 1;
                 } else {
@@ -499,24 +499,24 @@ impl TextEditorOperations {
                 moved = true;
             }
 
-            if super::is_key_typed(KeyCode::Home) {
+            if ui::is_key_typed(KeyCode::Home) {
                 cursor.position.column = 0;
                 moved = true;
             }
 
-            if super::is_key_typed(KeyCode::End) {
+            if ui::is_key_typed(KeyCode::End) {
                 cursor.position.column = self.length_of_line(cursor.position.line).unwrap();
                 moved = true;
             }
 
-            if super::is_key_typed(KeyCode::PageUp) {
+            if ui::is_key_typed(KeyCode::PageUp) {
                 cursor.position.line =
                     (cursor.position.line).saturating_sub(page_height.saturating_sub(1));
                 moved = true;
                 follow_slowly = true;
             }
 
-            if super::is_key_typed(KeyCode::PageDown) {
+            if ui::is_key_typed(KeyCode::PageDown) {
                 cursor.position.line = (cursor.position.line + page_height.saturating_sub(1))
                     .min(self.num_lines() - 1);
                 moved = true;
