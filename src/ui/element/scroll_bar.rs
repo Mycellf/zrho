@@ -198,7 +198,8 @@ impl ScrollBarState {
 
         let mut result = UpdateResult::default();
 
-        let height = element.page_height().powi(2) / element.scrollable_height();
+        let height =
+            (element.page_height().powi(2) / element.scrollable_height()).max(Self::MINIMUM_HEIGHT);
 
         if self.size.y != height {
             self.size.y = height;
