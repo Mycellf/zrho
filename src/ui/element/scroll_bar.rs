@@ -20,7 +20,9 @@ pub trait ScrollableElement: Element {
     fn maximum_scroll(&self) -> f32;
 
     #[must_use]
-    fn page_height(&self) -> f32;
+    fn page_height(&self) -> f32 {
+        self.height()
+    }
 
     #[must_use]
     fn scrollable_height(&self) -> f32 {
