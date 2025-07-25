@@ -30,6 +30,8 @@ pub struct TextEditor {
     pub target_scroll: f32,
     pub scroll_speed: f32,
 
+    pub last_scroll_input: f32,
+
     pub camera: Camera2D,
     pub text_needs_update: bool,
     pub page_size: Vec2,
@@ -56,8 +58,17 @@ impl Element for TextEditor {
         // Scrolling
         let previous_scroll = self.scroll;
 
+        let frame_time = macroquad::time::get_frame_time();
+
         if focus.mouse_hover {
-            let scroll_input = input::mouse_wheel().1.clamp(-1.0, 1.0);
+            let mut scroll_input = input::mouse_wheel().1.clamp(-1.0, 1.0);
+
+            if self.last_scroll_input.abs() > 0.99 && scroll_input.abs() > 0.99 {
+                scroll_input *= (frame_time * 240.0)
+                    .clamp(1.0, self.last_scroll_input.abs() + frame_time * 10.0);
+            }
+
+            self.last_scroll_input = scroll_input;
 
             if scroll_input != 0.0 {
                 self.target_scroll -= scroll_input;
@@ -75,8 +86,6 @@ impl Element for TextEditor {
         }
 
         if self.target_scroll != self.scroll {
-            let frame_time = macroquad::time::get_frame_time();
-
             self.scroll = ui::exp_decay_cutoff(
                 self.scroll,
                 self.target_scroll,
@@ -229,6 +238,8 @@ impl TextEditor {
             scroll: 0.0,
             target_scroll: 0.0,
             scroll_speed: 0.0,
+
+            last_scroll_input: 0.0,
 
             camera: Camera2D {
                 offset: Vec2::new(-1.0, -1.0),
