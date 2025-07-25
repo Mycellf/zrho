@@ -62,8 +62,10 @@ impl Element for TextEditor {
             if scroll_input != 0.0 {
                 self.target_scroll -= scroll_input;
 
-                if scroll_input.abs() >= 1.0 {
-                    self.target_scroll = self.target_scroll.round();
+                if scroll_input >= 1.0 {
+                    self.target_scroll = self.target_scroll.ceil();
+                } else if scroll_input <= -1.0 {
+                    self.target_scroll = self.target_scroll.floor();
                 }
                 self.target_scroll = self
                     .target_scroll
