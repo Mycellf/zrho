@@ -1,5 +1,6 @@
 use std::{
     cell::{LazyCell, OnceCell},
+    collections::VecDeque,
     ops::{Deref, DerefMut, Range},
     sync::Mutex,
 };
@@ -963,15 +964,29 @@ impl DerefMut for Cursor {
 #[derive(Clone, Debug, Default)]
 pub struct EditHistory {
     buffer: Vec<Edit>,
-    entries: Vec<EditGroup>,
+    entries: VecDeque<EditGroup>,
     next_entry: usize,
     group_next_edit: bool,
+    size: usize,
 }
 
 impl EditHistory {
+    pub const MAXIMUM_SIZE: usize = 1024 * 1024;
+
     pub fn add_edit_to_buffer(&mut self, edit: Edit) {
         if edit.replaced == edit.inserted {
             return;
+        }
+
+        self.size += edit.size();
+        println!("{:?}", edit.size());
+
+        while self.size > Self::MAXIMUM_SIZE {
+            let Some(removed) = self.entries.pop_front() else {
+                self.size = 0;
+                return;
+            };
+            self.size -= removed.size_of_elements();
         }
 
         self.buffer.push(edit);
@@ -986,7 +1001,7 @@ impl EditHistory {
             self.entries[self.next_entry].edits.append(&mut self.buffer);
         } else {
             self.entries.truncate(self.next_entry);
-            self.entries.push(EditGroup {
+            self.entries.push_back(EditGroup {
                 edits: std::mem::take(&mut self.buffer),
             });
 
@@ -1003,7 +1018,7 @@ impl EditHistory {
             self.entries[self.next_entry].edits.push(edit);
         } else {
             self.entries.truncate(self.next_entry);
-            self.entries.push(EditGroup { edits: vec![edit] });
+            self.entries.push_back(EditGroup { edits: vec![edit] });
 
             self.group_next_edit = true;
         }
@@ -1045,9 +1060,23 @@ pub struct EditGroup {
     pub edits: Vec<Edit>,
 }
 
+impl EditGroup {
+    pub fn size_of_elements(&self) -> usize {
+        self.edits.iter().map(Edit::size).sum()
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Edit {
     pub start: usize,
     pub inserted: String,
     pub replaced: String,
+}
+
+impl Edit {
+    pub fn size(&self) -> usize {
+        std::mem::size_of::<Self>()
+            + std::mem::size_of_val(self.inserted.as_str())
+            + std::mem::size_of_val(self.replaced.as_str())
+    }
 }
