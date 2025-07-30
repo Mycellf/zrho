@@ -65,7 +65,7 @@ impl Element for TextEditor {
 
             if self.last_scroll_input.abs() > 0.99 && scroll_input.abs() > 0.99 {
                 scroll_input *= (frame_time * 240.0)
-                    .clamp(1.0, self.last_scroll_input.abs() + frame_time * 10.0);
+                    .clamp(1.0, self.last_scroll_input.abs() + frame_time * 5.0);
             }
 
             self.last_scroll_input = scroll_input;
