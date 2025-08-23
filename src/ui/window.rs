@@ -265,7 +265,7 @@ impl Window {
     }
 
     pub fn update_texture(&mut self) {
-        if !(self.update_any || self.update_all || self.update_focus) || self.size.y <= 0.0 {
+        if self.size.y <= 0.0 || !(self.update_any || self.update_all || self.update_focus) {
             return;
         }
 
