@@ -979,7 +979,6 @@ impl EditHistory {
         }
 
         self.size += edit.size();
-        println!("{:?}", edit.size());
 
         while self.size > Self::MAXIMUM_SIZE {
             let Some(removed) = self.entries.pop_front() else {
