@@ -3841,6 +3841,7 @@ dependencies = [
  "ggez",
  "nalgebra",
  "simplerand",
+ "slotmap",
  "strum",
 ]
 

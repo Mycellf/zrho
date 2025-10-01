@@ -1,17 +1,23 @@
 use ggez::{
-    Context, ContextBuilder, GameError, GameResult,
+    Context, ContextBuilder, GameResult,
     conf::{Backend, Conf, FullscreenType, WindowMode, WindowSetup},
     event::{self, EventHandler},
     graphics::{Canvas, Color, Sampler},
     input::keyboard::KeyInput,
-    winit::keyboard::{Key, NamedKey},
+    winit::{
+        event::{KeyEvent, MouseButton},
+        keyboard::{Key, NamedKey},
+    },
 };
+use nalgebra::{Point2, Vector2, point, vector};
 
 use crate::ui2::{DRAW_FPS, START_IN_FULLSCREEN, utils};
 
 pub struct State {
     fullscreen: bool,
     was_maximized: bool,
+
+    input: WindowInput,
 }
 
 impl Default for State {
@@ -19,6 +25,41 @@ impl Default for State {
         Self {
             fullscreen: START_IN_FULLSCREEN,
             was_maximized: START_IN_FULLSCREEN,
+
+            input: WindowInput::default(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct WindowInput {
+    pub keys_down: Vec<Key>,
+    pub keys_pressed: Vec<Key>,
+
+    pub text_input: String,
+
+    pub mouse_in_window: bool,
+    pub mouse_position: Point2<f32>,
+    pub mouse_scroll: Vector2<f32>,
+
+    pub mouse_buttons_down: Vec<MouseButton>,
+    pub mouse_buttons_pressed: Vec<MouseButton>,
+}
+
+impl Default for WindowInput {
+    fn default() -> Self {
+        Self {
+            keys_down: Vec::new(),
+            keys_pressed: Vec::new(),
+
+            text_input: String::new(),
+
+            mouse_in_window: true,
+            mouse_position: point![0.0, 0.0],
+            mouse_scroll: vector![0.0, 0.0],
+
+            mouse_buttons_down: Vec::new(),
+            mouse_buttons_pressed: Vec::new(),
         }
     }
 }
@@ -55,6 +96,14 @@ impl State {
 
 impl EventHandler for State {
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
+        println!("{:?}", self.input);
+
+        self.input.text_input.clear();
+
+        self.input.mouse_scroll = vector![0.0, 0.0];
+
+        self.input.keys_pressed.clear();
+        self.input.mouse_buttons_pressed.clear();
         Ok(())
     }
 
@@ -75,14 +124,21 @@ impl EventHandler for State {
         &mut self,
         ctx: &mut Context,
         input: KeyInput,
-        repeated: bool,
-    ) -> Result<(), GameError> {
-        if !repeated {
-            if input.event.logical_key == Key::Named(NamedKey::Escape) {
+        _repeated: bool,
+    ) -> GameResult {
+        match input.event {
+            KeyEvent {
+                logical_key: Key::Named(NamedKey::Escape),
+                repeat: false,
+                ..
+            } => {
                 ctx.request_quit();
             }
-
-            if input.event.logical_key == Key::Named(NamedKey::F11) {
+            KeyEvent {
+                logical_key: Key::Named(NamedKey::F11),
+                repeat: false,
+                ..
+            } => {
                 if self.fullscreen {
                     ctx.gfx.set_fullscreen(FullscreenType::Windowed).unwrap();
                     ctx.gfx.window().set_maximized(self.was_maximized);
@@ -93,7 +149,87 @@ impl EventHandler for State {
 
                 self.fullscreen ^= true;
             }
+            _ => (),
         }
+
+        if !self.input.keys_down.contains(&input.event.logical_key) {
+            self.input.keys_down.push(input.event.logical_key.clone());
+        }
+
+        if !self.input.keys_pressed.contains(&input.event.logical_key) {
+            self.input.keys_pressed.push(input.event.logical_key);
+        }
+
+        Ok(())
+    }
+
+    fn key_up_event(&mut self, _ctx: &mut Context, input: KeyInput) -> GameResult {
+        self.input
+            .keys_down
+            .retain(|key| *key != input.event.logical_key);
+
+        Ok(())
+    }
+
+    fn mouse_button_down_event(
+        &mut self,
+        _ctx: &mut Context,
+        button: MouseButton,
+        _x: f32,
+        _y: f32,
+    ) -> GameResult {
+        if !self.input.mouse_buttons_down.contains(&button) {
+            self.input.mouse_buttons_down.push(button);
+        }
+
+        if !self.input.mouse_buttons_pressed.contains(&button) {
+            self.input.mouse_buttons_pressed.push(button);
+        }
+
+        Ok(())
+    }
+
+    fn mouse_button_up_event(
+        &mut self,
+        _ctx: &mut Context,
+        released_button: MouseButton,
+        _x: f32,
+        _y: f32,
+    ) -> GameResult {
+        self.input
+            .mouse_buttons_down
+            .retain(|button| *button != released_button);
+
+        Ok(())
+    }
+
+    fn mouse_motion_event(
+        &mut self,
+        _ctx: &mut Context,
+        x: f32,
+        y: f32,
+        _dx: f32,
+        _dy: f32,
+    ) -> GameResult {
+        self.input.mouse_position = point![x, y];
+
+        Ok(())
+    }
+
+    fn mouse_enter_or_leave(&mut self, _ctx: &mut Context, entered: bool) -> GameResult {
+        self.input.mouse_in_window = entered;
+
+        Ok(())
+    }
+
+    fn mouse_wheel_event(&mut self, _ctx: &mut Context, x: f32, y: f32) -> GameResult {
+        self.input.mouse_scroll += vector![x, y];
+
+        Ok(())
+    }
+
+    fn text_input_event(&mut self, _ctx: &mut Context, character: char) -> GameResult {
+        self.input.text_input.push(character);
 
         Ok(())
     }

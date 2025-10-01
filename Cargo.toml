@@ -7,4 +7,5 @@ edition = "2024"
 ggez = "0.10.0-rc0"
 nalgebra = { version = "0.34.1", features = ["mint"] }
 simplerand = "1.6.0"
+slotmap = "1.0.7"
 strum = { version = "0.27.1", features = ["derive"] }
