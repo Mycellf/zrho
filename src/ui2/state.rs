@@ -18,7 +18,7 @@ pub struct State {
     fullscreen: bool,
     was_maximized: bool,
 
-    input: WindowInput,
+    input: GlobalInput,
 }
 
 impl Default for State {
@@ -27,13 +27,13 @@ impl Default for State {
             fullscreen: START_IN_FULLSCREEN,
             was_maximized: START_IN_FULLSCREEN,
 
-            input: WindowInput::default(),
+            input: GlobalInput::default(),
         }
     }
 }
 
 #[derive(Debug)]
-pub struct WindowInput {
+pub struct GlobalInput {
     pub keys_down: Vec<(Key, KeyLocation)>,
     pub keys_pressed: Vec<(Key, KeyLocation)>,
 
@@ -47,7 +47,7 @@ pub struct WindowInput {
     pub mouse_buttons_pressed: Vec<MouseButton>,
 }
 
-impl Default for WindowInput {
+impl Default for GlobalInput {
     fn default() -> Self {
         Self {
             keys_down: Vec::new(),
