@@ -22,11 +22,34 @@ pub struct WindowSet {
 
 impl WindowSet {
     pub fn update(&mut self, ctx: &mut Context, input: &GlobalInput) {
-        for &key in &self.ordering {
-            let window = &mut self.windows[key];
-            let info = WindowUpdateInfo { input };
+        let mut mouse_focus = true;
+        let mut new_front_window = None;
 
-            window.update(ctx, info);
+        for (i, &key) in self.ordering.iter().enumerate() {
+            let window = &mut self.windows[key];
+            let info = WindowUpdateInfo {
+                input,
+                mouse_focus: mouse_focus && window.contains_point(input.mouse_position),
+            };
+
+            if info.mouse_focus {
+                mouse_focus = false;
+            }
+
+            for event in window.update(ctx, info) {
+                match event {
+                    WindowUpdateEvent::MoveToFront => {
+                        if new_front_window.is_none() {
+                            new_front_window = Some(i);
+                        }
+                    }
+                }
+            }
+        }
+
+        if let Some(i) = new_front_window {
+            let key = self.ordering.remove(i);
+            self.ordering.insert(0, key);
         }
     }
 
@@ -61,6 +84,11 @@ impl Window {
     }
 
     pub fn draw(&mut self, ctx: &mut Context, info: WindowDrawInfo) {}
+
+    pub fn contains_point(&self, point: Point2<f32>) -> bool {
+        let offset = point - self.position;
+        offset.x >= 0.0 && offset.y >= 0.0 && offset.x < self.size.x && offset.y < self.size.y
+    }
 }
 
 #[derive(Debug)]
@@ -80,6 +108,7 @@ pub enum WindowUpdateEvent {
 
 pub struct WindowUpdateInfo<'a> {
     pub input: &'a GlobalInput,
+    pub mouse_focus: bool,
 }
 
 pub struct WindowDrawInfo<'a> {
