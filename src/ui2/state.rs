@@ -6,7 +6,8 @@ use ggez::{
     input::keyboard::KeyInput,
     winit::{
         event::{KeyEvent, MouseButton},
-        keyboard::{Key, NamedKey},
+        keyboard::{Key, KeyLocation, NamedKey},
+        platform::modifier_supplement::KeyEventExtModifierSupplement,
     },
 };
 use nalgebra::{Point2, Vector2, point, vector};
@@ -33,8 +34,8 @@ impl Default for State {
 
 #[derive(Debug)]
 pub struct WindowInput {
-    pub keys_down: Vec<Key>,
-    pub keys_pressed: Vec<Key>,
+    pub keys_down: Vec<(Key, KeyLocation)>,
+    pub keys_pressed: Vec<(Key, KeyLocation)>,
 
     pub text_input: String,
 
@@ -152,21 +153,23 @@ impl EventHandler for State {
             _ => (),
         }
 
-        if !self.input.keys_down.contains(&input.event.logical_key) {
-            self.input.keys_down.push(input.event.logical_key.clone());
+        let key = (input.event.key_without_modifiers(), input.event.location);
+
+        if !self.input.keys_down.contains(&key) {
+            self.input.keys_down.push(key.clone());
         }
 
-        if !self.input.keys_pressed.contains(&input.event.logical_key) {
-            self.input.keys_pressed.push(input.event.logical_key);
+        if !self.input.keys_pressed.contains(&key) {
+            self.input.keys_pressed.push(key);
         }
 
         Ok(())
     }
 
     fn key_up_event(&mut self, _ctx: &mut Context, input: KeyInput) -> GameResult {
-        self.input
-            .keys_down
-            .retain(|key| *key != input.event.logical_key);
+        let released_key = (input.event.key_without_modifiers(), input.event.location);
+
+        self.input.keys_down.retain(|key| *key != released_key);
 
         Ok(())
     }
