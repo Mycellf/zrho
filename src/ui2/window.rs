@@ -2,7 +2,7 @@ use std::{fmt::Debug, ops::Deref};
 
 use ggez::{
     Context,
-    graphics::{Canvas, Image},
+    graphics::{Canvas, Color, Image},
 };
 use nalgebra::{Point2, Vector2};
 use slotmap::{SlotMap, new_key_type};
@@ -21,14 +21,34 @@ pub struct WindowSet {
 }
 
 impl WindowSet {
-    pub fn update(&mut self, ctx: &mut Context, input: &GlobalInput) {}
+    pub fn update(&mut self, ctx: &mut Context, input: &GlobalInput) {
+        for &key in &self.ordering {
+            let window = &mut self.windows[key];
+            let info = WindowUpdateInfo { input };
 
-    pub fn draw(&mut self, ctx: &mut Context) {}
+            window.update(ctx, info);
+        }
+    }
+
+    pub fn draw(&mut self, ctx: &mut Context) {
+        let mut canvas = Canvas::from_frame(ctx, Some(Color::BLACK));
+
+        for &key in self.ordering.iter().rev() {
+            let window = &mut self.windows[key];
+            let info = WindowDrawInfo {
+                canvas: &mut canvas,
+            };
+
+            window.draw(ctx, info);
+        }
+
+        canvas.finish(ctx).unwrap();
+    }
 }
 
 #[derive(Debug)]
 pub struct Window {
-    pub elements: SlotMap<ElementKey, Box<dyn WindowElement>>,
+    pub elements: SlotMap<ElementKey, WindowElementEntry>,
     pub ordering: Vec<ElementKey>,
     pub position: Point2<f32>,
     pub size: Vector2<f32>,
@@ -36,28 +56,53 @@ pub struct Window {
 }
 
 impl Window {
-    pub fn update(&mut self, ctx: &mut Context, input: &GlobalInput) {}
+    pub fn update(&mut self, ctx: &mut Context, info: WindowUpdateInfo) -> Vec<WindowUpdateEvent> {
+        Vec::new()
+    }
 
-    pub fn draw(&mut self, ctx: &mut Context) {}
+    pub fn draw(&mut self, ctx: &mut Context, info: WindowDrawInfo) {}
+}
+
+#[derive(Debug)]
+pub struct WindowElementEntry {
+    pub element: Box<dyn WindowElement>,
 }
 
 pub trait WindowElement: Debug {
-    fn update(&mut self, ctx: &mut Context, info: UpdateInfo);
+    fn update(&mut self, ctx: &mut Context, info: ElementUpdateInfo) -> Vec<ElementUpdateEvent>;
 
-    fn draw(&mut self, ctx: &mut Context, canvas: &mut Canvas, offset: Vector2<f32>);
-
-    fn height(&mut self) -> f32;
+    fn draw(&mut self, ctx: &mut Context, info: ElementDrawInfo);
 }
 
-pub enum UpdateEvent {
+pub enum WindowUpdateEvent {
+    MoveToFront,
+}
+
+pub struct WindowUpdateInfo<'a> {
+    pub input: &'a GlobalInput,
+}
+
+pub struct WindowDrawInfo<'a> {
+    pub canvas: &'a mut Canvas,
+}
+
+pub enum ElementUpdateEvent {
     WindowDrag { grab: bool },
     TakeKeyboardFocus,
+    SetHeight { new_height: f32 },
 }
 
-pub struct UpdateInfo {
-    pub input: GlobalInput,
+pub struct ElementUpdateInfo<'a> {
+    pub input: ElementInput<'a>,
     pub keyboard_focus: bool,
     pub mouse_focus: bool,
+    pub size: Vector2<f32>,
+}
+
+pub struct ElementDrawInfo<'a> {
+    pub canvas: &'a mut Canvas,
+    pub offset: Vector2<f32>,
+    pub size: Vector2<f32>,
 }
 
 pub struct ElementInput<'a> {
