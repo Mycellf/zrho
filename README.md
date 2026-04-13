@@ -54,7 +54,7 @@ Not all machines have every instruction or the same score
 | Operation     | Arguments   | Time Score* | Description                                                                                                                     |
 |---------------|-------------|-------------|---------------------------------------------------------------------------------------------------------------------------------|
 | `SET`         | `r r/n`     | 1           | sets the first argument to the second argument                                                                                  |
-| arithmatic:   |             |             |                                                                                                                                 |
+| arithmetic:   |             |             |                                                                                                                                 |
 | `ADD`         | `r/n r/n r` | 1           | adds the first two arguments and stores them in the third                                                                       |
 | `SUB`         | `r/n r/n r` | 1           | subtract                                                                                                                        |
 | `NEG`         | `r`         | 0           | negates the value in the register                                                                                               |
@@ -69,8 +69,8 @@ Not all machines have every instruction or the same score
 | control flow: |             |             |                                                                                                                                 |
 | `LBL`         | `l`         | N/A         | marks the next line as a target for a JMP instruction                                                                           |
 | `JMP`         | `?c l`      | 1 or 0      | moves program execution to the given label if the first argument is true or not present (has a score of 0 in the latter case)   |
-| `LJP`         | `c l`       | 0 or 5      | same as JMP but has a score of 1 if c is true and 5 if c is false, aka likely jump                                              |
-| `UJP`         | `c l`       | 0 or 5      | same as JMP but has a score of 5 if c is true and 1 if c is false, aka unlikely jump                                            |
+| `LJP`         | `c l`       | 0 or 5      | same as JMP but has a score of 0 if c is true and 5 if c is false, aka likely jump                                              |
+| `UJP`         | `c l`       | 0 or 5      | same as JMP but has a score of 5 if c is true and 0 if c is false, aka unlikely jump                                            |
 | misc/no-op:   |             |             |                                                                                                                                 |
 | `SLP`         | `r/n`       | varies      | takes as many ticks as the passed value                                                                                         |
 | `TRY`         | `r`         | 0           | takes as much time as reading from the first argument                                                                           |
